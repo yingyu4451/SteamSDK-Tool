@@ -353,6 +353,19 @@ function collectProblems({ appId, contentRoot, depots, appText }) {
     }
   }
 
+  // Depot 的内容目录不在项目文件夹里 —— 拖进 Downloads 里的现成构建时会这样。
+  // 不报的话界面头部显示的是项目文件夹，真正上传的是另一处，两者看不出区别。
+  if (contentRoot) {
+    const base = norm(contentRoot)
+    for (const { d, r } of roots) {
+      if (r !== base && !r.startsWith(base + path.sep)) {
+        problems.push(
+          `Depot ${d.id} 上传的是 ${d.contentRoot}，不在项目文件夹 ${contentRoot} 里`
+        )
+      }
+    }
+  }
+
   const open = (appText.match(/\{/g) || []).length
   const close = (appText.match(/\}/g) || []).length
   if (open !== close) problems.push(`app vdf 花括号不配对：${open} 个 { / ${close} 个 }`)
