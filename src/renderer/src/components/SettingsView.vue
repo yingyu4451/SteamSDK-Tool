@@ -148,9 +148,6 @@ function openExternal(url) {
     <!-- 路径 -->
     <section class="card p-5" v-reveal>
       <h2 class="text-[13px] font-semibold m-0">SDK 路径</h2>
-      <p class="mt-2 mb-0 text-[11.5px] text-faint leading-relaxed">
-        只需要一份 SDK。所有 App、所有 Depot、所有版本都走这一份。
-      </p>
 
       <div class="mt-3.5 flex gap-2">
         <input
@@ -189,12 +186,6 @@ function openExternal(url) {
         <span v-if="!state.encryptionAvailable" class="pill pill-bad">系统不支持加密存储</span>
       </div>
 
-      <p class="mt-2 mb-0 text-[11.5px] text-faint leading-relaxed">
-        密码用 Electron safeStorage 加密后落盘（Windows 上底层是 DPAPI，只有当前 Windows
-        用户能解密），明文不写磁盘、也不放进命令行参数。不保存也能用 ——
-        steamcmd 弹密码提示时界面会问你要。
-      </p>
-
       <div class="mt-3.5 flex gap-2">
         <input
           v-model="passwordDraft"
@@ -208,13 +199,9 @@ function openExternal(url) {
       </div>
 
       <div class="mt-3 pt-3 border-t border-line-soft">
-        <div class="text-[11.5px] text-muted">更省事的做法：先登录一次</div>
-        <p class="mt-1.5 mb-0 text-[11.5px] text-faint leading-relaxed">
-          打开一个真正的控制台窗口跑 steamcmd，在里面执行
-          <code class="text-accent">login {{ state.settings?.account || '<账号>' }}</code>
-          并输入密码 + Steam Guard。登录成功后 steamcmd 会自己保存凭据，之后构建就完全不需要密码了，
-          也可以把这里保存的密码清掉。
-        </p>
+        <div class="text-[11.5px] text-muted">
+          更省事：先在控制台窗口里 <code class="text-accent">login {{ state.settings?.account || '<账号>' }}</code>
+        </div>
         <button class="btn no-drag mt-2.5" @click="openLogin">打开登录窗口</button>
       </div>
     </section>
@@ -234,13 +221,6 @@ function openExternal(url) {
           {{ keyState.has ? `已保存 ····${keyState.tail}` : '未保存' }}
         </span>
       </div>
-
-      <p class="mt-2 mb-0 text-[11.5px] text-faint leading-relaxed">
-        有了它，界面就能<strong class="text-muted">读到 Steamworks 后台的真实数据</strong>：
-        这个 App 下到底有哪些 DepotID、有哪些分支、最近构建是几点。
-        本地 vdf 只能说明「你想传什么」，后台才说明「Steam 上实际有什么」——
-        勾了凭据校验，就不用再靠肉眼在两个页面之间对数字。
-      </p>
 
       <div class="mt-3 flex gap-2">
         <input
@@ -268,22 +248,14 @@ function openExternal(url) {
         </span>
       </div>
 
-      <div class="mt-2.5 text-[11px] text-faint leading-relaxed">
-        密钥和密码一样用 Windows DPAPI 加密落在本机，只有当前 Windows 用户能解密，明文不写磁盘。
-        取密钥的入口在 Steamworks → 用户与权限 → 管理 API 密钥，需要 <span class="text-muted">Publisher</span> 级别
-        （普通 App 管理员拿不到能读多个 App 的密钥）。
+      <div class="mt-2.5 text-[11px] text-faint">
+        需要 <span class="text-muted">Publisher</span> 级别（普通 App 管理员拿不到）。
       </div>
     </section>
 
     <!-- 关于 -->
     <section class="card p-5" v-reveal="{ delay: 0.08 }">
       <h2 class="text-[13px] font-semibold m-0">关于</h2>
-      <p class="mt-2 mb-0 text-[11.5px] text-faint leading-relaxed">
-        Vue 3 + Electron + TailwindCSS v4 + GSAP。<br />
-        真正的构建逻辑仍然在 <span class="font-mono text-muted">ContentBuilder\build.ps1</span> /
-        <span class="font-mono text-muted">check.ps1</span> 里 —— 命令行和这个界面走的是同一套脚本，
-        不会出现「界面上能跑、命令行不能跑」的分叉。
-      </p>
 
       <div class="mt-3.5 flex gap-2 flex-wrap">
         <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/doc/sdk/uploading')">

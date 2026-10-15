@@ -90,9 +90,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
         <h2 class="text-[15.5px] font-semibold m-0 text-[#ff8d97]">
           删除 App「{{ d.dirName }}」
         </h2>
-        <p class="mt-1.5 mb-0 text-[11.5px] text-faint leading-relaxed">
-          这个操作不可撤销。Steam 上已经传过的构建不受影响 —— 删的只是本地脚本和（可选的）内容目录。
-        </p>
+        <p class="mt-1.5 mb-0 text-[11.5px] text-[#ff8d97]">不可撤销。Steam 上已传的构建不受影响。</p>
       </header>
 
       <div v-if="d.loading" class="p-6 text-[12.5px] text-muted">正在统计要删的东西…</div>

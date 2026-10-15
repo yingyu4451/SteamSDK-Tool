@@ -64,6 +64,15 @@ export const state = reactive({
   orphanDialog: null
 })
 
+/** 平台 id → 显示名（和主进程 vdf-edit.js 的 PLATFORMS 一一对应） */
+export const PLATFORM_LABEL = {
+  win64: 'Windows 64',
+  win32: 'Windows 32',
+  macos: 'macOS',
+  linux: 'Linux',
+  linuxarm64: 'Linux ARM64'
+}
+
 export const selectedApp = computed(() => state.apps.find((a) => a.dirName === state.selectedDir) || null)
 
 export const canRun = computed(() => !state.running && !!state.detail && !state.detail.error)
@@ -173,11 +182,14 @@ export function toast(text, tone = 'ok') {
  * ------------------------------------------------------------------ */
 
 export async function openWizard() {
-  const [d, ks] = await Promise.all([
+  const [d, ks, ka] = await Promise.all([
     api.app.defaults({ platform: 'win64' }),
-    api.steam.keyState().catch(() => ({ has: false }))
+    api.steam.keyState().catch(() => ({ has: false })),
+    api.app.knownApps().catch(() => [])
   ])
   state.hasApiKey = !!ks.has
+  // 本地已有 App + 用过的 AppID 历史，给 AppID 下拉框用
+  state.knownApps = ka || []
   const picks = {}
   for (const p of d.platforms) {
     picks[p.id] = { on: p.id === 'win64', depotId: '', contentRoot: '', autoDepot: true, autoRoot: true, fromSteam: false }

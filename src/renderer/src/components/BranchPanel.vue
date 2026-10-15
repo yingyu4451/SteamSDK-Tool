@@ -47,11 +47,6 @@ function openExternal(url) {
       </span>
     </header>
 
-    <p class="mt-2.5 mb-0 text-[11.5px] text-faint leading-relaxed">
-      SetLive 只是告诉 steamcmd「这次构建发布到哪个分支」。分支本身必须先在
-      Steamworks 后台建好，本地读不到分支列表，所以这里只做写入和历史记录。
-    </p>
-
     <div class="mt-3.5 flex gap-2">
       <input
         v-model="draft"

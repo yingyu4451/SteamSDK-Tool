@@ -16,7 +16,6 @@ import {
   wizardApplyAllSteam,
   goSettings,
   selectedPicks,
-  loadKnownApps,
   publicName
 } from '../store.js'
 
@@ -25,11 +24,10 @@ const nameInput = ref(null)
 const lookedUp = ref('')
 const resolvedName = ref('')
 
-onMounted(async () => {
+onMounted(() => {
   if (!el.value) return
   gsap.fromTo(el.value, { opacity: 0, y: 18, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: 'power3.out' })
   nextTick(() => nameInput.value?.focus())
-  if (!state.knownApps.length) await loadKnownApps()
 })
 
 const w = computed(() => state.wizard)

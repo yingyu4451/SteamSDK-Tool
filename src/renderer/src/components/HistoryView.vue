@@ -79,10 +79,7 @@ async function refresh() {
           </button>
         </div>
 
-        <div v-if="!shown.length" class="p-6 text-[12.5px] text-faint leading-relaxed">
-          还没有任何构建日志。<br />
-          跑一次 Preview 就会生成。
-        </div>
+        <div v-if="!shown.length" class="p-6 text-[12.5px] text-faint">还没有构建日志</div>
       </div>
 
       <!-- 内容 -->

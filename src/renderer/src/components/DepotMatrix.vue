@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { fmtSize, fmtInt } from '../format.js'
-import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot } from '../store.js'
+import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL } from '../store.js'
 
 const props = defineProps({ depots: { type: Array, default: () => [] } })
 
@@ -46,6 +46,7 @@ const metaLine = computed(() => {
 })
 
 const osLabel = (id) => state.depotOptions.os.find((o) => o.id === id)?.label || id || ''
+const platLabel = (id) => PLATFORM_LABEL[id] || id || ''
 const archLabel = (id) => state.depotOptions.arch.find((o) => o.id === id)?.label || id || ''
 const langLabel = (id) =>
   state.depotOptions.languages.find((l) => l.id === id)?.label || (id === 'all' ? '所有语言' : id || '')

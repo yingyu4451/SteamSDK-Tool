@@ -200,9 +200,8 @@ const exitTone = computed(() => {
         <span :class="`log-${l.stream}`">{{ l.line }}</span>
       </div>
 
-      <div v-if="!state.logs.length" class="text-[12px] text-faint py-6 text-center leading-relaxed">
-        点「自检」验证 vdf 与排除规则，或点「Preview 空跑」走一遍完整构建流程。<br />
-        Preview 不会向 Steam 上传任何东西。
+      <div v-if="!state.logs.length" class="text-[12px] text-faint py-6 text-center">
+        点「自检」或「Preview 空跑」开始
       </div>
     </div>
   </section>

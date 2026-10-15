@@ -33,10 +33,6 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
       <header class="px-6 pt-5 pb-4 border-b border-line flex items-start gap-3">
         <div>
           <h2 class="text-[16px] font-semibold m-0">把游离的 vdf 收进一个 App</h2>
-          <p class="mt-1.5 mb-0 text-[11.5px] text-faint leading-relaxed">
-            会新建 <span class="font-mono">scripts\&lt;名字&gt;\</span>，把根目录下的文件搬进去，
-            并把 depot 文件名规范成 <span class="font-mono">depot_&lt;DepotID&gt;_&lt;平台&gt;.vdf</span>。
-          </p>
         </div>
         <button
           class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
@@ -79,11 +75,6 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
             class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
           >
             <span class="text-faint">depot</span> {{ o.file }}
-          </div>
-
-          <div class="mt-2 pt-2 border-t border-line-soft text-[11px] text-faint leading-relaxed">
-            app vdf 里指向根目录的绝对路径会被改写成新位置；
-            没被 app 引用、也没写 DepotID 的文件会留在原地。
           </div>
         </div>
 
