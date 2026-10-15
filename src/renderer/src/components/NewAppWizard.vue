@@ -292,50 +292,56 @@ function onPickPlatform(d, e) {
         <div class="flex flex-col gap-2">
           <span class="text-[11.5px] text-muted">平台</span>
 
-          <div class="flex flex-col gap-1.5">
+          <div class="rounded-[10px] border border-line overflow-hidden">
+            <div
+              class="grid grid-cols-[20px_104px_116px_1fr_70px] items-center gap-2 px-3 h-7 bg-[rgba(255,255,255,.022)] text-[10.5px] text-faint tracking-wider uppercase"
+            >
+              <span />
+              <span>平台</span>
+              <span>DepotID</span>
+              <span>内容目录</span>
+              <span />
+            </div>
+
             <div
               v-for="p in w.platforms"
               :key="p.id"
-              class="rounded-[10px] border transition-colors"
-              :class="
-                w.picks[p.id].on ? 'border-[rgba(46,230,197,.3)] bg-[rgba(46,230,197,.035)]' : 'border-line bg-transparent'
-              "
+              class="grid grid-cols-[20px_104px_116px_1fr_70px] items-center gap-2 px-3 h-10 border-t border-line-soft transition-colors"
+              :class="w.picks[p.id].on ? 'bg-[rgba(46,230,197,.035)]' : ''"
             >
-              <label class="flex items-center gap-3 px-3 h-11 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  :checked="w.picks[p.id].on"
-                  class="accent-[#2ee6c5] w-3.5 h-3.5"
-                  @change="wizardTogglePlatform(p.id)"
-                />
-                <span class="text-[12.5px]" :class="w.picks[p.id].on ? 'text-ink' : 'text-muted'">{{ p.label }}</span>
-                <span
-                  v-if="w.picks[p.id].on"
-                  class="ml-auto font-mono text-[11px] text-faint truncate max-w-[320px]"
-                >
-                  {{ w.picks[p.id].contentRoot || '（未填内容目录）' }}
-                </span>
+              <input
+                type="checkbox"
+                :checked="w.picks[p.id].on"
+                class="accent-[#2ee6c5] w-3.5 h-3.5"
+                @change="wizardTogglePlatform(p.id)"
+              />
+              <label
+                class="text-[12px] cursor-pointer select-none truncate"
+                :class="w.picks[p.id].on ? 'text-ink' : 'text-faint'"
+                @click="wizardTogglePlatform(p.id)"
+              >
+                {{ p.label }}
               </label>
-
-              <div v-if="w.picks[p.id].on" class="px-3 pb-3 flex flex-col gap-2">
-                <div class="grid grid-cols-[130px_1fr] gap-2 items-center">
-                  <span class="text-[11px] text-faint">DepotID</span>
-                  <input
-                    :value="w.picks[p.id].depotId"
-                    class="h-8 px-2.5 rounded-lg bg-surface border border-line text-[12px] num outline-none focus:border-[rgba(46,230,197,.45)]"
-                    @input="wizardSetDepotId(p.id, $event.target.value)"
-                  />
-                </div>
-                <div class="grid grid-cols-[130px_1fr_auto] gap-2 items-center">
-                  <span class="text-[11px] text-faint">内容目录</span>
-                  <input
-                    :value="w.picks[p.id].contentRoot"
-                    class="h-8 px-2.5 rounded-lg bg-surface border border-line text-[11.5px] font-mono outline-none focus:border-[rgba(46,230,197,.45)]"
-                    @input="wizardSetRoot(p.id, $event.target.value)"
-                  />
-                  <button class="btn h-8 px-2.5 text-[11px]" @click="wizardPickRoot(p.id)">选择…</button>
-                </div>
-              </div>
+              <input
+                :value="w.picks[p.id].depotId"
+                :disabled="!w.picks[p.id].on"
+                placeholder="AppID+1"
+                class="h-7 px-2 rounded-md bg-surface border border-line text-[11.5px] num outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
+                @input="wizardSetDepotId(p.id, $event.target.value)"
+              />
+              <input
+                :value="w.picks[p.id].contentRoot"
+                :disabled="!w.picks[p.id].on"
+                class="h-7 px-2 rounded-md bg-surface border border-line text-[11px] font-mono outline-none focus:border-[rgba(46,230,197,.45)] disabled:opacity-35 disabled:cursor-not-allowed"
+                @input="wizardSetRoot(p.id, $event.target.value)"
+              />
+              <button
+                class="btn h-7 px-2 text-[11px]"
+                :disabled="!w.picks[p.id].on"
+                @click="wizardPickRoot(p.id)"
+              >
+                选择…
+              </button>
             </div>
           </div>
         </div>
@@ -356,27 +362,39 @@ function onPickPlatform(d, e) {
           先设成 preview（空跑）
         </label>
 
-        <!-- 预览 -->
-        <div class="card-flat p-3.5">
-          <div class="text-[11px] font-semibold tracking-wider text-faint uppercase mb-2">会创建</div>
-          <div
-            v-for="(f, i) in willCreate.scripts"
-            :key="'s' + i"
-            class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
+        <!-- 预览：默认收起，勾几个平台都不会把弹窗撑长 -->
+        <details class="card-flat px-3.5 py-2.5 group">
+          <summary
+            class="flex items-center gap-2.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden"
           >
-            <span class="text-faint">＋ 脚本　</span>{{ f }}
-          </div>
-          <div
-            v-for="(d, i) in willCreate.dirs"
-            :key="'d' + i"
-            class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
-          >
-            <span class="text-faint">＋ 目录　</span>{{ d }}
-          </div>
+            <span class="text-[11px] font-semibold tracking-wider text-faint uppercase">会创建</span>
+            <span class="text-[11.5px] text-muted num">
+              {{ willCreate.scripts.length }} 个脚本 · {{ willCreate.dirs.length }} 个目录
+            </span>
+            <span class="ml-auto text-[11px] text-faint group-open:hidden">展开</span>
+            <span class="ml-auto text-[11px] text-faint hidden group-open:inline">收起</span>
+          </summary>
 
-          <div v-if="depotIdDup" class="mt-2 text-[11px] text-danger">
-            DepotID 有重复 —— 同一个 App 下每个 DepotID 必须不一样。
+          <div class="mt-2 flex flex-col">
+            <div
+              v-for="(f, i) in willCreate.scripts"
+              :key="'s' + i"
+              class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
+            >
+              <span class="text-faint">＋ 脚本　</span>{{ f }}
+            </div>
+            <div
+              v-for="(d, i) in willCreate.dirs"
+              :key="'d' + i"
+              class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
+            >
+              <span class="text-faint">＋ 目录　</span>{{ d }}
+            </div>
           </div>
+        </details>
+
+        <div v-if="depotIdDup" class="text-[11.5px] text-danger">
+          DepotID 有重复 —— 同一个 App 下每个 DepotID 必须不一样。
         </div>
 
         <div

@@ -48,6 +48,37 @@ const willCreate = computed(() => {
     dir: String(v.contentRoot || '').trim()
   }
 })
+
+/* ---- 后台那份填什么，抄这段 ---- */
+
+const copied = ref(false)
+
+const backendRows = computed(() => {
+  const v = s.value
+  const o = state.depotOptions || {}
+  const pick = (list, id) => (list || []).find((x) => x.id === id)?.label || id || ''
+  return [
+    ['App ID', String(state.detail?.appId ?? '').trim()],
+    ['Depot Name', String(v?.name || '').trim()],
+    ['Depot ID', String(v?.depotId || '').trim()],
+    ['OS', pick(o.os, v?.os)],
+    ['Architecture', pick(o.arch, v?.arch)],
+    ['Language', pick(o.languages, v?.language)]
+  ]
+})
+
+async function copyBackend() {
+  const text = backendRows.value.map(([k, val]) => `${k}\t${val}`).join('\n')
+  try {
+    await navigator.clipboard.writeText(text)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 1600)
+  } catch {
+    /* 剪贴板不可用就算了 */
+  }
+}
 </script>
 
 <template>
@@ -71,6 +102,11 @@ const willCreate = computed(() => {
       </header>
 
       <div class="flex-1 overflow-y-auto scroll-thin px-5 py-4 flex flex-col gap-4">
+        <div class="flex items-baseline gap-2">
+          <span class="text-[10.5px] font-semibold tracking-wider text-faint uppercase">Steamworks 后台</span>
+          <span class="text-[10.5px] text-faint">只在本地记录，不会写进 vdf</span>
+        </div>
+
         <label class="flex flex-col gap-1.5">
           <span class="text-[11.5px] text-muted">Depot 名称</span>
           <input
@@ -126,6 +162,26 @@ const willCreate = computed(() => {
             <option v-for="l in state.depotOptions.languages" :key="l.id" :value="l.id">{{ l.label }}</option>
           </select>
         </label>
+
+        <div class="card-flat px-3.5 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-semibold tracking-wider text-faint uppercase">照着填后台</span>
+            <button class="ml-auto btn h-7 px-2.5 text-[11px] no-drag" @click="copyBackend">
+              {{ copied ? '已复制' : '复制' }}
+            </button>
+          </div>
+          <div class="mt-2 grid grid-cols-[96px_1fr] gap-x-2 gap-y-1">
+            <template v-for="(row, i) in backendRows" :key="i">
+              <span class="text-[11px] text-faint">{{ row[0] }}</span>
+              <span class="text-[11.5px] num truncate">{{ row[1] || '—' }}</span>
+            </template>
+          </div>
+        </div>
+
+        <div class="flex items-baseline gap-2 pt-1 border-t border-line-soft">
+          <span class="text-[10.5px] font-semibold tracking-wider text-faint uppercase">本地 · SteamPipe</span>
+          <span class="text-[10.5px] text-faint">vdf 里真正生效的部分</span>
+        </div>
 
         <label class="flex flex-col gap-1.5">
           <span class="text-[11.5px] text-muted">内容目录</span>

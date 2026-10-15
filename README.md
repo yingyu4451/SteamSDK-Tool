@@ -18,11 +18,12 @@ App 列表、内容体检、一键自检、Preview 空跑、正式上传、实�
 | **新建时就把目录建好** | 向导建 App 时真的 `mkdir` 内容根目录（`D:\SteamBuilds\<名字>\<平台>`），不写占位文件 —— 占了位会被当内容传上 Steam。老配置缺目录时，Depot 行上有个「创建目录」按钮 |
 | **删除 App** | 编辑抽屉底部「删除这个 App」。弹窗显示真实文件数/体积和每个内容目录的状态，**二次点击确认**（点一下只是上膛，5 秒内再点一次才真删；改勾选、关窗口、超时都会自动取消）。默认只删 vdf、保留内容目录；要连内容目录一起删得自己勾，而且只有当它在 `D:\SteamBuilds` 里面才会删 |
 | **AppID 冲突检测** | 两个本地 App 用同一个 AppID 时，标题栏和侧栏都标红。给其中一个跑构建，内容会传到同一个 Steam App 上 —— 这种错误光看单个 App 是发现不了的 |
-| **与后台对账** | 本地配置和后台核对：AppID / DepotID 是不是真实存在、属于哪个账号、平台对不对，并列出后台那个 App 下**实际有哪几个 Depot**（平台 / 分支 / 体积）。**和「读取后台 Depot」走同一条路**：有 Web API 密钥就用密钥，没有就自动退回 steamcmd + 已保存的 Steam 账号 —— 不是管理员也能用。纯只读 |
+| **同步 Depot** | 读后台那个 App 下**实际有哪几个 Depot**（平台 / 分支 / 体积），列成带勾选框的清单，你自己挑要补哪几个，点「添加选中的 N 个」才写进来 —— 本地已有的会置灰标「本地已有」。**和「读取后台 Depot」走同一条路**：有 Web API 密钥就用密钥，没有就自动退回 steamcmd + 已保存的 Steam 账号 —— 不是管理员也能用。纯只读，不会碰后台 |
 | **项目文件夹** | 一个 App 一个**项目文件夹**（App 层 `ContentRoot`），各平台在它下面分子目录：`<项目文件夹>\win64`、`\macos`、`\linux`…… 每个 Depot 用自己的 `contentroot` 指过去。改完项目文件夹，抽屉里有「各 Depot 按项目文件夹重排」，一次把所有 Depot 挪过去并建好目录 —— 不重排的话它们还指着旧地方，构建时读到的是过期内容 |
 | **界面内编辑** | App 的 AppID / Desc / ContentRoot / BuildOutput / preview / SetLive，Depot 的 DepotID / 平台 / 内容目录 / FileExclusion，全都能在抽屉里改，不用手写 vdf |
 | **内容目录一键绑定** | 抽屉里点「选择…」挑文件夹；App 只有一个 Depot 时，改一次两边同步 |
-| **多平台 Depot** | Depot 矩阵上点平台卡片就能加 macOS / Linux depot，各自的排除规则按平台预填（macOS 会带上 `*.dSYM\*`） |
+| **Depot 用选项卡，不堆列表** | Depot 面板顶部是平台卡片（只显示**已配置**的平台，没有 win64/win32/linux 占位），点一下切到那个 Depot，下面显示它的状态 / 系统 / 语言 / 四个数字 / 内容目录 / 脚本名，再接「会被上传的可疑文件」和「被 FileExclusion 挡下的文件（按规则分组）」两块折叠区。原来那个独立的「内容体检」面板已删掉 —— 它的四个数字跟这里是同一份，没有存在的必要 |
+| **新建 Depot 走侧边栏** | Depot 面板右上角「＋ 新建 Depot」从右侧滑出 460px 侧边栏。字段分两组：**Steamworks 后台**（名称 / DepotID / 操作系统 / 架构 / 语言）和**本地 · SteamPipe**（内容目录）。同平台已经有 Depot 时弹黄色警告，要勾「确实要再加一个同平台的」才能建 |
 | **一键自检** | 跑的是 `check.ps1`，输出实时流回界面 |
 | **Preview / 正式上传** | 正式上传要点两次确认；没存密码时弹输入行而不是让进程干等 |
 | **实时日志** | steamcmd 和 PowerShell 的输出逐行流回，可复制、可中止（整棵进程树一起杀） |
@@ -50,6 +51,55 @@ Valve 的模板和手写的脚本里，`"Depots"` 块两种写法都有：
 两种都支持。这里踩过一个坑：**`path.join` 不像 `path.resolve` 那样会被绝对路径重置** ——
 `path.join('D:\a', 'D:\b\x.vdf')` 拼出来是 `D:\a\D:\b\x.vdf`，于是每个 depot 都被误报「脚本不存在」。
 PowerShell 的 `Join-Path` 有同样的问题，`build.ps1` / `check.ps1` 里也一并修了。
+
+### 「新建 Depot」的表单里，哪些字段真的会生效
+
+新建 Depot 的侧边栏把字段分成两组，因为这两组东西的去处完全不同：
+
+**本地 · SteamPipe** —— 只有 `内容目录`（以及 depot 脚本里的 `FileMapping` / `FileExclusion`）。
+这些是 `depot_<id>_<平台>.vdf` 里真正生效的部分。实际写出来的脚本长这样：
+
+```
+"DepotBuildConfig"
+{
+	"DepotID"		"3036851"
+	"contentroot"	"D:\SteamBuilds\AbyaDemo\win64"
+	"FileMapping" { "LocalPath" "*"  "DepotPath" "."  "recursive" "1" }
+	"FileExclusion"	"*.pdb"
+	...
+}
+```
+
+**Steamworks 后台** —— `名称` / `DepotID` / `操作系统` / `架构` / `语言`。
+这几个**不会写进 vdf，也不会被自动同步到后台**。`DepotID` 除外（它是两边对上的钥匙，必须和后台一致），
+其余四个只是本地备查，存在 `settings.json` 的 `depotMeta` 里，
+侧边栏的「照着填后台」把这一组拼成可以直接抄的清单。
+
+后台哪些字段是真的、我核对过：对 TF2（AppID 440）跑
+`steamcmd +login anonymous +app_info_print 440 +quit` 拿到 1063 行文本 VDF，
+逐条 depot 看下来，后台侧的 depot 属性是：
+
+```
+"445"
+{
+	"config" { "language" "russian" }
+	"config" { "oslist" "windows"  "osarch" "64" }
+	"manifests" { "public" { "gid" ... "size" ... "download" ... } }
+	"depotfromapp" "228980"     // 可选
+	"sharedinstall" "1"         // 可选
+	"systemdefined" "1"         // 可选（Valve 自己定义的）
+	"dlcappid" / "maxsize"      // 可选
+}
+```
+
+对照结论：
+- `操作系统` / `架构` / `语言` 对得上后台的 `config.oslist` / `config.osarch` / `config.language`（**语言在 `config` 里，不在 depot 顶层**）。
+- **后台的 appinfo 里根本没有 depot「名称」这个字段** —— 表单里的名称纯粹是本地备注。
+- `内容目录` 后台也没有，那是 SteamPipe 本地的事。
+- 表单里**没有**的是后台确实有的 `dlcappid` / `sharedinstall` / `depotfromapp` / `maxsize` ——
+  这几个只在特殊场景用到（DLC depot、共享安装、借别的 App 的 depot），没有做成输入框。
+- 后台只能**读**不能写：steamcmd 没有「建 depot」这个命令，`操作系统`/`语言` 这类要真生效，
+  还是得去 Steamworks 网页上设一次。
 
 ---
 
