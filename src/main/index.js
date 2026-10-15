@@ -58,7 +58,7 @@ import {
   repoUrl
 } from './updater.js'
 import { analyzeTarget, applyDrop } from './dropzone.js'
-import { localStatus, startLocal, stopLocal, steamDevCfg, writeSteamDevCfg } from './localserver.js'
+import { localStatus, startLocal, stopLocal, probePort, steamDevCfg, writeSteamDevCfg } from './localserver.js'
 import {
   PLATFORMS,
   DEFAULT_EXCLUSIONS,
@@ -648,7 +648,12 @@ function registerIpc() {
   })
 
   /* ---- 本地内容服务器 ---- */
-  ipcMain.handle('local:status', () => localStatus(loadSettings()))
+  ipcMain.handle('local:status', async () => {
+    const st = localStatus(loadSettings())
+    // 「在跑」和「真的能访问」是两件事，状态里必须分开报
+    st.serving = st.running ? await probePort(st.port) : false
+    return st
+  })
   ipcMain.handle('local:start', (_e, { port } = {}) => startLocal(loadSettings(), port || 80))
   ipcMain.handle('local:stop', () => stopLocal())
   ipcMain.handle('local:devcfg', (_e, { port } = {}) => steamDevCfg(loadSettings(), port || 80))
@@ -682,7 +687,13 @@ function registerIpc() {
 
   ipcMain.handle('local:open', async () => {
     const st = localStatus(loadSettings())
-    if (!st.running) return { ok: false, error: '服务器没在跑' }
+    if (!st.running) return { ok: false, error: '服务器没在跑，先点「启动」。' }
+    if (!(await probePort(st.port))) {
+      return {
+        ok: false,
+        error: `http://127.0.0.1:${st.port}/ 没有应答 —— 端口上可能挂着别的东西。先「停止」再「启动」一次。`
+      }
+    }
     const err = await shell.openExternal(st.url)
     return err ? { ok: false, error: String(err) } : { ok: true, url: st.url }
   })

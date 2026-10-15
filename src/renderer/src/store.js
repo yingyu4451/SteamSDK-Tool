@@ -93,7 +93,16 @@ export const state = reactive({
   // 检查文件
   preflight: { busy: false, error: null, data: null },
   // 本地内容服务器
-  local: { running: false, port: 80, url: '', installed: true, busy: false, devcfg: null, error: null },
+  local: {
+    running: false,
+    serving: false,
+    port: 80,
+    url: '',
+    installed: true,
+    busy: false,
+    devcfg: null,
+    error: null
+  },
   // 拖进来的文件夹 / 压缩包：{ over, busy, data, error }
   // over 是「正拖着东西悬在窗口上」，data 是分析结果
   drop: { over: false, busy: false, data: null, error: null },

@@ -415,18 +415,34 @@ textarea {
 }
 
 /*
- * 工具条下面那些面板（同步 Depot / 预检 / 本地服务器 / 密码行）。
+ * 工具条下面那些面板（同步 Depot / 检查文件 / 本地服务器 / 密码行）。
  * 原来它们是条内流式块，一展开就把下面所有内容顶下去 —— 看起来像“按钮弹了个 div”。
  * 改成绝对定位的浮层，完全不占布局。
+ *
+ * 宽度也改了：原来是 left:0 right:0，一个按钮弹出一整条横贯窗口的面板，
+ * 跟点哪儿没关系，看着很怪。现在收成一个 620px 的下拉，挂在按钮那一侧
+ * （左边按钮用 .bar-pop-left，右边按钮用 .bar-pop-right）。
  */
 .bar-pop {
   position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
+  top: calc(100% + 10px);
   z-index: 30;
-  background: linear-gradient(180deg, #1e2f44, #1b2838);
+  width: min(620px, calc(100vw - 48px));
+  max-height: min(64vh, 580px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1f3448, #182636);
   box-shadow:
-    0 20px 44px -14px rgba(0, 0, 0, 0.8),
-    0 0 0 1px var(--color-line);
+    0 26px 56px -18px rgba(0, 0, 0, 0.86),
+    0 3px 10px -3px rgba(0, 0, 0, 0.6);
+}
+
+.bar-pop-left {
+  left: 0;
+}
+
+.bar-pop-right {
+  right: 0;
 }

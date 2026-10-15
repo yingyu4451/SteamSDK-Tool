@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onBeforeUnmount } from 'vue'
+import { computed, ref, reactive, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
   state,
   runCheck,
@@ -113,6 +113,44 @@ const pfTone = computed(() => {
 
 const localOpen = ref(false)
 
+/* ---- 浮层锚点 ----
+ * 浮层挂在工具条这一层（绝对定位，不占布局），所以默认只能贴工具条的左右边。
+ * 想让面板正对着点它的那个按钮，就得自己算一下按钮相对工具条的横向位置。
+ */
+const barEl = ref(null)
+const anchors = reactive({ pf: {}, verify: {}, local: {}, pwd: {} })
+const POP_W = 620
+
+function anchorTo(key, el) {
+  const bar = barEl.value
+  const btn = el || bar?.querySelector(`[data-pop="${key}"]`)
+  if (!bar || !btn) return
+  const b = bar.getBoundingClientRect()
+  const r = btn.getBoundingClientRect()
+  const w = Math.min(POP_W, b.width)
+  const left = r.left - b.left
+  if (left + w > b.width) {
+    // 右边放不下就改成贴着按钮的右边对齐 —— 不然会顶到窗口外面
+    anchors[key] = { left: 'auto', right: `${Math.round(Math.max(0, b.right - r.right))}px` }
+    return
+  }
+  anchors[key] = { left: `${Math.round(Math.max(0, left))}px`, right: 'auto' }
+}
+
+function reanchor() {
+  if (state.askPassword) anchorTo('pwd')
+  if (state.verify.busy || state.verify.error || state.verify.data) anchorTo('verify')
+  if (state.preflight.busy || state.preflight.error || state.preflight.data) anchorTo('pf')
+  if (localOpen.value) anchorTo('local')
+}
+onMounted(() => window.addEventListener('resize', reanchor))
+watch(
+  () => state.askPassword,
+  (v) => {
+    if (v) nextTick(() => anchorTo('pwd'))
+  }
+)
+
 async function toggleLocalPanel() {
   localOpen.value = !localOpen.value
   if (!localOpen.value) return
@@ -128,7 +166,7 @@ const localHost = computed(() => {
 </script>
 
 <template>
-  <div class="card p-3 flex items-center gap-2 flex-wrap min-w-0 relative" v-reveal="{ delay: 0.02 }">
+  <div ref="barEl" class="card p-3 flex items-center gap-2 flex-wrap min-w-0 relative" v-reveal="{ delay: 0.02 }">
     <button
       class="btn no-drag"
       :disabled="disabled"
@@ -142,8 +180,9 @@ const localHost = computed(() => {
     <button
       class="btn no-drag"
       :disabled="disabled || state.preflight.busy"
+      data-pop="pf"
       title="检查文件：扫一遍真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app bundle。配置没问题但文件有问题时，只有这一关能发现。"
-      @click="runPreflight()"
+      @click="(e) => { anchorTo('pf', e.currentTarget); runPreflight() }"
     >
       <ShieldCheck :size="16" :stroke-width="1.8" />
       {{ state.preflight.busy ? '检查中…' : '检查文件' }}
@@ -160,6 +199,7 @@ const localHost = computed(() => {
       class="btn no-drag"
       :class="confirming ? 'btn-danger' : 'btn-primary'"
       :disabled="disabled"
+      data-pop="pwd"
       @click="doLive"
     >
       <Upload :size="16" :stroke-width="2.2" />
@@ -185,14 +225,16 @@ const localHost = computed(() => {
       <button
         class="btn no-drag"
         :disabled="!appId || state.verify.busy"
-        @click="verifyAgainstSteam()"
+        data-pop="verify"
+        @click="(e) => { anchorTo('verify', e.currentTarget); verifyAgainstSteam() }"
       >
         {{ state.verify.busy ? '读取中…' : '同步 Depot' }}
       </button>
       <button
         class="btn no-drag"
         :class="localEnabled ? 'border-[rgba(102,192,244,.35)] text-accent' : ''"
-        @click="toggleLocalPanel"
+        data-pop="local"
+        @click="(e) => { anchorTo('local', e.currentTarget); toggleLocalPanel() }"
       >
         <span
           v-if="state.local.running"
@@ -210,7 +252,8 @@ const localHost = computed(() => {
     >
       <div
         v-if="state.askPassword"
-        class="bar-pop rounded-[10px] border border-[rgba(255,180,84,.3)] px-3 py-2.5"
+        class="bar-pop bar-pop-left rounded-[10px] border border-[rgba(255,180,84,.3)] px-3 py-2.5"
+        :style="anchors.pwd"
       >
         <div class="flex items-center gap-2 text-[12px] text-amber">
           <Lock :size="16" :stroke-width="1.9" class="shrink-0" />
@@ -247,7 +290,8 @@ const localHost = computed(() => {
     >
       <div
         v-if="state.verify.busy || state.verify.error || state.verify.data"
-        class="bar-pop rounded-[10px] border px-3 py-2.5"
+        class="bar-pop bar-pop-right rounded-[10px] border px-3 py-2.5"
+        :style="anchors.verify"
         :class="
           state.verify.error
             ? 'border-[rgba(255,180,84,.3)]'
@@ -374,7 +418,8 @@ const localHost = computed(() => {
     >
       <div
         v-if="state.preflight.busy || state.preflight.error || pf"
-        class="bar-pop rounded-[10px] border px-3 py-2.5"
+        class="bar-pop bar-pop-left rounded-[10px] border px-3 py-2.5"
+        :style="anchors.pf"
         :class="
           state.preflight.error
             ? 'border-[rgba(255,180,84,.3)]'
@@ -423,12 +468,26 @@ const localHost = computed(() => {
     >
       <div
         v-if="localOpen"
-        class="bar-pop rounded-[10px] border border-line px-3 py-2.5"
+        class="bar-pop bar-pop-right rounded-[10px] border border-line px-3 py-2.5"
+        :style="anchors.local"
       >
         <div class="flex items-center gap-2 flex-wrap">
           <span class="font-semibold text-[12px]">本地内容服务器</span>
-          <span class="pill" :class="state.local.running ? 'pill-ok' : 'pill-idle'">
-            {{ state.local.running ? `运行中 · ${state.local.url}` : '没在跑' }}
+          <span
+            class="pill"
+            :class="
+              state.local.running && state.local.serving
+                ? 'pill-ok'
+                : state.local.running
+                  ? 'pill-warn'
+                  : 'pill-idle'
+            "
+          >
+            <template v-if="state.local.running && state.local.serving">
+              运行中 · {{ state.local.url }}
+            </template>
+            <template v-else-if="state.local.running">在跑，但访问不了</template>
+            <template v-else>没在跑</template>
           </span>
           <button class="ml-auto btn h-7 px-2.5 text-[11px] no-drag" @click="localOpen = false">收起</button>
         </div>
