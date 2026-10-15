@@ -182,6 +182,27 @@ function buildSteamVerify(app, steamy, settings, webError = '') {
  *  窗口
  * ------------------------------------------------------------------ */
 
+/* 任务栏 / 窗口图标。开发模式读仓库里的 build/，打包后读 resources/
+ * （由 electron-builder 的 extraResources 拷进去）。
+ * Windows 用 .ico（多尺寸，任务栏小图才清晰），其它平台用 .png。 */
+function appIconPath() {
+  const name = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+  const roots = app.isPackaged
+    ? [process.resourcesPath]
+    : [path.join(__dirname, '../../build')]
+  for (const root of roots) {
+    for (const file of [name, 'icon.png']) {
+      const p = path.join(root, file)
+      try {
+        if (fs.existsSync(p)) return p
+      } catch {
+        /* 读不到就试下一个 */
+      }
+    }
+  }
+  return undefined
+}
+
 function createWindow() {
   const settings = loadSettings()
   const b = settings.windowBounds || {}
@@ -196,6 +217,9 @@ function createWindow() {
     show: false,
     backgroundColor: '#171a21',
     title: 'SteamSDK 上传工作台',
+    // 任务栏 / Alt+Tab 图标。打包后 exe 里也嵌了同一份，但显式给一份
+    // 能让开发模式（跑的是 electron.exe）也显示自己的图标，而不是 Electron 的默认原子。
+    icon: appIconPath(),
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     titleBarOverlay: {

@@ -17,6 +17,13 @@ files:
 extraMetadata:
   main: out/main/index.js
 
+# 任务栏 / 窗口图标要在运行时按真实路径读到（BrowserWindow 的 icon 不收 asar 内的虚拟路径）
+extraResources:
+  - from: build/icon.ico
+    to: icon.ico
+  - from: build/icon.png
+    to: icon.png
+
 win:
   target:
     - target: nsis
@@ -35,3 +42,7 @@ nsis:
   shortcutName: SteamSDK 上传工作台
   uninstallDisplayName: SteamSDK 上传工作台
   deleteAppDataOnUninstall: false
+  # 安装包 / 卸载程序自己的图标
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
