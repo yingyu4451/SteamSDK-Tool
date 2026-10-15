@@ -336,7 +336,7 @@ onUnmounted(depotDisarm)
         <!-- ============ App ============ -->
         <template v-if="!isDepot">
           <!-- 一行一条：平时只读，点右边的按钮才进编辑态 -->
-          <div class="card-flat divide-y divide-[#1a212b]">
+          <div class="card-flat divide-y divide-[#22334a]">
             <div class="px-3 py-2.5">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="w-[88px] shrink-0 text-[11.5px] text-faint">App 名字</span>
@@ -352,7 +352,7 @@ onUnmounted(depotDisarm)
                 <template v-else>
                   <input
                     v-model="nameForm"
-                    class="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(46,230,197,.45)]"
+                    class="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(102,192,244,.45)]"
                     @keyup.enter="doRename"
                   />
                   <button
@@ -389,7 +389,7 @@ onUnmounted(depotDisarm)
                   <input
                     v-model="editValue"
                     :placeholder="row.placeholder || ''"
-                    class="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+                    class="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                     :class="[row.mono ? 'font-mono' : '', row.num ? 'num' : '']"
                     @keyup.enter="commitEdit(row.key)"
                   />
@@ -466,14 +466,14 @@ onUnmounted(depotDisarm)
               <span class="text-[11.5px] text-muted">DepotID</span>
               <input
                 v-model="depotForm.depotId"
-                class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] num outline-none focus:border-[rgba(46,230,197,.45)]"
+                class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] num outline-none focus:border-[rgba(102,192,244,.45)]"
               />
             </label>
             <label class="flex flex-col gap-1.5">
               <span class="text-[11.5px] text-muted">平台</span>
               <select
                 v-model="depotForm.platform"
-                class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)]"
+                class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
               >
                 <option v-for="p in platforms" :key="p.id" :value="p.id">{{ p.label }}</option>
               </select>
@@ -488,7 +488,7 @@ onUnmounted(depotDisarm)
             <div class="flex gap-2">
               <input
                 v-model="depotForm.contentRoot"
-                class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(46,230,197,.45)]"
+                class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
               />
               <button class="btn no-drag" @click="pickRoot">选择…</button>
             </div>
@@ -501,7 +501,7 @@ onUnmounted(depotDisarm)
               <button class="ml-auto btn h-7 px-2.5 text-[11.5px] no-drag" @click="resetRules">恢复默认</button>
             </div>
 
-            <div class="card-flat divide-y divide-[#1a212b] max-h-[260px] overflow-y-auto scroll-thin">
+            <div class="card-flat divide-y divide-[#22334a] max-h-[260px] overflow-y-auto scroll-thin">
               <div
                 v-for="(rule, i) in depotForm.exclusions"
                 :key="i"
@@ -529,7 +529,7 @@ onUnmounted(depotDisarm)
               <input
                 v-model="newRule"
                 placeholder="加一条，例如 *.pdb 或 logs\*"
-                class="flex-1 h-8 px-3 rounded-lg bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+                class="flex-1 h-8 px-3 rounded-lg bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 @keydown.enter="addRule"
               />
               <button class="btn h-8 no-drag" :disabled="!newRule.trim()" @click="addRule">添加</button>
@@ -550,7 +550,7 @@ onUnmounted(depotDisarm)
               </span>
             </div>
 
-            <div class="card-flat divide-y divide-[#1a212b] max-h-[200px] overflow-y-auto scroll-thin">
+            <div class="card-flat divide-y divide-[#22334a] max-h-[200px] overflow-y-auto scroll-thin">
               <div
                 v-for="(row, i) in depotForm.userConfig"
                 :key="'uc' + i"
@@ -579,7 +579,7 @@ onUnmounted(depotDisarm)
               <input
                 v-model="newUserConfig"
                 placeholder="相对内容目录，例如 ABYA_PB_Data/Progress"
-                class="flex-1 h-8 px-3 rounded-lg bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+                class="flex-1 h-8 px-3 rounded-lg bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 @keydown.enter="addUserConfig"
               />
               <button class="btn h-8 no-drag" :disabled="!newUserConfig.trim()" @click="addUserConfig">
@@ -599,7 +599,7 @@ onUnmounted(depotDisarm)
               {{ depotArmed ? `确认删除 Depot（${depotLeft}）` : '删除这个 Depot' }}
             </button>
           </div>
-          <div v-if="depotArmed" class="mt-2 text-[11px] text-[#ff8d97] leading-relaxed">
+          <div v-if="depotArmed" class="mt-2 text-[11px] text-[#ff8a8a] leading-relaxed">
             会删掉文件 {{ drawer.depotFile }}，并从 app 脚本里移除引用。
             Steam 上已经传过的 depot 不受影响。5 秒内再点一次才真删。
           </div>

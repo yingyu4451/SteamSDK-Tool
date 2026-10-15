@@ -1,31 +1,32 @@
 @import 'tailwindcss';
 
 /* ==================================================================
-   主题：深石墨底 + 薄荷青信号色。刻意避开 Steam 官方蓝和常见的
-   紫蓝渐变，走「机房里的一块仪表盘」的调子。
+   主题：照着 Steam 客户端的调子 —— 深蓝底 + 浅蓝信号色 + 绿色主按钮。
+   取色参考 Steam 自己的配色：底 #171a21、面板 #1b2838、抬升 #2a475e、
+   文字 #c6d4df / #8f98a0、链接蓝 #66c0f4、Play 按钮绿 #75b022→#588a1b。
    ================================================================== */
 @theme {
-  --color-base: #0a0c10;
-  --color-surface: #12161d;
-  --color-surface-2: #181e27;
-  --color-surface-3: #1f2733;
-  --color-line: #232b36;
-  --color-line-soft: #1a212b;
+  --color-base: #171a21;
+  --color-surface: #1b2838;
+  --color-surface-2: #21344a;
+  --color-surface-3: #2a475e;
+  --color-line: #2a3f5a;
+  --color-line-soft: #22334a;
 
-  --color-ink: #e8eef6;
-  --color-muted: #78889c;
-  --color-faint: #4d5b6e;
+  --color-ink: #dbe6ef;
+  --color-muted: #8f98a0;
+  --color-faint: #66707a;
 
-  --color-accent: #2ee6c5;
-  --color-accent-dim: #1b9e88;
-  --color-amber: #ffb454;
-  --color-danger: #ff5c6c;
-  --color-success: #4ade80;
+  --color-accent: #66c0f4;
+  --color-accent-dim: #2f7dad;
+  --color-amber: #f0a92e;
+  --color-danger: #e24b4b;
+  --color-success: #8bc53f;
 
   --font-mono:
     'JetBrains Mono', 'Cascadia Mono', 'SF Mono', ui-monospace, 'Consolas', monospace;
 
-  --radius-card: 14px;
+  --radius-card: 10px;
 }
 
 * {
@@ -51,18 +52,16 @@ body {
   user-select: none;
 }
 
-/* 背景：一层极淡的网格 + 顶部辉光，给纯黑底一点纵深 */
+/* 背景：Steam 那种从深蓝到近黑的纵向渐变，左上角一盏冷光 */
 #app::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(900px 500px at 12% -10%, rgba(46, 230, 197, 0.07), transparent 65%),
-    radial-gradient(700px 420px at 95% 0%, rgba(255, 180, 84, 0.045), transparent 60%),
-    linear-gradient(var(--color-line-soft) 1px, transparent 1px) 0 0 / 100% 44px,
-    linear-gradient(90deg, var(--color-line-soft) 1px, transparent 1px) 0 0 / 44px 100%;
-  opacity: 0.5;
+    radial-gradient(1200px 680px at 16% -14%, rgba(102, 192, 244, 0.13), transparent 62%),
+    radial-gradient(900px 520px at 102% -6%, rgba(42, 71, 94, 0.6), transparent 58%),
+    linear-gradient(180deg, #1b2838 0%, #171a21 46%, #13161c 100%);
   z-index: 0;
 }
 
@@ -80,17 +79,21 @@ textarea {
 }
 
 /* ---------- 卡片 ---------- */
+/* Steam 的面板：深蓝底 + 自上而下一道很淡的高光边 */
 .card {
   position: relative;
-  background: linear-gradient(180deg, var(--color-surface-2), var(--color-surface));
+  background: linear-gradient(180deg, #21344a 0%, #1b2838 58%, #192534 100%);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 2px 10px -4px rgba(0, 0, 0, 0.55);
 }
 
 .card-flat {
-  background: var(--color-surface);
+  background: rgba(12, 20, 30, 0.5);
   border: 1px solid var(--color-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 /* ---------- 按钮 ---------- */
@@ -100,11 +103,11 @@ textarea {
   justify-content: center;
   gap: 8px;
   padding: 0 14px;
-  height: 36px;
-  border-radius: 9px;
+  height: 34px;
+  border-radius: 5px;
   border: 1px solid var(--color-line);
-  background: var(--color-surface-2);
-  color: var(--color-ink);
+  background: linear-gradient(180deg, #2a475e, #21344a);
+  color: #c6d4df;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -112,11 +115,13 @@ textarea {
   transition:
     background 0.16s ease,
     border-color 0.16s ease,
+    color 0.16s ease,
     transform 0.08s ease;
 }
 .btn:hover:not(:disabled) {
-  background: var(--color-surface-3);
-  border-color: #2e3948;
+  background: linear-gradient(180deg, #35618a, #2a475e);
+  border-color: #4a7ba6;
+  color: #ffffff;
 }
 .btn:active:not(:disabled) {
   transform: translateY(1px);
@@ -126,43 +131,46 @@ textarea {
   cursor: not-allowed;
 }
 
+/* 主按钮 = Steam 那个绿色 Play 按钮 */
 .btn-primary {
-  background: linear-gradient(180deg, #2ee6c5, #1fbfa4);
-  border-color: #24cdb0;
-  color: #04231e;
+  background: linear-gradient(180deg, #75b022, #588a1b);
+  border-color: #4f7d18;
+  color: #d2e885;
   font-weight: 650;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #45f0d2, #24cdb0);
-  border-color: #45f0d2;
+  background: linear-gradient(180deg, #8ed629, #6ba32b);
+  border-color: #8ed629;
+  color: #f4ffd6;
 }
 
 .btn-danger {
-  border-color: #4a2229;
-  color: #ff8d97;
+  border-color: #4a2a2a;
+  color: #ff8a8a;
 }
 .btn-danger:hover:not(:disabled) {
-  background: #2a161b;
-  border-color: #6d2f39;
+  background: #2a1a1a;
+  border-color: #6d3030;
 }
 
 /* 「上膛」状态：实心红，跟未上膛的空心红明确区分 */
 .btn-danger-solid {
-  background: linear-gradient(180deg, #ff5c6c, #e03a4c);
-  border-color: #ff5c6c;
+  background: linear-gradient(180deg, #e24b4b, #c33a3a);
+  border-color: #e24b4b;
   color: #2a0006;
   font-weight: 650;
 }
 .btn-danger-solid:hover:not(:disabled) {
-  background: linear-gradient(180deg, #ff7180, #e8505f);
-  border-color: #ff7180;
+  background: linear-gradient(180deg, #ef6a6a, #c94a4a);
+  border-color: #ef6a6a;
 }
 
 .btn-lg {
-  height: 44px;
+  height: 42px;
   padding: 0 20px;
   font-size: 14px;
-  border-radius: 11px;
+  border-radius: 6px;
 }
 
 /* ---------- 徽标 / 药丸 ---------- */
@@ -178,24 +186,24 @@ textarea {
   border: 1px solid transparent;
 }
 .pill-ok {
-  background: rgba(74, 222, 128, 0.1);
+  background: rgba(139, 197, 63, 0.1);
   color: var(--color-success);
-  border-color: rgba(74, 222, 128, 0.24);
+  border-color: rgba(139, 197, 63, 0.24);
 }
 .pill-warn {
-  background: rgba(255, 180, 84, 0.1);
+  background: rgba(240, 169, 46, 0.1);
   color: var(--color-amber);
-  border-color: rgba(255, 180, 84, 0.26);
+  border-color: rgba(240, 169, 46, 0.26);
 }
 .pill-bad {
-  background: rgba(255, 92, 108, 0.1);
+  background: rgba(226, 75, 75, 0.1);
   color: var(--color-danger);
-  border-color: rgba(255, 92, 108, 0.26);
+  border-color: rgba(226, 75, 75, 0.26);
 }
 .pill-idle {
-  background: rgba(120, 136, 156, 0.1);
+  background: rgba(143, 152, 160, 0.1);
   color: var(--color-muted);
-  border-color: rgba(120, 136, 156, 0.22);
+  border-color: rgba(143, 152, 160, 0.22);
 }
 
 /* ---------- 筛选胶囊（构建历史：全部 / 每个 App） ---------- */
@@ -218,12 +226,12 @@ textarea {
 }
 .chip:hover {
   color: var(--color-ink);
-  border-color: rgba(46, 230, 197, 0.28);
+  border-color: rgba(102, 192, 244, 0.28);
 }
 .chip-on {
-  background: rgba(46, 230, 197, 0.1);
+  background: rgba(102, 192, 244, 0.1);
   color: var(--color-accent);
-  border-color: rgba(46, 230, 197, 0.4);
+  border-color: rgba(102, 192, 244, 0.4);
 }
 
 /* ---------- 目录 / 文件路径：显眼 + 可点开 ---------- */
@@ -235,9 +243,9 @@ textarea {
   min-width: 0;
   padding: 2.5px 9px 2.5px 7px;
   border-radius: 7px;
-  border: 1px solid rgba(46, 230, 197, 0.2);
-  background: rgba(46, 230, 197, 0.055);
-  color: #79efd8;
+  border: 1px solid rgba(102, 192, 244, 0.2);
+  background: rgba(102, 192, 244, 0.055);
+  color: #a8d8f0;
   font-family: var(--font-mono);
   font-size: 11.5px;
   line-height: 1.5;
@@ -248,12 +256,12 @@ textarea {
     color 0.14s;
 }
 .path-link:hover {
-  background: rgba(46, 230, 197, 0.13);
-  border-color: rgba(46, 230, 197, 0.46);
-  color: #a8f8e7;
+  background: rgba(102, 192, 244, 0.13);
+  border-color: rgba(102, 192, 244, 0.46);
+  color: #d3ecfa;
 }
 .path-link:active {
-  background: rgba(46, 230, 197, 0.2);
+  background: rgba(102, 192, 244, 0.2);
 }
 .path-link .path-text {
   overflow: hidden;
@@ -278,10 +286,10 @@ textarea {
   flex: 0 0 auto;
 }
 .log-stdout {
-  color: #b9c7d8;
+  color: #c6d4df;
 }
 .log-stderr {
-  color: #ff8d97;
+  color: #ff8a8a;
 }
 .log-system {
   color: var(--color-accent);
@@ -290,20 +298,20 @@ textarea {
 /* ---------- 滚动条 ---------- */
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: #2b3543 transparent;
+  scrollbar-color: #2a3f5a transparent;
 }
 .scroll-thin::-webkit-scrollbar {
   width: 9px;
   height: 9px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: #2b3543;
+  background: #2a3f5a;
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
-  background: #3a4757;
+  background: #3d5a7a;
   background-clip: content-box;
 }
 .scroll-thin::-webkit-scrollbar-track {
@@ -367,8 +375,8 @@ textarea {
   left: 0;
   right: 0;
   z-index: 30;
-  background: #0f141c;
+  background: linear-gradient(180deg, #1e2f44, #1b2838);
   box-shadow:
-    0 18px 40px -12px rgba(0, 0, 0, 0.75),
-    0 0 0 1px rgba(255, 255, 255, 0.02);
+    0 20px 44px -14px rgba(0, 0, 0, 0.8),
+    0 0 0 1px var(--color-line);
 }

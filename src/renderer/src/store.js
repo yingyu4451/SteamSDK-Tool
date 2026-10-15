@@ -37,6 +37,9 @@ export const state = reactive({
 
   view: 'workbench', // workbench | history | settings
 
+  // 首次运行引导
+  onboard: { open: false, step: 0, busy: false, error: null, candidates: [], manual: '', account: '', password: '', saved: '' },
+
   running: false,
   runKind: null, // check | build
   runId: null,
@@ -142,9 +145,114 @@ export async function boot() {
     state.bootError = e.message
     state.booted = true
   }
+  // 没走过引导（或者上次点了跳过但被清了）就弹一次
+  if (!state.settings?.onboarded) {
+    state.onboard.open = true
+    state.onboard.manual = state.settings?.sdkRoot || ''
+  }
   // 更新检查不挡启动：先让界面出来，再悄悄问一次 GitHub。
   // quiet = true 表示「没网 / 没发布过 release」这种情况不弹错误，只在设置页里留一句话。
   loadUpdateInfo().then(() => checkUpdateNow(true))
+}
+
+/* ------------------------------------------------------------------ *
+ *  首次运行引导
+ * ------------------------------------------------------------------ */
+
+export function onboardGo(step) {
+  state.onboard.step = Math.max(0, Math.min(2, step))
+  state.onboard.error = null
+}
+
+export async function onboardDetect() {
+  const o = state.onboard
+  o.busy = true
+  try {
+    o.candidates = (await api.sdk.detect()) || []
+    if (!o.candidates.length) o.error = '常见位置没找到 SteamSDK —— 手动选一下它所在的文件夹'
+  } catch (e) {
+    o.error = e.message
+  } finally {
+    o.busy = false
+  }
+}
+
+export async function onboardPickFolder() {
+  const o = state.onboard
+  const r = await api.settings.pickFolder(o.manual || '')
+  if (r?.ok && r.path) {
+    o.manual = r.path
+    o.error = null
+  }
+  return r
+}
+
+/** 把选中的 SDK 路径存下来，顺便验一下里面有没有 ContentBuilder */
+export async function onboardApplySdk(root) {
+  const o = state.onboard
+  const dir = String(root || o.manual || '').trim()
+  if (!dir) {
+    o.error = '先选一个 SteamSDK 目录'
+    return false
+  }
+  o.busy = true
+  o.error = null
+  try {
+    await api.settings.save({ sdkRoot: dir })
+    const st = await api.sdk.status()
+    state.sdk = st
+    state.settings = { ...(state.settings || {}), sdkRoot: dir }
+    if (!st.contentBuilderExists) {
+      o.error = `这个目录里没有 tools\\ContentBuilder —— ${dir}`
+      return false
+    }
+    o.manual = dir
+    return true
+  } catch (e) {
+    o.error = e.message
+    return false
+  } finally {
+    o.busy = false
+  }
+}
+
+export async function onboardSaveAccount() {
+  const o = state.onboard
+  o.busy = true
+  o.error = null
+  try {
+    const acc = String(o.account || '').trim()
+    if (acc) await api.settings.save({ account: acc })
+    if (o.password) {
+      const r = await api.settings.setPassword(o.password)
+      if (!r?.ok) {
+        o.error = r?.error || '密码没存上'
+        return false
+      }
+      state.hasPassword = true
+      o.password = ''
+    }
+    state.settings = { ...(state.settings || {}), account: acc || state.settings?.account }
+    return true
+  } catch (e) {
+    o.error = e.message
+    return false
+  } finally {
+    o.busy = false
+  }
+}
+
+/** 引导的最后一步：无论走完还是「跳过教程」，都记下来不再弹 */
+export async function finishOnboard() {
+  state.onboard.open = false
+  state.settings = { ...(state.settings || {}), onboarded: true }
+  try {
+    await api.settings.setOnboarded(true)
+  } catch {
+    /* 记不上就下次再弹，不影响使用 */
+  }
+  await rescan()
+  if (!state.selectedDir && state.apps.length) await selectApp(state.apps[0].dirName)
 }
 
 /* ------------------------------------------------------------------ *

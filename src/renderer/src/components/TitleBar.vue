@@ -17,7 +17,7 @@ const upd = computed(() => state.update?.data || null)
     <div class="flex items-center gap-2.5 no-drag">
       <div
         class="w-[22px] h-[22px] rounded-[7px] grid place-items-center"
-        style="background: linear-gradient(145deg, #2ee6c5, #17a58d)"
+        style="background: linear-gradient(145deg, #66c0f4, #17a58d)"
       >
         <svg viewBox="0 0 24 24" class="w-[13px] h-[13px]" fill="none">
           <path
@@ -48,7 +48,7 @@ const upd = computed(() => state.update?.data || null)
       >
         <div
           v-if="state.running"
-          class="flex items-center gap-2 h-6 px-2.5 rounded-full bg-[rgba(46,230,197,.1)] border border-[rgba(46,230,197,.28)]"
+          class="flex items-center gap-2 h-6 px-2.5 rounded-full bg-[rgba(102,192,244,.1)] border border-[rgba(102,192,244,.28)]"
         >
           <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
           <span class="text-[11.5px] text-accent font-medium">

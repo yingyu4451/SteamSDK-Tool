@@ -62,7 +62,7 @@ async function refresh() {
       <input
         v-model="filter"
         placeholder="筛选文件名"
-        class="h-8 w-[200px] px-3 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+        class="h-8 w-[200px] px-3 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
       />
       <button class="btn h-8 no-drag" @click="refresh">刷新</button>
     </div>
@@ -102,7 +102,7 @@ async function refresh() {
             class="w-full text-left px-2.5 py-2 rounded-lg transition-colors cursor-pointer border-0 bg-transparent"
             :class="
               selected?.file === h.file
-                ? 'bg-[rgba(46,230,197,.07)] ring-1 ring-[rgba(46,230,197,.3)]'
+                ? 'bg-[rgba(102,192,244,.07)] ring-1 ring-[rgba(102,192,244,.3)]'
                 : 'hover:bg-surface-2'
             "
             @click="open(h)"
@@ -133,7 +133,7 @@ async function refresh() {
           <div v-if="loading" class="text-[12px] text-faint">读取中…</div>
           <pre
             v-else-if="content"
-            class="m-0 text-[11.5px] leading-[1.7] font-mono text-[#b9c7d8] whitespace-pre-wrap break-all"
+            class="m-0 text-[11.5px] leading-[1.7] font-mono text-[#c6d4df] whitespace-pre-wrap break-all"
             >{{ content }}</pre
           >
           <div v-else class="text-[12px] text-faint">左侧点一个日志查看内容。</div>

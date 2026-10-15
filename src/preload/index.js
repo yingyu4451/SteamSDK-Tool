@@ -15,6 +15,7 @@ const api = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     save: (patch) => ipcRenderer.invoke('settings:save', patch),
+    setOnboarded: (on) => ipcRenderer.invoke('settings:onboarded', on),
     setPassword: (pw) => ipcRenderer.invoke('cred:set', pw),
     clearPassword: () => ipcRenderer.invoke('cred:clear'),
     pickFolder: (current) => ipcRenderer.invoke('sdk:pickFolder', current)
@@ -22,6 +23,7 @@ const api = {
 
   sdk: {
     status: () => ipcRenderer.invoke('sdk:status'),
+    detect: () => ipcRenderer.invoke('sdk:detect'),
     scan: () => ipcRenderer.invoke('sdk:scan'),
     app: (dirName) => ipcRenderer.invoke('sdk:app', dirName),
     history: () => ipcRenderer.invoke('sdk:history'),

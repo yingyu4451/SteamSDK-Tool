@@ -109,8 +109,8 @@ const dup = computed(() => {
     </div>
   </div>
 
-  <div v-else-if="app?.error" class="card p-5 border-[#4a2229]">
-    <div class="text-[14px] font-semibold text-[#ff8d97]">读取 App 失败</div>
+  <div v-else-if="app?.error" class="card p-5 border-[#4a2a2a]">
+    <div class="text-[14px] font-semibold text-[#ff8a8a]">读取 App 失败</div>
     <div class="text-[12.5px] text-muted mt-1.5">{{ app.error }}</div>
   </div>
 </template>

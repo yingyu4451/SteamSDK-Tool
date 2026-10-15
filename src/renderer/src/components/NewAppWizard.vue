@@ -176,6 +176,20 @@ function goExisting() {
   closeWizard()
   if (dir) selectApp(dir)
 }
+
+/* ---- 描述 / 会创建：共用一个位置，用选项卡切换，勾几个平台都不会把弹窗撑长 ---- */
+
+const TABS = [
+  { id: 'desc', label: '描述' },
+  { id: 'will', label: '会创建' }
+]
+const descTab = ref('desc')
+
+/** 设置入口：AppID 和 Depot 读取都依赖设置里的账号/密钥 */
+function openSettings() {
+  closeWizard()
+  goSettings()
+}
 </script>
 
 <template>
@@ -203,7 +217,7 @@ function goExisting() {
             ref="nameInput"
             :value="w.name"
             placeholder="例如 Dashoot"
-            class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+            class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
             @input="wizardNameChanged($event.target.value)"
           />
         </label>
@@ -216,8 +230,8 @@ function goExisting() {
               :value="w.appId"
               list="known-apps"
               placeholder="例如 2670430"
-              class="flex-1 min-w-0 h-9 px-3 rounded-[9px] bg-surface border text-[13px] num outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
-              :class="w.appId && !appIdOk ? 'border-[#6d2f39]' : 'border-line'"
+              class="flex-1 min-w-0 h-9 px-3 rounded-[9px] bg-surface border text-[13px] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+              :class="w.appId && !appIdOk ? 'border-[#6d3030]' : 'border-line'"
               @input="wizardAppIdChanged($event.target.value)"
               @blur="onAppIdBlur"
               @keyup.enter="doLookup"
@@ -240,6 +254,23 @@ function goExisting() {
               <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none">
                 <path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <button
+              class="btn h-9 px-2.5 no-drag"
+              title="设置（账号 / Web API 密钥）"
+              @click="openSettings"
+            >
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
+                <path
+                  d="M4 7h8M18 7h2M4 12h2M12 12h8M4 17h10M20 17h0"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+                <circle cx="15" cy="7" r="2.1" stroke="currentColor" stroke-width="1.8" />
+                <circle cx="9" cy="12" r="2.1" stroke="currentColor" stroke-width="1.8" />
+                <circle cx="17" cy="17" r="2.1" stroke="currentColor" stroke-width="1.8" />
               </svg>
             </button>
           </div>
@@ -311,7 +342,7 @@ function goExisting() {
                 v-if="d.platform"
                 type="checkbox"
                 :checked="d.on"
-                class="accent-[#2ee6c5] w-3.5 h-3.5 shrink-0"
+                class="accent-[#66c0f4] w-3.5 h-3.5 shrink-0"
                 @change="toggleDepot(d)"
               />
               <select
@@ -362,8 +393,8 @@ function goExisting() {
                 :key="p.id"
                 class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-10 border-t border-line-soft transition-colors"
                 :class="[
-                  w.picks[p.id].on ? 'bg-[rgba(46,230,197,.035)]' : '',
-                  dragId === p.id ? 'bg-[rgba(46,230,197,.09)] opacity-60' : ''
+                  w.picks[p.id].on ? 'bg-[rgba(102,192,244,.035)]' : '',
+                  dragId === p.id ? 'bg-[rgba(102,192,244,.09)] opacity-60' : ''
                 ]"
                 @dragover.prevent="onDragOver(p.id)"
               >
@@ -386,7 +417,7 @@ function goExisting() {
               <input
                 type="checkbox"
                 :checked="w.picks[p.id].on"
-                class="accent-[#2ee6c5] w-3.5 h-3.5"
+                class="accent-[#66c0f4] w-3.5 h-3.5"
                 @change="wizardTogglePlatform(p.id)"
               />
               <label
@@ -400,13 +431,13 @@ function goExisting() {
                 :value="w.picks[p.id].depotId"
                 :disabled="!w.picks[p.id].on"
                 placeholder="AppID+1"
-                class="h-7 px-2 rounded-md bg-surface border border-line text-[11.5px] num outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
+                class="h-7 px-2 rounded-md bg-surface border border-line text-[11.5px] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
                 @input="wizardSetDepotId(p.id, $event.target.value)"
               />
               <input
                 :value="w.picks[p.id].contentRoot"
                 :disabled="!w.picks[p.id].on"
-                class="h-7 px-2 rounded-md bg-surface border border-line text-[11px] font-mono outline-none focus:border-[rgba(46,230,197,.45)] disabled:opacity-35 disabled:cursor-not-allowed"
+                class="h-7 px-2 rounded-md bg-surface border border-line text-[11px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] disabled:opacity-35 disabled:cursor-not-allowed"
                 @input="wizardSetRoot(p.id, $event.target.value)"
               />
               <button
@@ -421,47 +452,68 @@ function goExisting() {
           </div>
         </div>
 
-        <!-- 描述 -->
-        <label class="flex flex-col gap-1.5">
-          <span class="text-[11.5px] text-muted">描述</span>
-          <input
-            :value="w.desc"
-            placeholder="例如 阿比亚：弹射之旅 正式版"
-            class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
-            @input="w.desc = $event.target.value"
-          />
-        </label>
-
-        <!-- 预览：默认收起，勾几个平台都不会把弹窗撑长 -->
-        <details class="card-flat px-3.5 py-2.5 group">
-          <summary
-            class="flex items-center gap-2.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden"
-          >
-            <span class="text-[11px] font-semibold tracking-wider text-faint uppercase">会创建</span>
-            <span class="text-[11.5px] text-muted num">
+        <!-- 描述 / 会创建 -->
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-5">
+            <button
+              v-for="t in TABS"
+              :key="t.id"
+              class="relative pb-1.5 text-[13px] font-medium bg-transparent border-0 px-0 cursor-pointer transition-colors"
+              :class="descTab === t.id ? 'text-accent' : 'text-faint hover:text-muted'"
+              @click="descTab = t.id"
+            >
+              {{ t.label }}
+              <span
+                v-if="descTab === t.id"
+                class="absolute left-0 right-0 -bottom-px h-[2px] rounded-full bg-accent"
+              />
+            </button>
+            <span v-if="descTab === 'will'" class="ml-auto text-[11.5px] text-faint num">
               {{ willCreate.scripts.length }} 个脚本 · {{ willCreate.dirs.length }} 个目录
             </span>
-            <span class="ml-auto text-[11px] text-faint group-open:hidden">展开</span>
-            <span class="ml-auto text-[11px] text-faint hidden group-open:inline">收起</span>
-          </summary>
+          </div>
 
-          <div class="mt-2 flex flex-col">
-            <div
-              v-for="(f, i) in willCreate.scripts"
-              :key="'s' + i"
-              class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
-            >
-              <span class="text-faint">＋ 脚本　</span>{{ f }}
-            </div>
-            <div
-              v-for="(d, i) in willCreate.dirs"
-              :key="'d' + i"
-              class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
-            >
-              <span class="text-faint">＋ 目录　</span>{{ d }}
+          <div class="border-t border-line pt-3.5">
+            <!-- 描述 -->
+            <input
+              v-if="descTab === 'desc'"
+              :value="w.desc"
+              placeholder="例如 阿比亚：弹射之旅 正式版"
+              class="w-full h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+              @input="w.desc = $event.target.value"
+            />
+
+            <!-- 会创建 -->
+            <div v-else class="flex flex-col gap-1">
+              <details
+                v-for="grp in [
+                  { name: '脚本', icon: '＋ 脚本　', rows: willCreate.scripts },
+                  { name: '目录', icon: '＋ 目录　', rows: willCreate.dirs }
+                ]"
+                :key="grp.name"
+                class="group"
+              >
+                <summary
+                  class="flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-[11.5px] text-muted hover:text-ink"
+                >
+                  <span class="text-faint">{{ grp.name }}</span>
+                  <span class="num text-faint">{{ grp.rows.length }}</span>
+                  <span class="ml-auto text-[11px] text-faint group-open:hidden">展开</span>
+                  <span class="ml-auto text-[11px] text-faint hidden group-open:inline">收起</span>
+                </summary>
+                <div class="mt-1">
+                  <div
+                    v-for="(f, i) in grp.rows"
+                    :key="grp.name + i"
+                    class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
+                  >
+                    <span class="text-faint">{{ grp.icon }}</span>{{ f }}
+                  </div>
+                </div>
+              </details>
             </div>
           </div>
-        </details>
+        </div>
 
         <div v-if="depotIdDup" class="text-[11.5px] text-danger">
           DepotID 有重复 —— 同一个 App 下每个 DepotID 必须不一样。

@@ -51,7 +51,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
             ref="input"
             :value="d.name"
             placeholder="例如 Abya"
-            class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+            class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
             @input="d.name = $event.target.value"
             @keydown.enter="canSubmit && submitOrphanDialog()"
           />

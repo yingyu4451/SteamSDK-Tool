@@ -24,7 +24,9 @@ const DEFAULTS = {
   appIdHistory: [],
   // appDirName -> [被忽略的问题原文]。有些「待处理」是故意的（比如 depot
   // 就是要点到 Downloads 里的构建产物），不该每次开界面都报一遍。
-  ignoredProblems: {}
+  ignoredProblems: {},
+  // 首次运行引导走完（或点了「跳过教程」）就置 true，之后不再弹
+  onboarded: false
 }
 
 let cache = null
@@ -63,6 +65,11 @@ export function saveSettings(patch) {
   } catch (e) {
     return { ok: false, error: e.message, settings: next }
   }
+}
+
+/** 首次运行引导走完（或用户点了「跳过教程」）置 true */
+export function setOnboarded(on) {
+  return saveSettings({ onboarded: !!on })
 }
 
 export function rememberBranch(appId, branch) {

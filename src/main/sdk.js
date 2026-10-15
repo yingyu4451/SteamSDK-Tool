@@ -56,6 +56,45 @@ export function sdkStatus(settings) {
   }
 }
 
+/**
+ * 猜 SDK 在哪里 —— 首次运行引导里给用户点一下就行，不用手打路径。
+ * 扫所有盘符下几个常见的目录名；只认真的有 tools\ContentBuilder 的。
+ */
+const SDK_DIR_NAMES = ['SteamSDK', 'Steamworks', 'steamworks_sdk', 'SteamworksSDK', 'sdk']
+
+export function detectSdkRoots() {
+  const found = []
+  const seen = new Set()
+
+  const consider = (dir) => {
+    const key = dir.toLowerCase()
+    if (seen.has(key)) return
+    const cb = path.join(dir, 'tools', 'ContentBuilder')
+    if (!fs.existsSync(cb)) return
+    seen.add(key)
+    found.push({
+      root: dir,
+      contentBuilder: cb,
+      hasSteamcmd: fs.existsSync(path.join(cb, 'builder', 'steamcmd.exe')),
+      hasScripts: fs.existsSync(path.join(cb, 'scripts'))
+    })
+  }
+
+  for (const L of 'CDEFGHIJKLMNOPQRSTUVWXYZ') {
+    for (const name of SDK_DIR_NAMES) consider(`${L}:\\${name}`)
+  }
+  const home = process.env.USERPROFILE || ''
+  if (home) {
+    for (const name of SDK_DIR_NAMES) consider(path.join(home, name))
+    for (const name of SDK_DIR_NAMES) consider(path.join(home, 'Desktop', name))
+  }
+
+  // steamcmd 和脚本目录都在的排前面
+  const score = (x) => Number(x.hasSteamcmd) * 2 + Number(x.hasScripts)
+  found.sort((a, b) => score(b) - score(a))
+  return found
+}
+
 /* ------------------------------------------------------------------ *
  *  通配符匹配（VDF 的 FileExclusion / LocalPath 用 * 和 ?）
  *  Windows 路径统一用反斜杠，* 跨目录分隔符匹配，和 PowerShell -like 一致。

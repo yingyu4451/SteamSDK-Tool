@@ -134,7 +134,7 @@ const totalMb = computed(() => agg.value.totalBytes / 1024 / 1024)
     <!-- 加载中 -->
     <div v-else class="card p-10 grid place-items-center text-muted text-[13px]">
       <div class="flex items-center gap-3">
-        <div class="w-5 h-5 rounded-full border-2 border-[#23303d] border-t-[#2ee6c5] animate-spin" />
+        <div class="w-5 h-5 rounded-full border-2 border-[#23303d] border-t-[#66c0f4] animate-spin" />
         正在读取 {{ state.selectedDir }}…
       </div>
     </div>

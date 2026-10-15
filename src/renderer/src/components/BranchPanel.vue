@@ -52,7 +52,7 @@ function openExternal(url) {
         v-model="draft"
         type="text"
         placeholder="分支名，例如 qa / internal"
-        class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] text-ink placeholder:text-faint outline-none focus:border-[rgba(46,230,197,.45)] transition-colors"
+        class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] text-ink placeholder:text-faint outline-none focus:border-[rgba(102,192,244,.45)] transition-colors"
         @keydown.enter="apply(draft.trim())"
       />
       <button class="btn no-drag" :disabled="busy" @click="apply(draft.trim())">写入</button>
@@ -68,7 +68,7 @@ function openExternal(url) {
           :class="
             b === current
               ? 'border-[rgba(255,180,84,.35)] text-amber'
-              : 'border-line text-muted hover:text-ink hover:border-[#2e3948]'
+              : 'border-line text-muted hover:text-ink hover:border-[#3d5a7a]'
           "
           @click="draft = b"
         >
@@ -99,7 +99,7 @@ function openExternal(url) {
         class="mt-3 text-[11.5px] rounded-lg px-3 py-2 border"
         :class="
           message.tone === 'ok'
-            ? 'text-accent border-[rgba(46,230,197,.22)] bg-[rgba(46,230,197,.05)]'
+            ? 'text-accent border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)]'
             : 'text-danger border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)]'
         "
       >

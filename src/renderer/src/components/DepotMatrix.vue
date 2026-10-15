@@ -107,7 +107,7 @@ async function openPath(p) {
         class="text-left rounded-[10px] border px-3 py-2 transition-colors cursor-pointer min-w-0 bg-transparent"
         :class="
           String(d.id) === String(current?.id)
-            ? 'border-[rgba(46,230,197,.4)] bg-[rgba(46,230,197,.06)]'
+            ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.06)]'
             : 'border-line hover:bg-surface-2/60'
         "
         @click="setActiveDepot(d.id)"
@@ -262,7 +262,7 @@ async function openPath(p) {
         <div v-show="showExcluded" class="px-5 pb-3 max-h-[240px] overflow-y-auto scroll-thin">
           <div v-for="[rule, files] in excludedByRule" :key="rule" class="mb-2.5 last:mb-0">
             <div class="flex items-center gap-2 mb-1">
-              <code class="text-[11px] text-accent bg-[rgba(46,230,197,.07)] border border-[rgba(46,230,197,.18)] rounded px-1.5 py-0.5">
+              <code class="text-[11px] text-accent bg-[rgba(102,192,244,.07)] border border-[rgba(102,192,244,.18)] rounded px-1.5 py-0.5">
                 {{ rule }}
               </code>
               <span class="num text-[11px] text-faint">{{ files.length }} 个</span>

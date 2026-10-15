@@ -166,7 +166,7 @@ function openExternal(url) {
         class="rounded-[10px] px-4 py-2.5 text-[12.5px] border"
         :class="
           message.tone === 'ok'
-            ? 'text-accent border-[rgba(46,230,197,.22)] bg-[rgba(46,230,197,.05)]'
+            ? 'text-accent border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)]'
             : 'text-danger border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)]'
         "
       >
@@ -181,7 +181,7 @@ function openExternal(url) {
       <div class="mt-3.5 flex gap-2">
         <input
           v-model="sdkDraft"
-          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(46,230,197,.45)]"
+          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
           placeholder="D:\SteamSDK"
         />
         <button class="btn no-drag" @click="pick">选择…</button>
@@ -190,7 +190,7 @@ function openExternal(url) {
       <div class="mt-3.5 flex gap-2">
         <input
           v-model="accountDraft"
-          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(46,230,197,.45)]"
+          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
           placeholder="Steam 构建账号"
         />
         <button class="btn btn-primary no-drag" :disabled="saving" @click="savePaths">保存</button>
@@ -219,7 +219,7 @@ function openExternal(url) {
         <input
           v-model="passwordDraft"
           type="password"
-          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)]"
+          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
           placeholder="Steam 账号密码"
           @keydown.enter="savePw"
         />
@@ -243,7 +243,7 @@ function openExternal(url) {
           class="px-2 py-[3px] rounded-full text-[10.5px] border"
           :class="
             keyState.has
-              ? 'text-accent border-[rgba(46,230,197,.3)] bg-[rgba(46,230,197,.07)]'
+              ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
               : 'text-faint border-line'
           "
         >
@@ -256,7 +256,7 @@ function openExternal(url) {
           v-model="apiKeyDraft"
           type="password"
           placeholder="32 位十六进制 Publisher 密钥"
-          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12.5px] font-mono outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12.5px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
         />
         <button class="btn no-drag" :disabled="!apiKeyDraft.trim()" @click="saveKey">加密保存</button>
         <button class="btn no-drag" :disabled="!keyState.has" @click="clearKey">清除</button>

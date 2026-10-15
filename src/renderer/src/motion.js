@@ -133,7 +133,7 @@ export function flashValue(el) {
   if (!el || reducedMotion()) return
   gsap.fromTo(
     el,
-    { color: '#2ee6c5' },
+    { color: '#66c0f4' },
     { color: '', duration: 0.9, ease: 'power2.out', clearProps: 'color' }
   )
 }

@@ -4,6 +4,9 @@
  * （ICO 允许 256x256 条目用 PNG 负载）。
  *
  *   node scripts/make-icon.mjs
+ *
+ * 图形：Steam 蓝底 + 等距立方体（depot / 内容箱）+ 从箱子里升起的上传箭头。
+ * 箭头先画、箱子后压上去，看起来就是「把内容推进 Depot 里再传上去」。
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -67,7 +70,7 @@ function encodePng(width, height, rgba) {
   ])
 }
 
-/* ---------------- 画图 ---------------- */
+/* ---------------- 画图工具 ---------------- */
 
 const pixels = Buffer.alloc(SIZE * SIZE * 4)
 
@@ -104,46 +107,125 @@ function inTriangle(px, py, ax, ay, bx, by, cx, cy) {
   return u >= 0 && v >= 0 && u + v <= 1 ? 1 : 0
 }
 
-function rectCoverage(x, y, x0, y0, x1, y1) {
-  const cx = clamp01(Math.min(x + 1, x1) - Math.max(x, x0))
-  const cy = clamp01(Math.min(y + 1, y1) - Math.max(y, y0))
-  return cx * cy
+/** 凸四边形：拆成两个三角形 */
+function inQuad(px, py, p) {
+  return (
+    inTriangle(px, py, p[0], p[1], p[2], p[3], p[4], p[5]) ||
+    inTriangle(px, py, p[0], p[1], p[4], p[5], p[6], p[7])
+  )
 }
 
-// 背景渐变：薄荷青 -> 深青（和界面里的品牌色一致）
-const TOP = [0x45, 0xf0, 0xd2]
-const BOTTOM = [0x12, 0x8f, 0x7c]
-const INK = [0x04, 0x23, 0x1e]
+/** 4x4 超采样，边缘平滑很多（图标缩到 16px 也不毛） */
+const SS = 4
+function cover(fn, x, y) {
+  let hit = 0
+  for (let sy = 0; sy < SS; sy++) {
+    for (let sx = 0; sx < SS; sx++) {
+      hit += fn(x + (sx + 0.5) / SS, y + (sy + 0.5) / SS)
+    }
+  }
+  return hit / (SS * SS)
+}
+
+/* ---------------- 图形 ---------------- */
+
+// Steam 的蓝
+const BG_TOP = [0x2f, 0x51, 0x6e]
+const BG_BOT = [0x12, 0x1a, 0x24]
+const RIM = [0x66, 0xc0, 0xf4]
+
+const CUBE_TOP = [0x8f, 0xd4, 0xfa] // 顶面最亮
+const CUBE_LEFT = [0x3f, 0x92, 0xc9] // 左面中间
+const CUBE_RIGHT = [0x24, 0x5c, 0x8c] // 右面最暗
+const ARROW = [0xea, 0xf6, 0xff]
+
+// 等距立方体：顶面中心 (128,118)，半宽 58，菱形半高 34，侧面下沉 50
+const C = { x: 128, y: 118, hw: 58, hh: 34, drop: 50 }
+const topC = [C.x, C.y]
+const topR = [C.x + C.hw, C.y + C.hh]
+const topB = [C.x, C.y + C.hh * 2]
+const topL = [C.x - C.hw, C.y + C.hh]
+const botL = [topL[0], topL[1] + C.drop]
+const botB = [topB[0], topB[1] + C.drop]
+const botR = [topR[0], topR[1] + C.drop]
+
+const FACE_TOP = [...topC, ...topR, ...topB, ...topL]
+const FACE_LEFT = [...topL, ...topB, ...botB, ...botL]
+const FACE_RIGHT = [...topB, ...topR, ...botR, ...botB]
+
+// 箭头：杆 + 三角头，画在箱子下面，被箱子盖住下半截
+const SHAFT = [119, 40, 137, 150]
+const HEAD = [96, 74, 160, 74, 128, 22] // a,b,c
+
+const inArrow = (px, py) =>
+  (px >= SHAFT[0] && px < SHAFT[2] && py >= SHAFT[1] && py < SHAFT[3] ? 1 : 0) ||
+  inTriangle(px, py, HEAD[0], HEAD[1], HEAD[2], HEAD[3], HEAD[4], HEAD[5])
+
+const inCube = (px, py) =>
+  inQuad(px, py, FACE_TOP) || inQuad(px, py, FACE_LEFT) || inQuad(px, py, FACE_RIGHT)
+
+/* 写进 Buffer 前必须收口：NaN 会被 Buffer 静默写成 0（曾经因为少写两个逗号，
+ * ARROW 变成单元素数组 → g/b 变 NaN → 箭头渲染成纯红，很难看出是数据问题）。 */
+const byte = (v) => (Number.isFinite(v) ? Math.max(0, Math.min(255, Math.round(v))) : 0)
 
 for (let y = 0; y < SIZE; y++) {
   for (let x = 0; x < SIZE; x++) {
     const i = (y * SIZE + x) * 4
 
-    const bg = roundRectCoverage(x + 0.5, y + 0.5, SIZE, 58)
+    const bg = cover((px, py) => roundRectCoverage(px, py, SIZE, 54), x, y)
     if (bg <= 0) continue
 
     const t = y / (SIZE - 1)
-    let r = mix(TOP[0], BOTTOM[0], t)
-    let g = mix(TOP[1], BOTTOM[1], t)
-    let b = mix(TOP[2], BOTTOM[2], t)
+    let r = mix(BG_TOP[0], BG_BOT[0], t)
+    let g = mix(BG_TOP[1], BG_BOT[1], t)
+    let b = mix(BG_TOP[2], BG_BOT[2], t)
 
-    // 向下箭头的杆
-    let arrow = rectCoverage(x, y, 118, 56, 138, 152)
-    // 箭头三角
-    arrow = Math.max(arrow, inTriangle(x + 0.5, y + 0.5, 84, 140, 172, 140, 128, 190))
-    // 底部基线
-    arrow = Math.max(arrow, rectCoverage(x, y, 74, 200, 182, 214))
+    // 顶部一盏冷光，让图标不是死板的纯渐变
+    const glow = clamp01(1 - Math.hypot(x - 92, y - 40) / 210) ** 2
+    r = mix(r, RIM[0], glow * 0.16)
+    g = mix(g, RIM[1], glow * 0.16)
+    b = mix(b, RIM[2], glow * 0.16)
 
-    if (arrow > 0) {
-      r = mix(r, INK[0], arrow)
-      g = mix(g, INK[1], arrow)
-      b = mix(b, INK[2], arrow)
+    // 1px 内描边
+    const inner = bg - cover((px, py) => roundRectCoverage(px, py - 3, SIZE - 6, 51), x + 3, y)
+    const rim = clamp01(inner) * 0.3
+    r = mix(r, RIM[0], rim)
+    g = mix(g, RIM[1], rim)
+    b = mix(b, RIM[2], rim)
+
+    // 箭头
+    const a = cover(inArrow, x, y)
+    if (a > 0) {
+      r = mix(r, ARROW[0], a)
+      g = mix(g, ARROW[1], a)
+      b = mix(b, ARROW[2], a)
     }
 
-    pixels[i] = Math.round(r)
-    pixels[i + 1] = Math.round(g)
-    pixels[i + 2] = Math.round(b)
-    pixels[i + 3] = Math.round(bg * 255)
+    // 箱子压在最上面
+    const ft = cover((px, py) => inQuad(px, py, FACE_TOP), x, y)
+    const fl = cover((px, py) => inQuad(px, py, FACE_LEFT), x, y)
+    const fr = cover((px, py) => inQuad(px, py, FACE_RIGHT), x, y)
+
+    if (ft > 0) {
+      r = mix(r, CUBE_TOP[0], ft)
+      g = mix(g, CUBE_TOP[1], ft)
+      b = mix(b, CUBE_TOP[2], ft)
+    }
+    if (fl > 0) {
+      r = mix(r, CUBE_LEFT[0], fl)
+      g = mix(g, CUBE_LEFT[1], fl)
+      b = mix(b, CUBE_LEFT[2], fl)
+    }
+    if (fr > 0) {
+      r = mix(r, CUBE_RIGHT[0], fr)
+      g = mix(g, CUBE_RIGHT[1], fr)
+      b = mix(b, CUBE_RIGHT[2], fr)
+    }
+
+    pixels[i] = byte(r)
+    pixels[i + 1] = byte(g)
+    pixels[i + 2] = byte(b)
+    pixels[i + 3] = byte(bg * 255)
   }
 }
 

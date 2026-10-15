@@ -39,7 +39,7 @@ function healthOf(app) {
 </script>
 
 <template>
-  <aside class="w-[268px] shrink-0 border-r border-line bg-[#0b0e14]/70 flex flex-col min-h-0">
+  <aside class="w-[268px] shrink-0 border-r border-line bg-[#171a21]/70 flex flex-col min-h-0">
     <!-- 视图切换 -->
     <nav class="p-3 flex flex-col gap-1" v-stagger="{ each: 0.04 }">
       <button
@@ -135,7 +135,7 @@ function healthOf(app) {
         class="text-left rounded-[10px] border px-3 py-2.5 transition-colors cursor-pointer"
         :class="
           state.selectedDir === app.dirName
-            ? 'border-[rgba(46,230,197,.34)] bg-[rgba(46,230,197,.06)]'
+            ? 'border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.06)]'
             : 'border-line bg-surface hover:bg-surface-2'
         "
         @click="selectApp(app.dirName)"

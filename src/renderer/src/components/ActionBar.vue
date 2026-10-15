@@ -206,7 +206,7 @@ const localHost = computed(() => {
       </button>
       <button
         class="btn no-drag"
-        :class="localEnabled ? 'border-[rgba(46,230,197,.35)] text-accent' : ''"
+        :class="localEnabled ? 'border-[rgba(102,192,244,.35)] text-accent' : ''"
         @click="toggleLocalPanel"
       >
         <span
@@ -246,7 +246,7 @@ const localHost = computed(() => {
             @keydown.enter="submitPw"
           />
           <label class="flex items-center gap-1.5 text-[11.5px] text-muted cursor-pointer select-none">
-            <input type="checkbox" v-model="pwRemember" class="accent-[#2ee6c5]" />
+            <input type="checkbox" v-model="pwRemember" class="accent-[#66c0f4]" />
             加密保存
           </label>
           <button class="btn btn-primary no-drag" :disabled="!pwDraft" @click="submitPw">
@@ -302,7 +302,7 @@ const localHost = computed(() => {
               class="px-2 py-[3px] rounded-full text-[10.5px] border"
               :class="
                 vd.appIdKnown
-                  ? 'text-accent border-[rgba(46,230,197,.3)] bg-[rgba(46,230,197,.07)]'
+                  ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
                   : 'text-amber border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.07)]'
               "
             >
@@ -327,7 +327,7 @@ const localHost = computed(() => {
             >
               <input
                 type="checkbox"
-                class="accent-[#2ee6c5] w-3.5 h-3.5 shrink-0"
+                class="accent-[#66c0f4] w-3.5 h-3.5 shrink-0"
                 :checked="!!state.syncPicks[String(d.depotId)]"
                 :disabled="localIds.has(String(d.depotId))"
                 @change="toggleSyncPick(d.depotId)"
@@ -371,7 +371,7 @@ const localHost = computed(() => {
                 class="px-2 py-[3px] rounded-full text-[10.5px] border"
                 :class="
                   b.key === 'public' || b.key === 'default'
-                    ? 'text-accent border-[rgba(46,230,197,.3)] bg-[rgba(46,230,197,.07)]'
+                    ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
                     : 'text-muted border-line'
                 "
                 :title="b.description || ''"
@@ -478,7 +478,7 @@ const localHost = computed(() => {
             <input
               type="checkbox"
               :checked="localEnabled"
-              class="accent-[#2ee6c5]"
+              class="accent-[#66c0f4]"
               @change="setAppLocal($event.target.checked)"
             />
             这个 App 的构建先传进本地服务器

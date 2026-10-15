@@ -112,7 +112,7 @@ async function copyBackend() {
           <input
             :value="s.name"
             placeholder="例如 Dashoot Content"
-            class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+            class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
             @input="s.name = $event.target.value"
           />
         </label>
@@ -123,8 +123,8 @@ async function copyBackend() {
             ref="idInput"
             :value="s.depotId"
             placeholder="例如 3036851"
-            class="h-9 px-3 rounded-[9px] bg-surface border text-[13px] num outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
-            :class="s.depotId && !/^\d+$/.test(String(s.depotId).trim()) ? 'border-[#6d2f39]' : 'border-line'"
+            class="h-9 px-3 rounded-[9px] bg-surface border text-[13px] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+            :class="s.depotId && !/^\d+$/.test(String(s.depotId).trim()) ? 'border-[#6d3030]' : 'border-line'"
             @input="s.depotId = $event.target.value"
           />
           <span class="text-[11px] text-faint">后台新建时如果留空，Steam 会自动分配一个</span>
@@ -135,7 +135,7 @@ async function copyBackend() {
             <span class="text-[11.5px] text-muted">操作系统</span>
             <select
               :value="s.os"
-              class="h-9 px-2.5 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)]"
+              class="h-9 px-2.5 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
               @change="setDepotPlatform({ os: $event.target.value })"
             >
               <option v-for="o in state.depotOptions.os" :key="o.id" :value="o.id">{{ o.label }}</option>
@@ -145,7 +145,7 @@ async function copyBackend() {
             <span class="text-[11.5px] text-muted">架构</span>
             <select
               :value="s.arch"
-              class="h-9 px-2.5 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)]"
+              class="h-9 px-2.5 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
               @change="setDepotPlatform({ arch: $event.target.value })"
             >
               <option v-for="x in state.depotOptions.arch" :key="x.id" :value="x.id">{{ x.label }}</option>
@@ -157,7 +157,7 @@ async function copyBackend() {
           <span class="text-[11.5px] text-muted">语言</span>
           <select
             v-model="s.language"
-            class="h-9 px-2.5 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)]"
+            class="h-9 px-2.5 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
           >
             <option v-for="l in state.depotOptions.languages" :key="l.id" :value="l.id">{{ l.label }}</option>
           </select>
@@ -188,7 +188,7 @@ async function copyBackend() {
           <div class="flex items-center gap-2">
             <input
               :value="s.contentRoot"
-              class="flex-1 min-w-0 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(46,230,197,.45)]"
+              class="flex-1 min-w-0 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
               @input="s.contentRoot = $event.target.value"
             />
             <button class="btn h-9 px-3 text-[11.5px] no-drag" @click="pickDepotRoot">选择…</button>
@@ -204,7 +204,7 @@ async function copyBackend() {
             这个 App 已经有 {{ dup.platformId }} 的 Depot（{{ dup.id }}）。
           </div>
           <label class="mt-2 flex items-center gap-2 text-[11.5px] text-muted cursor-pointer select-none">
-            <input type="checkbox" v-model="s.allowDup" class="accent-[#2ee6c5]" />
+            <input type="checkbox" v-model="s.allowDup" class="accent-[#66c0f4]" />
             确实要再加一个同平台的
           </label>
         </div>

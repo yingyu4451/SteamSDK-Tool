@@ -84,13 +84,13 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
     <div
       ref="el"
       class="relative card w-full max-w-[560px] max-h-[88vh] overflow-y-auto scroll-thin transition-colors duration-200"
-      :class="armed ? 'border-[#ff5c6c]' : 'border-[#4a2229]'"
+      :class="armed ? 'border-[#e24b4b]' : 'border-[#4a2a2a]'"
     >
       <header class="px-6 pt-5 pb-4 border-b border-line">
-        <h2 class="text-[15.5px] font-semibold m-0 text-[#ff8d97]">
+        <h2 class="text-[15.5px] font-semibold m-0 text-[#ff8a8a]">
           删除 App「{{ d.dirName }}」
         </h2>
-        <p class="mt-1.5 mb-0 text-[11.5px] text-[#ff8d97]">不可撤销。Steam 上已传的构建不受影响。</p>
+        <p class="mt-1.5 mb-0 text-[11.5px] text-[#ff8a8a]">不可撤销。Steam 上已传的构建不受影响。</p>
       </header>
 
       <div v-if="d.loading" class="p-6 text-[12.5px] text-muted">正在统计要删的东西…</div>
@@ -127,7 +127,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
             v-if="deletableContent.length"
             class="mt-2.5 flex items-start gap-2 text-[12px] cursor-pointer select-none"
           >
-            <input type="checkbox" v-model="d.deleteContent" class="accent-[#ff5c6c] mt-0.5" />
+            <input type="checkbox" v-model="d.deleteContent" class="accent-[#e24b4b] mt-0.5" />
             <span>
               同时删除下面的内容目录
               <span class="text-faint">（游戏构建产物，删了要重新打包，确认不需要了再勾）</span>
@@ -160,7 +160,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
         <!-- 上膛后的提示条 -->
         <div
           v-if="armed"
-          class="rounded-[10px] border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] px-3.5 py-2.5 text-[12px] text-[#ff8d97]"
+          class="rounded-[10px] border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] px-3.5 py-2.5 text-[12px] text-[#ff8a8a]"
         >
           再点一次底下那个红色按钮才会真的删。改勾选或关掉窗口都会取消。
         </div>

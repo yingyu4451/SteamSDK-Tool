@@ -15,6 +15,7 @@ import EditDrawer from './components/EditDrawer.vue'
 import DeleteAppDialog from './components/DeleteAppDialog.vue'
 import AdoptOrphansDialog from './components/AdoptOrphansDialog.vue'
 import DropDialog from './components/DropDialog.vue'
+import OnboardGuide from './components/OnboardGuide.vue'
 
 const views = { workbench: WorkbenchView, history: HistoryView, settings: SettingsView }
 const current = computed(() => views[state.view] || WorkbenchView)
@@ -106,8 +107,8 @@ function onLeave(el, done) {
       <main class="flex-1 min-w-0 min-h-0 relative">
         <!-- 启动失败 -->
         <div v-if="state.booted && state.bootError" class="p-8">
-          <div class="card p-6 border-[#4a2229]">
-            <div class="text-[15px] font-semibold text-[#ff8d97] mb-2">启动失败</div>
+          <div class="card p-6 border-[#4a2a2a]">
+            <div class="text-[15px] font-semibold text-[#ff8a8a] mb-2">启动失败</div>
             <div class="text-[13px] text-muted">{{ state.bootError }}</div>
           </div>
         </div>
@@ -116,7 +117,7 @@ function onLeave(el, done) {
         <div v-else-if="!state.booted" class="h-full grid place-items-center">
           <div class="flex flex-col items-center gap-3 text-muted text-[13px]">
             <div
-              class="w-7 h-7 rounded-full border-2 border-[#23303d] border-t-[#2ee6c5] animate-spin"
+              class="w-7 h-7 rounded-full border-2 border-[#23303d] border-t-[#66c0f4] animate-spin"
             />
             正在读取 SDK…
           </div>
@@ -145,6 +146,7 @@ function onLeave(el, done) {
     <DeleteAppDialog />
     <AdoptOrphansDialog />
     <DropDialog />
+    <OnboardGuide />
 
     <!-- 拖着东西悬在窗口上 -->
     <Transition
@@ -157,7 +159,7 @@ function onLeave(el, done) {
         v-if="state.drop.over && !state.drop.data"
         class="fixed inset-0 z-[58] grid place-items-center pointer-events-none"
       >
-        <div class="absolute inset-3 rounded-[16px] border-2 border-dashed border-[rgba(46,230,197,.5)] bg-[rgba(11,15,22,.72)] backdrop-blur-sm" />
+        <div class="absolute inset-3 rounded-[16px] border-2 border-dashed border-[rgba(102,192,244,.5)] bg-[rgba(11,15,22,.72)] backdrop-blur-sm" />
         <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
           <svg viewBox="0 0 24 24" class="w-8 h-8" fill="none">
             <path
@@ -185,8 +187,8 @@ function onLeave(el, done) {
         class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-[11px] border text-[12.5px] shadow-2xl max-w-[80vw] truncate"
         :class="
           state.toast.tone === 'bad'
-            ? 'border-[rgba(255,92,108,.3)] bg-[#22141a] text-[#ff8d97]'
-            : 'border-[rgba(46,230,197,.3)] bg-[#0d211e] text-accent'
+            ? 'border-[rgba(255,92,108,.3)] bg-[#221a1a] text-[#ff8a8a]'
+            : 'border-[rgba(102,192,244,.3)] bg-[#16202d] text-accent'
         "
       >
         {{ state.toast.text }}

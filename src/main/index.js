@@ -18,7 +18,8 @@ import {
   setDepotMeta,
   readDepotMeta,
   rememberAppId,
-  setIgnoredProblem
+  setIgnoredProblem,
+  setOnboarded
 } from './store.js'
 import {
   sdkStatus,
@@ -42,6 +43,7 @@ import {
   adoptOrphans,
   suggestDepotId,
   defaultContentRoot,
+  detectSdkRoots,
   getPaths
 } from './sdk.js'
 import { preflightApp } from './preflight.js'
@@ -192,12 +194,12 @@ function createWindow() {
     minWidth: 1120,
     minHeight: 720,
     show: false,
-    backgroundColor: '#0b0f16',
+    backgroundColor: '#171a21',
     title: 'SteamSDK 上传工作台',
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#0b0f16',
+      color: '#171a21',
       symbolColor: '#8ea3bd',
       height: 44
     },
@@ -269,6 +271,7 @@ function registerIpc() {
   }))
 
   ipcMain.handle('settings:save', (_e, patch) => saveSettings(patch || {}))
+  ipcMain.handle('settings:onboarded', (_e, on) => setOnboarded(on))
 
   /* ---- Steamworks Web API ---- */
   ipcMain.handle('api:setKey', (_e, key) => saveApiKey(key))
@@ -414,6 +417,7 @@ function registerIpc() {
   })
 
   /* ---- SDK ---- */
+  ipcMain.handle('sdk:detect', () => detectSdkRoots())
   ipcMain.handle('sdk:status', () => sdkStatus(loadSettings()))
   ipcMain.handle('sdk:scan', () => scanApps(loadSettings()))
   ipcMain.handle('sdk:app', (_e, dirName) => readApp(dirName, loadSettings()))

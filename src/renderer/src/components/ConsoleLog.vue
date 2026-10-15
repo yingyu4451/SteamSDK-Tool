@@ -124,7 +124,7 @@ const exitTone = computed(() => {
       <span class="ml-auto num text-[11px] text-faint">{{ state.logs.length }} 行</span>
 
       <label class="flex items-center gap-1.5 text-[11.5px] text-faint cursor-pointer select-none">
-        <input type="checkbox" v-model="autoScroll" class="accent-[#2ee6c5]" />
+        <input type="checkbox" v-model="autoScroll" class="accent-[#66c0f4]" />
         自动滚动
       </label>
 

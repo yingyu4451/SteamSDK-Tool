@@ -163,7 +163,7 @@ function pickPlatform(id) {
                   v-for="p in platformChoices"
                   :key="p.id"
                   class="btn h-7 px-2.5 text-[11px]"
-                  :class="platform === p.id ? 'border-[rgba(46,230,197,.5)] text-accent' : ''"
+                  :class="platform === p.id ? 'border-[rgba(102,192,244,.5)] text-accent' : ''"
                   @click="pickPlatform(p.id)"
                 >
                   {{ p.label }}<span v-if="p.used" class="text-faint"> ·已占用</span>
@@ -197,11 +197,11 @@ function pickPlatform(id) {
                 class="flex items-center gap-2.5 px-3 py-2 rounded-[10px] border cursor-pointer transition-colors"
                 :class="
                   target === dep.file
-                    ? 'border-[rgba(46,230,197,.4)] bg-[rgba(46,230,197,.05)]'
+                    ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]'
                     : 'border-line hover:border-[#2a3644]'
                 "
               >
-                <input type="radio" value="" :checked="target === dep.file" class="accent-[#2ee6c5]" @change="target = dep.file" />
+                <input type="radio" value="" :checked="target === dep.file" class="accent-[#66c0f4]" @change="target = dep.file" />
                 <span class="text-[12.5px] text-ink">{{ PLATFORM_LABEL[dep.platformId] || dep.platformId }}</span>
                 <span class="font-mono num text-[11.5px] text-faint">{{ dep.id }}</span>
                 <span
@@ -218,10 +218,10 @@ function pickPlatform(id) {
               <label
                 class="flex items-center gap-2.5 px-3 py-2 rounded-[10px] border cursor-pointer transition-colors"
                 :class="
-                  !target ? 'border-[rgba(46,230,197,.4)] bg-[rgba(46,230,197,.05)]' : 'border-line hover:border-[#2a3644]'
+                  !target ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]' : 'border-line hover:border-[#2a3644]'
                 "
               >
-                <input type="radio" :checked="!target" class="accent-[#2ee6c5]" @change="target = ''" />
+                <input type="radio" :checked="!target" class="accent-[#66c0f4]" @change="target = ''" />
                 <span class="text-[12.5px] text-ink">新建一个 Depot</span>
                 <span v-if="!depots.length" class="text-[11.5px] text-faint">（这个 App 还没有 Depot）</span>
               </label>
@@ -234,7 +234,7 @@ function pickPlatform(id) {
                 <input
                   v-model="newDepotId"
                   placeholder="AppID+1"
-                  class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] num outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+                  class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 />
               </label>
               <label class="flex flex-col gap-1.5">
@@ -242,7 +242,7 @@ function pickPlatform(id) {
                 <input
                   v-model="depotName"
                   :placeholder="`${state.selectedDir || ''} Content`"
-                  class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+                  class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 />
               </label>
             </div>
@@ -250,11 +250,11 @@ function pickPlatform(id) {
             <!-- 已经有了：直接指过去 or 复制进去 -->
             <div v-if="target" class="flex items-center gap-2 flex-wrap pl-3">
               <label class="flex items-center gap-1.5 text-[11.5px] text-muted cursor-pointer select-none">
-                <input type="radio" value="bind" :checked="mode === 'bind'" class="accent-[#2ee6c5]" @change="mode = 'bind'" />
+                <input type="radio" value="bind" :checked="mode === 'bind'" class="accent-[#66c0f4]" @change="mode = 'bind'" />
                 直接指过去（不复制）
               </label>
               <label class="flex items-center gap-1.5 text-[11.5px] text-muted cursor-pointer select-none">
-                <input type="radio" value="copy" :checked="mode === 'copy'" class="accent-[#2ee6c5]" @change="mode = 'copy'" />
+                <input type="radio" value="copy" :checked="mode === 'copy'" class="accent-[#66c0f4]" @change="mode = 'copy'" />
                 复制进现有内容目录
               </label>
             </div>
