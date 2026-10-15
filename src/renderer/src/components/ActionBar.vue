@@ -15,7 +15,16 @@ import {
   syncPickAll,
   syncAddSelected,
   goSettings,
-  openDepotSlide
+  openDepotSlide,
+  runPreflight,
+  clearPreflight,
+  loadLocalStatus,
+  loadLocalDevCfg,
+  startLocalServer,
+  stopLocalServer,
+  openLocalServer,
+  enableLocalDevCfg,
+  setAppLocal
 } from '../store.js'
 import { fmtSize } from '../format.js'
 
@@ -69,8 +78,7 @@ function doPreview() {
   runBuild({ preview: true })
 }
 
-/** 正式上传要点两次，避免手滑把开发版推到线上 */
-function doLive() {
+/** 正式上传要点两次，避免手滑把开发版推到线上 */function doLive() {
   if (!confirming.value) {
     confirming.value = true
     timer = setTimeout(() => (confirming.value = false), 4500)
@@ -91,6 +99,32 @@ async function openPath(p) {
 }
 
 const partner = (seg) => `https://partner.steamgames.com/apps/${seg}/${appId.value}`
+/* ---- 上传前预检 ---- */
+
+const pf = computed(() => state.preflight.data || null)
+const pfTone = computed(() => {
+  if (!pf.value) return ''
+  if (pf.value.errors) return 'text-danger'
+  if (pf.value.warns) return 'text-amber'
+  return 'text-accent'
+})
+
+/* ---- 本地内容服务器 ---- */
+
+const localOpen = ref(false)
+
+async function toggleLocalPanel() {
+  localOpen.value = !localOpen.value
+  if (!localOpen.value) return
+  await loadLocalStatus()
+  if (!state.local.devcfg) await loadLocalDevCfg()
+}
+
+const localEnabled = computed(() => !!state.detail?.local)
+const localHost = computed(() => {
+  // steam_dev.cfg 里写的是主机名；本机填 127.0.0.1 就行
+  return '127.0.0.1'
+})
 </script>
 
 <template>
@@ -100,6 +134,16 @@ const partner = (seg) => `https://partner.steamgames.com/apps/${seg}/${appId.val
         <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
       自检
+    </button>
+
+    <button class="btn no-drag" :disabled="disabled || state.preflight.busy" @click="runPreflight()">
+      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
+        <path d="M12 3 4.5 6v6c0 4.4 3.1 8.1 7.5 9 4.4-.9 7.5-4.6 7.5-9V6z"
+          stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+        <path d="m9 12 2.2 2.2L15.5 10" stroke="currentColor" stroke-width="1.9"
+          stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      {{ state.preflight.busy ? '预检中…' : '预检' }}
     </button>
 
     <div class="w-px h-6 bg-line mx-1" />
@@ -159,6 +203,17 @@ const partner = (seg) => `https://partner.steamgames.com/apps/${seg}/${appId.val
         @click="verifyAgainstSteam()"
       >
         {{ state.verify.busy ? '读取中…' : '同步 Depot' }}
+      </button>
+      <button
+        class="btn no-drag"
+        :class="localEnabled ? 'border-[rgba(46,230,197,.35)] text-accent' : ''"
+        @click="toggleLocalPanel"
+      >
+        <span
+          v-if="state.local.running"
+          class="w-1.5 h-1.5 rounded-full bg-accent mr-1.5"
+        />
+        本地服务器
       </button>
       <button class="btn no-drag" @click="openLogin">登录一次</button>
     </div>
@@ -326,6 +381,137 @@ const partner = (seg) => `https://partner.steamgames.com/apps/${seg}/${appId.val
             </div>
           </div>
         </template>
+      </div>
+    </Transition>
+
+    <!-- 上传前预检 -->
+    <Transition
+      enter-active-class="transition duration-200"
+      enter-from-class="opacity-0 -translate-y-1"
+      leave-active-class="transition duration-150"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="state.preflight.busy || state.preflight.error || pf"
+        class="mt-1 w-full rounded-[10px] border px-3 py-2.5"
+        :class="
+          state.preflight.error
+            ? 'border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)]'
+            : 'border-line bg-surface-2/40'
+        "
+      >
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-semibold text-[12px]">上传前预检</span>
+          <span v-if="pf" class="text-[11px]" :class="pfTone">
+            {{ pf.errors }} 个会拦住上传 · {{ pf.warns }} 个警告 · {{ pf.infos }} 条提示
+          </span>
+          <span v-else-if="state.preflight.busy" class="text-[11px] text-faint">正在查后台和本地…</span>
+          <button class="ml-auto btn h-7 px-2.5 text-[11px] no-drag" @click="clearPreflight">收起</button>
+        </div>
+
+        <div v-if="state.preflight.error" class="mt-2 text-[12px] text-amber">
+          {{ state.preflight.error }}
+        </div>
+        <div v-else-if="pf && !pf.problems.length" class="mt-2 text-[11.5px] text-accent">
+          没有发现问题。
+        </div>
+        <div v-else-if="pf" class="mt-2 flex flex-col gap-2">
+          <div v-for="(p, i) in pf.problems" :key="i" class="flex items-start gap-2 min-w-0">
+            <span
+              class="pill shrink-0 mt-[1px]"
+              :class="p.level === 'error' ? 'pill-bad' : p.level === 'warn' ? 'pill-warn' : 'pill-idle'"
+            >
+              {{ p.level === 'error' ? '拦住' : p.level === 'warn' ? '警告' : '提示' }}
+            </span>
+            <div class="min-w-0">
+              <div class="text-[12px] text-ink">{{ p.title }}</div>
+              <div class="text-[11px] text-faint font-mono break-all">{{ p.text }}</div>
+              <div v-if="p.hint" class="text-[11px] text-muted">{{ p.hint }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 本地内容服务器 -->
+    <Transition
+      enter-active-class="transition duration-200"
+      enter-from-class="opacity-0 -translate-y-1"
+      leave-active-class="transition duration-150"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="localOpen"
+        class="mt-1 w-full rounded-[10px] border border-line bg-surface-2/40 px-3 py-2.5"
+      >
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-semibold text-[12px]">本地内容服务器</span>
+          <span class="pill" :class="state.local.running ? 'pill-ok' : 'pill-idle'">
+            {{ state.local.running ? `运行中 · ${state.local.url}` : '没在跑' }}
+          </span>
+          <button class="ml-auto btn h-7 px-2.5 text-[11px] no-drag" @click="localOpen = false">收起</button>
+        </div>
+
+        <div class="mt-2.5 flex items-center gap-2 flex-wrap">
+          <button
+            class="btn h-7 px-2.5 text-[11px] no-drag"
+            :disabled="state.local.busy || state.local.running"
+            @click="startLocalServer"
+          >
+            启动
+          </button>
+          <button
+            class="btn h-7 px-2.5 text-[11px] no-drag"
+            :disabled="state.local.busy || !state.local.running"
+            @click="stopLocalServer"
+          >
+            停止
+          </button>
+          <button
+            class="btn h-7 px-2.5 text-[11px] no-drag"
+            :disabled="!state.local.running"
+            @click="openLocalServer"
+          >
+            打开
+          </button>
+          <label class="flex items-center gap-1.5 text-[11.5px] text-muted cursor-pointer select-none ml-1">
+            <input
+              type="checkbox"
+              :checked="localEnabled"
+              class="accent-[#2ee6c5]"
+              @change="setAppLocal($event.target.checked)"
+            />
+            这个 App 的构建先传进本地服务器
+          </label>
+        </div>
+
+        <div v-if="state.local.error" class="mt-2 text-[11.5px] text-amber whitespace-pre-wrap">
+          {{ state.local.error }}
+        </div>
+
+        <div class="mt-2.5 pt-2.5 border-t border-line-soft text-[11px] text-muted leading-relaxed">
+          客户端要从本机下载，得在 Steam.exe 旁边放一个
+          <span class="font-mono text-ink">steam_dev.cfg</span>，写一行
+          <span class="font-mono text-ink">@localcontentserver {{ localHost }}</span>。
+          <template v-if="state.local.devcfg?.ok">
+            <br />找到的 Steam 目录：<span class="font-mono">{{ state.local.devcfg.steamPath }}</span>
+            <span v-if="state.local.devcfg.has"> · 已经配好了</span>
+          </template>
+          <template v-else-if="state.local.devcfg">
+            <br /><span class="text-amber">{{ state.local.devcfg.error }}</span>
+          </template>
+        </div>
+
+        <div class="mt-2 flex items-center gap-2 flex-wrap">
+          <button
+            class="btn h-7 px-2.5 text-[11px] no-drag"
+            :disabled="!state.local.devcfg?.ok || state.local.busy"
+            @click="enableLocalDevCfg"
+          >
+            写入 steam_dev.cfg
+          </button>
+          <span class="text-[11px] text-faint">80 端口要管理员；写入前会备份成 .bak</span>
+        </div>
       </div>
     </Transition>
   </div>

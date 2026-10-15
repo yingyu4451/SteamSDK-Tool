@@ -11,6 +11,7 @@ import {
   openDeleteDialog,
   renameApp,
   rescan,
+  setAppLocal,
   toast
 } from '../store.js'
 
@@ -59,9 +60,10 @@ const depot = computed(() =>
 
 /* ---- 本地草稿 ---- */
 
-const appForm = ref({ appId: '', desc: '', contentRoot: '', buildOutput: '', preview: false, setLive: '' })
-const depotForm = ref({ depotId: '', platform: 'win64', contentRoot: '', exclusions: [] })
+const appForm = ref({ appId: '', desc: '', contentRoot: '', buildOutput: '', preview: false, verbose: false, local: false, setLive: '' })
+const depotForm = ref({ depotId: '', platform: 'win64', contentRoot: '', exclusions: [], userConfig: [] })
 const newRule = ref('')
+const newUserConfig = ref('')
 const platforms = ref([])
 const defaults = ref([])
 
@@ -72,7 +74,8 @@ function sync() {
       depotId: depot.value.id || '',
       platform: depot.value.platformId || 'win64',
       contentRoot: depot.value.contentRoot || '',
-      exclusions: [...(depot.value.exclusions || [])]
+      exclusions: [...(depot.value.exclusions || [])],
+      userConfig: [...(depot.value.userConfig || [])]
     }
   } else {
     appForm.value = {
@@ -81,6 +84,8 @@ function sync() {
       contentRoot: detail.value.contentRoot || '',
       buildOutput: detail.value.buildOutput || '',
       preview: detail.value.preview === '1',
+      verbose: detail.value.verbose === '1',
+      local: !!detail.value.local,
       setLive: detail.value.setLive || ''
     }
     nameForm.value = detail.value.dirName || ''
@@ -148,17 +153,22 @@ async function submit() {
         depotId: depotForm.value.depotId.trim(),
         platform: depotForm.value.platform,
         contentRoot: depotForm.value.contentRoot.trim(),
-        exclusions: depotForm.value.exclusions.map((s) => s.trim()).filter(Boolean)
+        exclusions: depotForm.value.exclusions.map((s) => s.trim()).filter(Boolean),
+        userConfig: depotForm.value.userConfig.map((s) => s.trim()).filter(Boolean)
       })
     } else {
+      const wasLocal = !!detail.value.local
       await saveApp({
         appId: appForm.value.appId.trim(),
         desc: appForm.value.desc.trim(),
         contentRoot: appForm.value.contentRoot.trim(),
         buildOutput: appForm.value.buildOutput.trim(),
         preview: appForm.value.preview,
+        verbose: appForm.value.verbose,
         setLive: appForm.value.setLive.trim()
       })
+      // Local 那一行要写内容服务器的地址，不是 true/false，所以单独走一次
+      if (appForm.value.local !== wasLocal) await setAppLocal(appForm.value.local)
     }
     sync()
   } finally {
@@ -180,6 +190,18 @@ function removeRule(i) {
 
 function resetRules() {
   depotForm.value.exclusions = [...defaults.value]
+}
+
+function addUserConfig() {
+  const v = newUserConfig.value.trim().replace(/\\/g, '/')
+  if (!v) return
+  if (depotForm.value.userConfig.includes(v)) return toast('这条已经有了', 'bad')
+  depotForm.value.userConfig.push(v)
+  newUserConfig.value = ''
+}
+
+function removeUserConfig(i) {
+  depotForm.value.userConfig.splice(i, 1)
 }
 
 /* 删 Depot 也是二次点击：第一次上膛，5 秒内再点一次才真删 */
@@ -345,6 +367,19 @@ onUnmounted(depotDisarm)
             vdf 里 preview = 1（每次构建都只空跑，不会真上传）
           </label>
 
+          <label class="flex items-center gap-2 text-[12px] text-muted cursor-pointer select-none">
+            <input type="checkbox" v-model="appForm.verbose" class="accent-[#2ee6c5]" />
+            vdf 里 verbose = 1（steamcmd 打印每个文件，日志会长很多）
+          </label>
+
+          <label class="flex items-center gap-2 text-[12px] text-muted cursor-pointer select-none">
+            <input type="checkbox" v-model="appForm.local" class="accent-[#2ee6c5]" />
+            vdf 里 Local = 内容服务器（构建先传进本机，不上 Steam）
+          </label>
+          <div v-if="appForm.local" class="-mt-1 text-[11px] text-faint">
+            地址取「本地服务器」面板里那个；没跑就又开一次正式上传会失败。
+          </div>
+
           <div class="pt-3 border-t border-line flex items-center gap-2 flex-wrap">
             <button class="btn no-drag" @click="openVdf(null)">用系统编辑器打开</button>
             <button class="btn btn-danger no-drag ml-auto" @click="askDeleteApp">删除这个 App</button>
@@ -425,6 +460,58 @@ onUnmounted(depotDisarm)
                 @keydown.enter="addRule"
               />
               <button class="btn h-8 no-drag" :disabled="!newRule.trim()" @click="addRule">添加</button>
+            </div>
+          </div>
+
+          <!-- FileProperties / userconfig -->
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-[11.5px] text-muted">
+                FileProperties / userconfig（{{ depotForm.userConfig.length }} 条）
+              </span>
+              <span
+                class="pill pill-idle"
+                title="玩家运行时会改的文件：Steam 首次安装时放一份，之后升级不再覆盖"
+              >
+                保护存档
+              </span>
+            </div>
+
+            <div class="card-flat divide-y divide-[#1a212b] max-h-[200px] overflow-y-auto scroll-thin">
+              <div
+                v-for="(row, i) in depotForm.userConfig"
+                :key="'uc' + i"
+                class="flex items-center gap-2 px-2.5 py-1.5 group"
+              >
+                <input
+                  v-model="depotForm.userConfig[i]"
+                  placeholder="ABYA_PB_Data/Progress/Progress_0.PBProg"
+                  class="flex-1 min-w-0 bg-transparent border-0 outline-none text-[12px] font-mono text-accent placeholder:text-faint"
+                />
+                <button
+                  class="w-6 h-6 grid place-items-center rounded-md text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer shrink-0"
+                  @click="removeUserConfig(i)"
+                >
+                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none">
+                    <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </div>
+              <div v-if="!depotForm.userConfig.length" class="px-3 py-3 text-[11.5px] text-faint">
+                没有标记为玩家数据的文件 —— 玩家存档在升级时会被覆盖掉。
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <input
+                v-model="newUserConfig"
+                placeholder="相对内容目录，例如 ABYA_PB_Data/Progress"
+                class="flex-1 h-8 px-3 rounded-lg bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+                @keydown.enter="addUserConfig"
+              />
+              <button class="btn h-8 no-drag" :disabled="!newUserConfig.trim()" @click="addUserConfig">
+                添加
+              </button>
             </div>
           </div>
 

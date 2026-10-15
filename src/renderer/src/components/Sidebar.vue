@@ -1,10 +1,13 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { state, selectApp, rescan, openWizard } from '../store.js'
+import { state, selectApp, rescan, openWizard, runCheckAll } from '../store.js'
 import { useListStagger } from '../motion.js'
 
 const listEl = ref(null)
 const { run } = useListStagger(listEl, (el) => el.dataset.dir)
+
+/** 「全部自检」跑起来的时候，图标要亮着 */
+const checkingAll = computed(() => state.running && state.runKind === 'check')
 
 watch(
   () => state.apps.map((a) => a.dirName).join('|'),
@@ -74,6 +77,32 @@ function healthOf(app) {
             d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"
             stroke="currentColor"
             stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+      <button
+        class="w-6 h-6 grid place-items-center rounded-md transition-colors cursor-pointer border-0 bg-transparent"
+        :class="
+          checkingAll
+            ? 'text-accent'
+            : 'text-faint hover:text-accent hover:bg-surface-2'
+        "
+        title="全部自检（把每个 App 都跑一遍 check.ps1）"
+        @click="runCheckAll"
+      >
+        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" :class="checkingAll && 'animate-pulse'" fill="none">
+          <path
+            d="M12 3 4.5 6v6c0 4.4 3.1 8.1 7.5 9 4.4-.9 7.5-4.6 7.5-9V6z"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linejoin="round"
+          />
+          <path
+            d="m9 12 2.2 2.2L15.5 10"
+            stroke="currentColor"
+            stroke-width="1.9"
             stroke-linecap="round"
             stroke-linejoin="round"
           />

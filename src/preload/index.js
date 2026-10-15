@@ -52,7 +52,18 @@ const api = {
     delete: (dirName, deleteContent) => ipcRenderer.invoke('app:delete', { dirName, deleteContent }),
     openVdf: (dirName, depotFile) => ipcRenderer.invoke('app:openVdf', { dirName, depotFile }),
     publicName: (appId) => ipcRenderer.invoke('app:publicName', { appId }),
-    knownApps: () => ipcRenderer.invoke('app:knownApps')
+    knownApps: () => ipcRenderer.invoke('app:knownApps'),
+    preflight: (dirName) => ipcRenderer.invoke('app:preflight', { dirName })
+  },
+
+  /** 本地内容服务器：把构建写进 tools\ContentServer\htdocs，不上传 Steam */
+  local: {
+    status: () => ipcRenderer.invoke('local:status'),
+    start: (port) => ipcRenderer.invoke('local:start', { port }),
+    stop: () => ipcRenderer.invoke('local:stop'),
+    devcfg: (port) => ipcRenderer.invoke('local:devcfg', { port }),
+    enableDevcfg: (port) => ipcRenderer.invoke('local:enableDevcfg', { port }),
+    open: () => ipcRenderer.invoke('local:open')
   },
 
   /** Steamworks 后台那几项 Depot 属性（本地 vdf 里没有），存在应用设置里 */
@@ -76,7 +87,8 @@ const api = {
 
   run: {
     check: (dirName) => ipcRenderer.invoke('run:check', { dirName }),
-    build: (dirName, preview, password) => ipcRenderer.invoke('run:build', { dirName, preview, password }),
+    build: (dirName, preview, password, local) =>
+      ipcRenderer.invoke('run:build', { dirName, preview, password, local }),
     cancel: (runId) => ipcRenderer.invoke('run:cancel', runId),
     input: (runId, text) => ipcRenderer.invoke('run:input', { runId, text }),
     login: () => ipcRenderer.invoke('run:login'),

@@ -44,6 +44,8 @@ import {
   defaultContentRoot,
   getPaths
 } from './sdk.js'
+import { preflightApp } from './preflight.js'
+import { localStatus, startLocal, stopLocal, steamDevCfg, writeSteamDevCfg } from './localserver.js'
 import {
   PLATFORMS,
   DEFAULT_EXCLUSIONS,
@@ -487,9 +489,16 @@ function registerIpc() {
   })
 
   ipcMain.handle('app:create', (_e, spec) => createApp(spec || {}, loadSettings()))
-  ipcMain.handle('app:update', (_e, { dirName, patch }) =>
-    updateAppFields(dirName, patch || {}, loadSettings())
-  )
+  ipcMain.handle('app:update', (_e, { dirName, patch } = {}) => {
+    const p = { ...(patch || {}) }
+    // local: true = 用 SDK 自带的本地内容服务器；渲染层不该知道它在哪
+    if (p.local === true) {
+      p.local = path.join(loadSettings().sdkRoot, 'tools', 'ContentServer', 'htdocs')
+    } else if (p.local === false) {
+      p.local = ''
+    }
+    return updateAppFields(dirName, p, loadSettings())
+  })
   ipcMain.handle('app:updateDepot', (_e, { dirName, depotFile, patch }) =>
     updateDepotFields(dirName, depotFile, patch || {}, loadSettings())
   )
@@ -558,6 +567,30 @@ function registerIpc() {
     }
   })
 
+  /* ---- 上传前预检 ---- */
+  ipcMain.handle('app:preflight', (_e, { dirName } = {}) => {
+    try {
+      return preflightApp(dirName, loadSettings())
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
+  })
+
+  /* ---- 本地内容服务器 ---- */
+  ipcMain.handle('local:status', () => localStatus(loadSettings()))
+  ipcMain.handle('local:start', (_e, { port } = {}) => startLocal(loadSettings(), port || 80))
+  ipcMain.handle('local:stop', () => stopLocal())
+  ipcMain.handle('local:devcfg', (_e, { port } = {}) => steamDevCfg(loadSettings(), port || 80))
+  ipcMain.handle('local:enableDevcfg', (_e, { port } = {}) =>
+    writeSteamDevCfg(loadSettings(), port || 80)
+  )
+  ipcMain.handle('local:open', async () => {
+    const st = localStatus(loadSettings())
+    if (!st.running) return { ok: false, error: '服务器没在跑' }
+    const err = await shell.openExternal(st.url)
+    return err ? { ok: false, error: String(err) } : { ok: true, url: st.url }
+  })
+
   /* ---- 系统通知 ---- */
   ipcMain.handle('notify', (_e, { title, body } = {}) => {
     try {
@@ -592,7 +625,7 @@ function registerIpc() {
     return handle ? { ok: true, ...handle } : { ok: false, error: 'check.ps1 未找到' }
   })
 
-  ipcMain.handle('run:build', (_e, { dirName, preview = true, password } = {}) => {
+  ipcMain.handle('run:build', (_e, { dirName, preview = true, password, local = false } = {}) => {
     const s = loadSettings()
     const p = getPaths(s)
     const pw = currentPassword(password)
@@ -609,12 +642,13 @@ function registerIpc() {
 
     const args = ['-App', dirName, '-User', s.account]
     if (preview) args.push('-Preview')
+    if (local) args.push('-Local')
 
     const handle = runScript({
       script: p.buildScript,
       args,
       cwd: p.contentBuilder,
-      label: `${preview ? 'Preview' : '正式上传'} ${dirName}`,
+      label: `${local ? '本地服务器' : preview ? 'Preview' : '正式上传'} ${dirName}`,
       password: pw,
       env: { STEAMSDK_BUILD_PASSWORD: pw },
       onData: (d) => send('run:data', { kind: 'build', ...d }),
@@ -626,7 +660,7 @@ function registerIpc() {
       }
     })
     return handle
-      ? { ok: true, preview, ...handle }
+      ? { ok: true, preview, local, ...handle }
       : { ok: false, error: 'build.ps1 未找到，请在设置里检查 SDK 路径' }
   })
 

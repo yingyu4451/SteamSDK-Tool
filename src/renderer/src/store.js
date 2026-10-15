@@ -28,6 +28,7 @@ export const state = reactive({
   runKind: null, // check | build
   runId: null,
   runPreview: true,
+  runLocal: false,
   logs: [],
   prompt: null,
   lastExit: null,
@@ -61,7 +62,11 @@ export const state = reactive({
   depotOptions: { os: [], arch: [], languages: [] },
   // scripts 根目录下游离的 vdf（不属于任何 App 文件夹）
   orphans: [],
-  orphanDialog: null
+  orphanDialog: null,
+  // 上传前预检
+  preflight: { busy: false, error: null, data: null },
+  // 本地内容服务器
+  local: { running: false, port: 80, url: '', installed: true, busy: false, devcfg: null, error: null }
 })
 
 /** 平台 id → 显示名（和主进程 vdf-edit.js 的 PLATFORMS 一一对应） */
@@ -972,15 +977,19 @@ export async function runCheck() {
   }
 }
 
-export async function runBuild({ preview, password }) {
+export async function runBuild({ preview, password, local }) {
   if (state.running || !state.selectedDir) return
   clearLogs()
   state.askPasswordError = null
   state.running = true
   state.runKind = 'build'
   state.runPreview = !!preview
-  pushLog('system', `> build.ps1 -App ${state.selectedDir}${preview ? ' -Preview' : ''}`)
-  const res = await api.run.build(state.selectedDir, !!preview, password)
+  state.runLocal = !!local
+  pushLog(
+    'system',
+    `> build.ps1 -App ${state.selectedDir}${preview ? ' -Preview' : ''}${local ? ' -Local' : ''}`
+  )
+  const res = await api.run.build(state.selectedDir, !!preview, password, !!local)
 
   if (res.ok) {
     state.runId = res.id
@@ -1098,4 +1107,160 @@ export function wireEvents() {
     reloadDetail()
     if (kind === 'build') loadHistory()
   })
+}
+
+/* ------------------------------------------------------------------ *
+ *  全部 App 一起自检
+ * ------------------------------------------------------------------ */
+
+export async function runCheckAll() {
+  if (state.running) return
+  clearLogs()
+  state.running = true
+  state.runKind = 'check'
+  pushLog('system', '> check.ps1（所有 App）')
+  const res = await api.run.check(undefined)
+  if (!res.ok) {
+    pushLog('stderr', res.error || '启动失败')
+    state.running = false
+    state.runKind = null
+  } else {
+    state.runId = res.id
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  上传前预检
+ * ------------------------------------------------------------------ */
+
+export async function runPreflight(dirName) {
+  const dir = dirName || state.selectedDir
+  if (!dir) return null
+  state.preflight = { busy: true, error: null, data: null }
+  let res = null
+  try {
+    res = await api.app.preflight(dir)
+  } catch (e) {
+    state.preflight = { busy: false, error: e.message, data: null }
+    return null
+  }
+  if (!res || res.ok === false) {
+    state.preflight = { busy: false, error: res?.error || '预检失败', data: null }
+    return null
+  }
+  state.preflight = { busy: false, error: null, data: res }
+  const n = res.errors || 0
+  toast(n ? `预检发现 ${n} 个会挡住上传的问题` : '预检通过，没有会挡住上传的问题', n ? 'warn' : 'ok')
+  return res
+}
+
+export function clearPreflight() {
+  state.preflight = { busy: false, error: null, data: null }
+}
+
+/* ------------------------------------------------------------------ *
+ *  App 级开关：verbose / 本地内容服务器
+ * ------------------------------------------------------------------ */
+
+export async function setAppVerbose(on) {
+  if (!state.selectedDir) return
+  await api.app.update(state.selectedDir, { verbose: !!on })
+  await reloadDetail()
+}
+
+export async function setAppLocal(on) {
+  if (!state.selectedDir) return
+  const r = await api.app.update(state.selectedDir, { local: !!on })
+  if (r && r.ok === false) {
+    toast(r.error || '改不了', 'bad')
+    return
+  }
+  await reloadDetail()
+  toast(on ? '这个 App 的构建会传进本地内容服务器' : '已改回正常上传 Steam')
+}
+
+/* ------------------------------------------------------------------ *
+ *  Depot 的「玩家存档文件」（FileProperties / userconfig）
+ * ------------------------------------------------------------------ */
+
+export async function setDepotUserConfig(depotFile, list) {
+  if (!state.selectedDir) return null
+  const r = await api.app.updateDepot(state.selectedDir, depotFile, { userConfig: list })
+  if (r && r.ok === false) {
+    toast(r.error || '保存失败', 'bad')
+    return r
+  }
+  await reloadDetail()
+  await rescan()
+  toast('已更新玩家存档标记')
+  return r
+}
+
+/* ------------------------------------------------------------------ *
+ *  本地内容服务器
+ * ------------------------------------------------------------------ */
+
+export async function loadLocalStatus() {
+  try {
+    const st = await api.local.status()
+    if (st?.ok) {
+      state.local = { ...state.local, ...st, busy: false, devcfg: state.local.devcfg }
+    }
+  } catch {
+    /* 主进程没起来也无所谓 */
+  }
+  return state.local
+}
+
+export async function loadLocalDevCfg() {
+  try {
+    state.local.devcfg = await api.local.devcfg(state.local.port || 80)
+  } catch (e) {
+    state.local.devcfg = { ok: false, error: e.message }
+  }
+  return state.local.devcfg
+}
+
+export async function startLocalServer() {
+  state.local.busy = true
+  state.local.error = null
+  const r = await api.local
+    .start(state.local.port || 80)
+    .catch((e) => ({ ok: false, error: e.message }))
+  state.local.busy = false
+  if (!r.ok) {
+    state.local.error = r.error
+    toast(r.error || '启动失败', 'bad')
+    return r
+  }
+  await loadLocalStatus()
+  toast(`本地内容服务器已启动：${state.local.url}`)
+  return r
+}
+
+export async function stopLocalServer() {
+  state.local.busy = true
+  await api.local.stop().catch(() => null)
+  state.local.busy = false
+  await loadLocalStatus()
+  toast('本地内容服务器已停')
+}
+
+export async function openLocalServer() {
+  const r = await api.local.open().catch((e) => ({ ok: false, error: e.message }))
+  if (!r.ok) toast(r.error || '打不开', 'bad')
+  return r
+}
+
+export async function enableLocalDevCfg() {
+  const r = await api.local
+    .enableDevcfg(state.local.port || 80)
+    .catch((e) => ({ ok: false, error: e.message }))
+  if (!r.ok) {
+    toast(r.error || '写不了 steam_dev.cfg', 'bad')
+    return r
+  }
+  await loadLocalDevCfg()
+  toast(`已写入 ${r.file}${r.backedUp ? '（原文件备份成 .bak）' : ''}`)
+  return r
 }

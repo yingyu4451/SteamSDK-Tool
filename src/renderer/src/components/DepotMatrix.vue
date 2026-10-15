@@ -184,6 +184,16 @@ async function openPath(p) {
             <span class="shrink-0 w-[52px] text-faint/70">脚本</span>
             <span class="font-mono truncate" :title="current.file">{{ current.file }}</span>
           </div>
+          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-[11.5px] text-faint min-w-0">
+            <span class="shrink-0 w-[52px] text-faint/70">存档保护</span>
+            <span class="font-mono break-all">
+              {{ current.userConfig.join('、') }}
+            </span>
+          </div>
+          <div v-else class="flex items-center gap-2 text-[11.5px] min-w-0">
+            <span class="shrink-0 w-[52px] text-faint/70">存档保护</span>
+            <span class="text-amber/80">没标任何玩家数据文件</span>
+          </div>
         </div>
       </div>
 

@@ -17,7 +17,9 @@ import {
   languageLabel,
   DEPOT_OS,
   DEPOT_ARCH,
-  DEPOT_LANGUAGES
+  DEPOT_LANGUAGES,
+  readUserConfig,
+  setUserConfig
 } from './vdf-edit.js'
 import { readDepotMeta, setDepotMeta } from './store.js'
 
@@ -70,7 +72,7 @@ function globToRegExp(pattern) {
 }
 
 const globCache = new Map()
-function globMatch(rel, pattern) {
+export function globMatch(rel, pattern) {
   let re = globCache.get(pattern)
   if (!re) {
     re = globToRegExp(pattern)
@@ -242,6 +244,9 @@ export function readApp(appDirName, settings) {
   const buildOutput = getString(root, 'BuildOutput')
   const preview = getString(root, 'preview', '0')
   const setLive = getString(root, 'SetLive', '')
+  const verbose = getString(root, 'verbose', '0') === '1'
+  // "Local" 一旦有值，run_app_build 会把内容丢进本地内容服务器而不是上传 Steam。
+  const local = getString(root, 'Local', '')
 
   const depotsBlock = getBlock(root, 'Depots')
   const depotRefs = pairs(depotsBlock)
@@ -279,6 +284,7 @@ export function readApp(appDirName, settings) {
       idMatches: depotId === ref.key,
       contentRoot: depotContentRoot,
       exclusions,
+      userConfig: readUserConfig(depotText),
       hasFileMapping: !!getBlock(droot, 'FileMapping'),
       platform: depotPlatformFromName(ref.value),
       platformId: platformId0,
@@ -304,6 +310,8 @@ export function readApp(appDirName, settings) {
     buildOutput,
     preview,
     setLive,
+    verbose,
+    local,
     depots,
     // 概览用第一个 depot 的数据；多平台时界面上按 depot 分开看
     analysis: primary?.analysis ?? analyzeContent(null, []),
@@ -722,6 +730,18 @@ export function updateAppFields(appDirName, patch, settings) {
     text = r.text
     if (r.changed) changed.push('preview')
   }
+  if ('verbose' in patch) {
+    const r = setField(text, 'verbose', patch.verbose ? '1' : '0')
+    text = r.text
+    if (r.changed) changed.push('verbose')
+  }
+  if ('local' in patch) {
+    // 传空 = 把这一行注释回去。绝不能留下 "Local" "" —— 那会让 run_app_build
+    // 以为要往空路径的本地服务器上传。
+    const r = setField(text, 'Local', patch.local ? String(patch.local) : '')
+    text = r.text
+    if (r.changed) changed.push('Local')
+  }
 
   // 注释是自愈的：就算字段没变，只要注释和当前 depot 列表对不上就顺手修掉
   const noted = refreshAppNotes(text, depotNotes(app))
@@ -770,6 +790,9 @@ export function updateDepotFields(appDirName, depotFile, patch, settings) {
   }
   if (Array.isArray(patch.exclusions)) {
     text = setList(text, 'FileExclusion', patch.exclusions).text
+  }
+  if (Array.isArray(patch.userConfig)) {
+    text = setUserConfig(text, patch.userConfig).text
   }
 
   const platform = patch.platform || guessPlatform(depotFile) || 'win64'
@@ -990,7 +1013,8 @@ export function createApp(spec, settings) {
           platform: d.platform,
           contentRoot: d.contentRoot,
           playerName: spec.playerName || '',
-          exclusions: defaultExclusionsFor(d.platform)
+          exclusions: defaultExclusionsFor(d.platform),
+          userConfig: Array.isArray(d.userConfig) ? d.userConfig : []
         }),
         'utf8'
       )
@@ -1002,9 +1026,12 @@ export function createApp(spec, settings) {
         name,
         desc: spec.desc || '',
         contentRoot: projectDir,
-        buildOutput: p.outputDir,
+        // 构建缓存按 App 分开：共用一个目录时，两个 App 的缓存会互相干扰，
+        // 增量上传也会算错。Valve 模板的注释也提到缓存分开能更快。
+        buildOutput: String(spec.buildOutput ?? '').trim() || path.join(p.outputDir, name),
         preview: spec.preview !== false,
         setLive: spec.setLive || '',
+        verbose: !!spec.verbose,
         depots
       }),
       'utf8'

@@ -273,6 +273,62 @@ const NOTE_BODY_RES = [
   /^[ \t]*\/\/ 这里的 ContentRoot[^\n]*\r?\n(?:[ \t]*\/\/ 每个 Depot 在各自的脚本里用[^\n]*\r?\n)?/gm
 ]
 
+/* ------------------------------------------------------------------ *
+ *  FileProperties / userconfig
+ *  标记「玩家运行时会改的文件」（存档、进度、设置）。Steam 更新时不会用
+ *  新构建里的版本覆盖玩家本地那份 —— 不标的话玩家一更新进度就回档。
+ * ------------------------------------------------------------------ */
+
+const UC_COMMENT = /^[ \t]*\/\/ --- 玩家运行时会改的文件[^\n]*\r?\n/gm
+// 注意 key 和 { 之间要允许换行 —— 我们自己生成的就是分两行的
+const FP_BLOCK = /[ \t]*"FileProperties"\s*\{[^}]*\}[ \t]*\r?\n?/gi
+
+/** 从 depot 脚本里读出打了 userconfig 的 LocalPath 列表 */
+export function readUserConfig(text = '') {
+  const out = []
+  for (const m of String(text).matchAll(FP_BLOCK)) {
+    const body = m[0]
+    if (!/userconfig/i.test(body)) continue
+    const lm = /"LocalPath"[ \t]+"([^"]*)"/i.exec(body)
+    if (lm && lm[1].trim()) out.push(lm[1])
+  }
+  return out
+}
+
+/** 整组替换 depot 脚本里的 userconfig 块；空数组 = 全部删掉 */
+export function setUserConfig(text, list = []) {
+  const original = text
+  const uc = (Array.isArray(list) ? list : []).map((s) => String(s ?? '').trim()).filter(Boolean)
+
+  // 先清掉旧的（连同我们自己写的那行分组注释）
+  let out = text.replace(UC_COMMENT, '')
+  // 只删带 userconfig 的块；用户手写的其它 FileProperties 原样留着
+  out = out.replace(FP_BLOCK, (m) => (/userconfig/i.test(m) ? '' : m))
+
+  if (uc.length) {
+    const block =
+      `\n\t// --- 玩家运行时会改的文件：更新时不覆盖玩家那份 ---\n` +
+      uc
+        .map(
+          (p) =>
+            `\t"FileProperties"\n\t{\n\t\t"LocalPath"\t${q(p)}\n\t\t"Attributes"\t"userconfig"\n\t}\n`
+        )
+        .join('\n')
+    const fm = /"FileMapping"[ \t]*\{[^}]*\}[ \t]*\r?\n/i.exec(out)
+    if (fm) {
+      const at = fm.index + fm[0].length
+      out = out.slice(0, at) + block + out.slice(at)
+    } else {
+      const dm = /^([ \t]*"DepotID"[^\n]*\r?\n)/m.exec(out)
+      if (!dm) return { text: original, changed: false, mode: 'no-anchor' }
+      out = out.slice(0, dm.index + dm[0].length) + block + out.slice(dm.index + dm[0].length)
+    }
+  }
+
+  out = out.replace(/\n{3,}/g, '\n\n')
+  return { text: out, changed: out !== original, mode: uc.length ? 'replaced' : 'cleared' }
+}
+
 export function refreshAppNotes(text, { depotCount = 0, platforms = [] } = {}) {
   const names = platforms.filter(Boolean)
   const list = names.length ? `（${names.join(' + ')}）` : ''
@@ -306,6 +362,8 @@ export function renderAppVdf({
   buildOutput = '',
   preview = false,
   setLive = '',
+  verbose = false,
+  local = '',
   depots = []
 }) {
   const depotLines = depots
@@ -313,6 +371,13 @@ export function renderAppVdf({
     .join('\n')
 
   const setLiveLine = setLive ? `\t"SetLive"\t\t${q(setLive)}` : `//\t"SetLive"\t"beta_branch_name"`
+  const verboseLine = `\t"verbose"\t\t${q(verbose ? '1' : '0')}`
+
+  // "Local" = 内容放到本地内容服务器（tools\ContentServer），不上传到 Steam。
+  // 平时留成注释：它一旦生效，「正式上传」会静默地什么都传不上去。
+  const localLine = local
+    ? `\t"Local"\t\t${q(local)}`
+    : `//\t"Local"\t\t"..\\..\\ContentServer\\htdocs"`
 
   // App 层 ContentRoot 在 Valve 的语义里是「自己没写 contentroot 的 depot」的默认值。
   // 这里把它当成**项目文件夹**用：一个 App 一个项目文件夹（D:\SteamBuilds\AbyaDemo），
@@ -337,7 +402,7 @@ export function renderAppVdf({
 {
 \t"AppID"\t\t\t${q(appId)}
 \t"Desc"\t\t\t${q(desc)}
-\t"verbose"\t\t"0"
+${verboseLine}
 \t"preview"\t\t${q(preview ? '1' : '0')}
 
 ${contentRootBlock}
@@ -346,6 +411,9 @@ ${contentRootBlock}
 
 \t// 发布到哪个 beta 分支；留空 = 默认分支。
 ${setLiveLine}
+
+\t// 取消下面这行的注释 = 传进本地内容服务器，不上传 Steam。
+${localLine}
 
 \t"Depots"
 \t{
@@ -368,10 +436,25 @@ export function renderDepotVdf({
   playerName = '',
   platform = 'win64',
   contentRoot = '',
-  exclusions = DEFAULT_EXCLUSIONS
+  exclusions = DEFAULT_EXCLUSIONS,
+  userConfig = []
 }) {
   const plat = platformById(platform)
   const exLines = exclusions.map((e) => `\t"FileExclusion"\t${q(e)}`).join('\n')
+  const uc = userConfig.map((s) => String(s ?? '').trim()).filter(Boolean)
+
+  // FileProperties + userconfig：告诉 Steam 这些文件是「玩家运行时会改的」。
+  // 效果是更新时不会用新构建里的版本覆盖玩家本地那份 —— 存档、进度、设置
+  // 这些跟着 depot 一起传上去的文件就该这么标，否则玩家一更新进度就回档。
+  const ucBlock = uc.length
+    ? `\n\t// --- 玩家运行时会改的文件：更新时不覆盖玩家那份 ---\n` +
+      uc
+        .map(
+          (p) =>
+            `\t"FileProperties"\n\t{\n\t\t"LocalPath"\t${q(p)}\n\t\t"Attributes"\t"userconfig"\n\t}\n`
+        )
+        .join('\n')
+    : ''
 
   return `// ============================================================================
 //  Depot ${depotId}  --  ${plat.label}
@@ -393,7 +476,7 @@ export function renderDepotVdf({
 \t\t"DepotPath"\t\t"."
 \t\t"recursive"\t\t"1"
 \t}
-
+${ucBlock}
 \t// --- 调试 / 诊断产物，永远不上传 ---
 ${exLines}
 

@@ -10,7 +10,8 @@ App 列表、内容体检、一键自检、Preview 空跑、正式上传、实�
 
 | | |
 |---|---|
-| **多 App 管理** | 侧栏「＋」打开向导，填名字 + AppID 就建好一个版本（Demo / 正式版 / Playtest）。DepotID 自动按 `AppID + 1` 预填（你的 3036850→3036851 就是这个规律），可以改 |
+| **多 App 管理** | 侧栏「＋」打开向导，填名字 + AppID 就建好一个版本（Demo / 正式版 / Playtest）。DepotID 自动按 `AppID + 1` 预填（你的 3036850→3036851 就是这个规律），可以改。**平台行可以拖动排序**，自上而下就是 +1、+2… 的顺序 —— 想让 macOS 拿到 `+1` 就把它拖到第一行 |
+| **AppID 撞车当场拦下** | 向导里填的 AppID 如果本地已经有 App 在用，AppID 输入框下面立刻弹黄色横幅并给一个「改用它」按钮。两个本地 App 指同一个 Steam App 是很隐蔽的错误 —— 两边各自看都正常，构建却传到同一处 |
 | **读后台真实 DepotID** | 向导里填完 AppID，点「读取后台 Depot」（或直接点到别处）就把后台已经配好的 Depot 列出来 —— 平台、构建号、体积，勾上哪个就把那个平台的 DepotID 换成后台的真实值。**比猜 `AppID+1` 可靠**：后台的 DepotID 不一定连号。**不需要管理员**：只要「设置」里存过 Steam 账号密码，就走 steamcmd 的 `app_info_print` 读；有 Web API 密钥时优先用密钥那条路 |
 | **一个 App 管多平台** | **别为 win64 / macOS 各建一个 App。** 一个 App 下面挂多个 Depot 就行 —— 向导里多勾几个平台，或者在 Depot 矩阵上点「＋ 添加 Depot」。每个 Depot 有自己的内容目录和平台，一次构建全部发布，跟 Unity 命令行传 `-steamAppType Demo` 是一回事 |
 | **改名（连文件夹一起）** | 抽屉里改 App 名字，`scripts\旧名\` 会自动重命名成 `scripts\新名\`，vdf 内容不动，内容目录也不碰 |
@@ -31,6 +32,12 @@ App 列表、内容体检、一键自检、Preview 空跑、正式上传、实�
 | **分支管理** | 写 `SetLive`，记住用过的分支名，一键跳后台分支页 |
 | **上传后跳转** | 正式上传成功后，控制台顶部出现「打开构建页」，直接去设为 live |
 | **系统通知** | 自检 / Preview / 上传跑完弹系统通知，不用盯着窗口 |
+| **上传前预检** | 自检之外再查一遍「线上会出事」的东西：内容目录重叠、玩家存档没被标成 `userconfig`、macOS `.app` / 符号链接、`.pdb` / 日志 / `BurstDebugInformation` 混在里面、`preview` 还开着却点了正式上传。每条给「拦住 / 警告 / 提示」 |
+| **玩家存档保护** | Depot 抽屉里可以标 `FileProperties / userconfig`（相对内容目录）。标上的文件 Steam 首次安装放一份，**之后升级不再覆盖** —— 玩家的进度不会被你的更新冲掉 |
+| **verbose 详细日志** | App 抽屉里勾上，vdf 里写 `verbose = 1`，steamcmd 会逐文件打印 |
+| **每个 App 独立 BuildOutput** | vdf 里的 `BuildOutput` 现在真的生效了：`build.ps1` 把日志和构建缓存写到那个目录，不再全塞进 ContentBuilder 根下 |
+| **本地内容服务器** | 用 SDK 自带的 `ContentServer\`，把构建传进本机而不是 Steam。一键起停、一键写客户端的 `steam_dev.cfg`（会先备份 `.bak`）。调试不用每次真上传 |
+| **多 App 批量自检** | 侧栏那个盾牌图标，把每个 App 都跑一遍 `check.ps1`，结果进同一个控制台 |
 
 ### 编辑 vdf 时不会毁掉注释
 
