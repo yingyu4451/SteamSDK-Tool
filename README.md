@@ -6,6 +6,8 @@
 
 > **下载**：[最新版本](https://github.com/yingyu4451/SteamSDK-Tool/releases/latest) —— 装完第一次打开会有三步引导。
 
+[English](README.en.md) · **中文**
+
 ![工作台](docs/workbench.png)
 
 ---
