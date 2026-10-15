@@ -136,6 +136,7 @@ export const state = reactive({
   update: {
     current: '',
     repo: '',
+    portable: false, // 便携版：更新下载完只打开文件夹，不自动装
     busy: false,
     checked: false,
     data: null, // checkUpdate 的返回值
@@ -300,6 +301,7 @@ export async function loadUpdateInfo() {
     if (r?.ok) {
       state.update.current = r.current
       state.update.repo = r.repo
+      state.update.portable = !!r.portable
     }
   } catch {
     /* 拿不到就算了，不是关键路径 */
@@ -357,7 +359,9 @@ export async function installUpdateNow() {
   const u = state.update
   if (!u.ready) return toast('先点「下载更新」', 'bad')
   const r = await api.update.install(u.ready)
-  if (!r?.ok) toast(r?.error || '安装失败', 'bad')
+  if (!r?.ok) return toast(r?.error || '安装失败', 'bad')
+  // 便携版：主进程只把文件夹打开，替换得用户自己来
+  if (r.manual) toast('已经把新版所在的位置打开了 —— 关掉工具，替换掉你那个 exe')
 }
 
 export function openReleases() {

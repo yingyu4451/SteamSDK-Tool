@@ -344,12 +344,16 @@ function openExternal(url) {
                 {{ u.downloading ? '下载中…' : u.data.asset ? '下载更新' : '这个 release 里没有 .exe' }}
               </button>
               <button v-else class="btn btn-primary h-8 px-3 text-[11.5px] no-drag" @click="installUpdateNow()">
-                重启并安装
+                {{ u.portable ? '打开下载位置' : '重启并安装' }}
               </button>
               <button class="btn h-8 px-3 text-[11.5px] no-drag" @click="openReleases()">在 GitHub 上看</button>
             </div>
 
-            <div v-if="u.ready" class="mt-2 text-[11px] text-faint">
+            <div v-if="u.ready && u.portable" class="mt-2 text-[11px] text-faint">
+              便携版没有安装目录，也覆盖不了正在运行的自己。
+              点「打开下载位置」，关掉工具，用新版替换掉你那个 exe 就行。
+            </div>
+            <div v-else-if="u.ready" class="mt-2 text-[11px] text-faint">
               安装包已经下好了。点「重启并安装」会关掉工具、起安装程序。
             </div>
           </div>

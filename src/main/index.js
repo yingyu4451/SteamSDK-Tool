@@ -55,7 +55,8 @@ import {
   pruneOldDownloads,
   openReleases,
   currentVersion,
-  repoUrl
+  repoUrl,
+  isPortable
 } from './updater.js'
 import { analyzeTarget, applyDrop } from './dropzone.js'
 import { localStatus, startLocal, stopLocal, probePort, steamDevCfg, writeSteamDevCfg } from './localserver.js'
@@ -660,7 +661,7 @@ function registerIpc() {
   ipcMain.handle('local:enableDevcfg', (_e, { port } = {}) =>
     writeSteamDevCfg(loadSettings(), port || 80)
   )
-  ipcMain.handle('update:info', () => ({ ok: true, current: currentVersion(), repo: repoUrl() }))
+  ipcMain.handle('update:info', () => ({ ok: true, current: currentVersion(), repo: repoUrl(), portable: isPortable() }))
 
   ipcMain.handle('update:check', () => checkUpdate())
 

@@ -1,0 +1,89 @@
+name: 构建
+
+# 什么时候跑：
+#   - 在 GitHub 网页上手动点（Actions → 构建 → Run workflow）
+#   - 往 main 推（只为验证「还能不能构建出来」，不碰 Release）
+#   - 推一个 v* 标签（这时除了产物，还会自动挂到对应的 Release 上）
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+# 认领 GitHub 的直连：runner 在国外，走官方源比走国内镜像快。
+# 仓库里的 .npmrc 配了 npmmirror，这里用环境变量盖掉 ——
+# @electron/get 读环境变量的优先级高于 npm 配置。
+env:
+  ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
+  ELECTRON_BUILDER_BINARIES_MIRROR: https://github.com/electron-userland/electron-builder-binaries/releases/download/
+
+jobs:
+  windows:
+    name: Windows 安装版 + 便携版
+    runs-on: windows-latest
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: 装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 装依赖
+        run: pnpm install --frozen-lockfile
+
+      # electron 44 的 package.json 里没有 scripts 字段，二进制靠 index.js
+      # 首次调用时惰性下载；pnpm 的 onlyBuiltDependencies 里也挂了它。
+      # 这里显式跑一次，免得后面 electron-builder 找不到 dist。
+      - name: 确保 electron 二进制在
+        run: node node_modules/electron/install.js
+
+      - name: 生成图标
+        run: node scripts/make-icon.mjs
+
+      # dist 一次出两个：nsis 安装包 + portable 单文件
+      - name: 打包（安装版 + 便携版）
+        run: pnpm dist
+
+      - name: 列出产物
+        run: Get-ChildItem release -Filter *.exe | Select-Object Name, Length
+        shell: pwsh
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: SteamSDK-Tool-windows
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            release/*.exe
+            release/*.blockmap
+
+      # 只有推标签时才动 Release。gh 在 runner 上是预装的。
+      - name: 挂到 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Release $tag 还不存在，建一个"
+            gh release create $tag --title $tag --generate-notes
+          } else {
+            Write-Host "Release $tag 已存在，只补文件"
+          }
+          gh release upload $tag (Get-ChildItem release -Filter *.exe | ForEach-Object { $_.FullName }) --clobber
+          Write-Host "完成："
+          gh release view $tag --json assets --jq '.assets[] | "  \(.name)  \(.size) 字节"'

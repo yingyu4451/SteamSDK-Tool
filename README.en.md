@@ -179,18 +179,35 @@ The optional Web API key is likewise DPAPI-encrypted locally.
 
 The tool checks GitHub Releases for new versions: the **About** card in Settings shows the current version and a **Check for updates** button, and a `vX.Y.Z available` pill appears in the title bar when there's a newer build — click through to download and restart-install in one step.
 
+Update checks go through `releases.atom` and the release web pages, **not the GitHub API** — the anonymous API is limited to 60 requests/hour/IP, which a whole office behind one NAT would burn through instantly.
+
+### Two editions
+
+| | `-setup.exe` | `-portable.exe` |
+|---|---|---|
+| Install | Double-click to install; Start-menu entry and uninstaller | Double-click to run; nothing installed, nothing written to the registry |
+| Permissions | Can install per-user without admin | Never needs admin |
+| Updates | **Restart and install** replaces it automatically | **Open download location**, then close the tool and swap the exe yourself |
+
+A portable build can't overwrite itself while running, so its update is manual by design — the app says so, and the updater only downloads the edition you're actually running.
+
 ### Publishing a new version (maintainer notes)
+
+Push a `v*` tag and the workflow in `.github/workflows/build.yml` builds both editions and creates the release. Manually it's the same path:
 
 ```powershell
 # 1. bump version in package.json, e.g. 0.2.0
-# 2. build + package
+# 2. build + package (both editions)
 pnpm build
 $env:ELECTRON_BUILDER_BINARIES_MIRROR='https://npmmirror.com/mirrors/electron-builder-binaries/'
 $env:ELECTRON_MIRROR='https://npmmirror.com/mirrors/electron/'
 pnpm dist
 # 3. publish — the tag MUST be vX.Y.Z, that's what the updater looks for
-gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md "release\SteamSDK Tool-0.2.0-setup.exe"
+gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md `
+  "release\SteamSDK Tool-0.2.0-setup.exe" "release\SteamSDK Tool-0.2.0-portable.exe"
 ```
+
+> Upload both. If only the setup is published, portable users get an installer — downloadable, but the wrong thing.
 
 ---
 

@@ -26,11 +26,24 @@ extraResources:
 
 win:
   target:
+    # setup：走安装向导，能改安装目录、建快捷方式、能自动更新
     - target: nsis
+      arch:
+        - x64
+    # portable：单个 exe，双击就跑，不装、不写注册表、不需要管理员
+    - target: portable
       arch:
         - x64
   icon: build/icon.ico
   artifactName: ${productName}-${version}-setup.${ext}
+
+portable:
+  # 名字里带 portable，别让更新逻辑把它当成安装包
+  # （updater 挑资产时优先选名字含 setup 的那个）
+  artifactName: ${productName}-${version}-portable.${ext}
+  # 不申请管理员权限：便携版的意义就是解压即用
+  requestExecutionLevel: user
+  unpackDirName: SteamSDKTool
 
 nsis:
   oneClick: false

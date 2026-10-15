@@ -177,18 +177,35 @@ Web API 密钥（可选）同样用 DPAPI 加密存在本机。
 
 工具会读 GitHub Releases 检查新版本：设置页「关于」里能看到当前版本和「检查更新」，标题栏出现 `vX.Y.Z 可更新` 就说明有新版本，点进去一键下载、重启安装。
 
+检查更新走的是 `releases.atom` 和 release 页面，**不用 GitHub API**（API 匿名限流 60 次/小时/IP，一份工具传给一个办公室的人就会集体失效）。
+
+### 两种版本
+
+| | `-setup.exe` | `-portable.exe` |
+|---|---|---|
+| 装法 | 双击安装，有开始菜单和卸载项 | 双击直接跑，不装、不写注册表 |
+| 权限 | 可选装到当前用户目录 | 不需要管理员 |
+| 更新 | 应用里点「重启并安装」自动替换 | 点「打开下载位置」，关掉工具自己替换 exe |
+
+便携版覆盖不了正在运行的自己，所以更新只能手动替换 —— 应用里会说明这一点，检查更新时也只会下载对应的那种包。
+
 ### 发新版本（给自己看）
+
+推一个 `v*` tag 就会自动构建两种包并建 Release，见 `.github/workflows/build.yml`。本地手动发也走同一条路：
 
 ```powershell
 # 1. 改 package.json 的 version，比如 0.2.0
-# 2. 构建 + 打包
+# 2. 构建 + 打包（两种包一起出）
 pnpm build
 $env:ELECTRON_BUILDER_BINARIES_MIRROR='https://npmmirror.com/mirrors/electron-builder-binaries/'
 $env:ELECTRON_MIRROR='https://npmmirror.com/mirrors/electron/'
 pnpm dist
 # 3. 发 release —— tag 必须写成 vX.Y.Z，更新器按这个找
-gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md "release\SteamSDK Tool-0.2.0-setup.exe"
+gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md `
+  "release\SteamSDK Tool-0.2.0-setup.exe" "release\SteamSDK Tool-0.2.0-portable.exe"
 ```
+
+> 两个包都传。只传 setup 的话，便携版用户拿到的会是安装包 —— 能下但不对路。
 
 ---
 

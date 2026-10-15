@@ -58,6 +58,18 @@ export function currentVersion() {
   return app.getVersion()
 }
 
+/**
+ * 是不是便携版。
+ * electron-builder 的 portable 启动器会设这两个变量，安装版没有。
+ *
+ * 为什么要区分：便携版没有安装目录，而且 exe 正被自己占着，
+ * **没法自己覆盖自己** —— 所以它的「装更新」只能是帮你把文件夹打开，
+ * 让你关掉程序自己替换。
+ */
+export function isPortable() {
+  return !!(process.env.PORTABLE_EXECUTABLE_FILE || process.env.PORTABLE_EXECUTABLE_DIR)
+}
+
 /** 数字段逐个比：0.10.0 > 0.9.1，忽略 v 前缀和 -beta 这类后缀 */
 export function compareVersions(a, b) {
   const norm = (v) =>
@@ -258,7 +270,10 @@ export async function checkUpdate() {
   try {
     const frag = await getText(`${repoUrl()}/releases/expanded_assets/${encodeURIComponent(tag)}`)
     const exes = parseAssets(frag.text).filter((a) => /\.exe$/i.test(a.name))
-    asset = exes.find((a) => /setup/i.test(a.name)) || exes[0] || null
+    // 装的是哪个版本，就给哪个版本的包：
+    // 便携版用户拿安装包去「重启并安装」是说不通的 —— 他没有安装目录
+    const preferred = isPortable() ? /portable/i : /setup/i
+    asset = exes.find((a) => preferred.test(a.name)) || exes.find((a) => /setup/i.test(a.name)) || exes[0] || null
   } catch {
     /* 忽略 */
   }
@@ -358,6 +373,13 @@ export async function downloadUpdate({ url, name, onProgress } = {}) {
 /** 起安装程序，然后退出自己 —— 不退出的话文件被占着，装不进去 */
 export function installUpdate(filePath) {
   if (!filePath || !fs.existsSync(filePath)) return { ok: false, error: '安装包已经不在了，重新下载一次' }
+
+  // 便携版没有安装目录，而且自己的 exe 正被占用，覆盖不了 —— 只把文件夹打开
+  if (isPortable()) {
+    shell.showItemInFolder(filePath)
+    return { ok: true, manual: true, path: filePath }
+  }
+
   try {
     const child = spawn(filePath, [], { detached: true, stdio: 'ignore' })
     child.unref()
