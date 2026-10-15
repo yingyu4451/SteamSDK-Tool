@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { fmtSize, fmtInt } from '../format.js'
 import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL } from '../store.js'
 import PathLink from './PathLink.vue'
+import { ChevronRight } from '@lucide/vue'
 
 const props = defineProps({ depots: { type: Array, default: () => [] } })
 
@@ -225,10 +226,11 @@ async function openPath(p) {
           class="w-full flex items-center gap-2 px-5 py-2.5 bg-transparent border-0 cursor-pointer text-left hover:bg-surface-2/60 transition-colors"
           @click="showSuspicious = !showSuspicious"
         >
-          <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-danger transition-transform"
-            :class="showSuspicious && 'rotate-90'" fill="none">
-            <path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <ChevronRight
+        :size="14"
+        :stroke-width="2.4"
+        :class="['text-danger transition-transform', showSuspicious && 'rotate-90']"
+      />
           <span class="text-[12px] font-medium text-danger">会被上传的可疑文件</span>
           <span class="num text-[11.5px] text-faint">{{ a.suspicious.length }}</span>
           <span class="ml-auto text-[11px] text-faint">这些应该加进 FileExclusion</span>
@@ -251,10 +253,11 @@ async function openPath(p) {
           class="w-full flex items-center gap-2 px-5 py-2.5 bg-transparent border-0 cursor-pointer text-left hover:bg-surface-2/60 transition-colors"
           @click="showExcluded = !showExcluded"
         >
-          <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 text-amber transition-transform"
-            :class="showExcluded && 'rotate-90'" fill="none">
-            <path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <ChevronRight
+        :size="14"
+        :stroke-width="2.4"
+        :class="['text-amber transition-transform', showExcluded && 'rotate-90']"
+      />
           <span class="text-[12px] font-medium text-amber">被 FileExclusion 挡下的文件</span>
           <span class="num text-[11.5px] text-faint">{{ a?.excludedCount || 0 }}</span>
           <span class="ml-auto text-[11px] text-faint">只不上传，本地都还在</span>

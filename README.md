@@ -209,7 +209,7 @@ gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md "release\SteamSD
 
 ## 技术栈与开发
 
-Vue 3 + Electron + Tailwind CSS v4 + GSAP，构建用 electron-vite，打包用 electron-builder。
+Vue 3 + Electron + Tailwind CSS v4 + GSAP，图标用 [Lucide](https://lucide.dev)（`@lucide/vue`），构建用 electron-vite，打包用 electron-builder。
 
 ```powershell
 pnpm install

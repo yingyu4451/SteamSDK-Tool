@@ -15,6 +15,7 @@ import {
   toast
 } from '../store.js'
 import PathLink from './PathLink.vue'
+import { X } from '@lucide/vue'
 
 /** 「各 Depot 按项目文件夹重排」的状态 */
 const syncingRoots = ref(false)
@@ -326,9 +327,7 @@ onUnmounted(depotDisarm)
           class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
           @click="closeDrawer"
         >
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-            <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
+          <X :size="16" :stroke-width="2" />
         </button>
       </header>
 
@@ -515,9 +514,7 @@ onUnmounted(depotDisarm)
                   class="w-6 h-6 grid place-items-center rounded-md text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer"
                   @click="removeRule(i)"
                 >
-                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none">
-                    <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                  </svg>
+                  <X :size="14" :stroke-width="2" />
                 </button>
               </div>
               <div v-if="!depotForm.exclusions.length" class="px-3 py-3 text-[11.5px] text-faint">
@@ -565,9 +562,7 @@ onUnmounted(depotDisarm)
                   class="w-6 h-6 grid place-items-center rounded-md text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer shrink-0"
                   @click="removeUserConfig(i)"
                 >
-                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none">
-                    <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                  </svg>
+                  <X :size="14" :stroke-width="2" />
                 </button>
               </div>
               <div v-if="!depotForm.userConfig.length" class="px-3 py-3 text-[11.5px] text-faint">

@@ -16,6 +16,7 @@ import DeleteAppDialog from './components/DeleteAppDialog.vue'
 import AdoptOrphansDialog from './components/AdoptOrphansDialog.vue'
 import DropDialog from './components/DropDialog.vue'
 import OnboardGuide from './components/OnboardGuide.vue'
+import { Upload } from '@lucide/vue'
 
 const views = { workbench: WorkbenchView, history: HistoryView, settings: SettingsView }
 const current = computed(() => views[state.view] || WorkbenchView)
@@ -161,15 +162,7 @@ function onLeave(el, done) {
       >
         <div class="absolute inset-3 rounded-[16px] border-2 border-dashed border-[rgba(102,192,244,.5)] bg-[rgba(11,15,22,.72)] backdrop-blur-sm" />
         <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
-          <svg viewBox="0 0 24 24" class="w-8 h-8" fill="none">
-            <path
-              d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 17v1.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V17"
-              stroke="currentColor"
-              stroke-width="1.7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <Upload :size="32" :stroke-width="1.8" />
           <div class="text-[13px] font-semibold">松手就分析</div>
           <div class="text-[11.5px] text-muted">文件夹，或者 .zip</div>
         </div>

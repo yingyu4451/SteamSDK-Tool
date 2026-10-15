@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
+import { LayoutDashboard, History, Settings, RefreshCw, ShieldCheck, Plus } from '@lucide/vue'
 import { state, selectApp, rescan, openWizard, runCheckAll } from '../store.js'
 import { useListStagger } from '../motion.js'
 
@@ -16,17 +17,19 @@ watch(
 )
 
 const nav = [
-  { id: 'workbench', label: '工作台', icon: 'M3 12h6v9H3zM11 3h6v18h-6zM19 8h2v13h-2z' },
-  { id: 'history', label: '构建历史', icon: 'M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7' },
-  { id: 'settings', label: '设置', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h1m14 0h1M12 4v1m0 14v1' }
+  { id: 'workbench', label: '工作台', icon: LayoutDashboard },
+  { id: 'history', label: '构建历史', icon: History },
+  { id: 'settings', label: '设置', icon: Settings }
 ]
 
 const appCount = computed(() => state.apps.length)
 
 /**
- * 指示灯：红 = 结构性坏了（脚本缺了 / 没有 AppID / AppID 撞车），
+ * 三态：红 = 结构性坏了（脚本缺了 / 没有 AppID / AppID 撞车），
  * 黄 = 有待处理但不致命，绿 = 干净。
- * 「有待处理」一律用黄色 —— 用红色会让人以为构建都跑不了。
+ *
+ * 三个状态用**同一个形状**（圆点），只换颜色 —— 之前黄的是地球、红的是三角、
+ * 绿的是圆点，同一个语义轴三种形状，看着像三回事。
  */
 function healthOf(app) {
   if ((app.depots || []).some((d) => d.missing)) return 'bad'
@@ -35,6 +38,21 @@ function healthOf(app) {
   if (app.problems?.length) return 'warn'
   if (!app.analysis?.exists) return 'warn'
   return 'ok'
+}
+
+/** 颜色之外再给一句大白话，别只靠颜色传达状态 */
+function healthTitle(app) {
+  const h = healthOf(app)
+  if (h === 'bad') {
+    if ((app.depots || []).some((d) => d.missing)) return '有 Depot 的脚本文件不在了'
+    if (!app.appId) return '没有 AppID'
+    return 'AppID 和别的本地 App 撞车'
+  }
+  if (h === 'warn') {
+    const n = app.problems?.length || 0
+    return n ? `有待处理 ${n} 项` : '内容根目录不存在'
+  }
+  return '一切正常'
 }
 </script>
 
@@ -53,9 +71,7 @@ function healthOf(app) {
         "
         @click="state.view = n.id"
       >
-        <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="none">
-          <path :d="n.icon" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-        </svg>
+        <component :is="n.icon" :size="16" :stroke-width="1.8" class="shrink-0" />
         {{ n.label }}
         <span
           v-if="state.view === n.id"
@@ -75,20 +91,11 @@ function healthOf(app) {
         title="重新扫描 scripts 目录"
         @click="rescan"
       >
-        <svg
-          viewBox="0 0 24 24"
-          class="w-3.5 h-3.5"
+        <RefreshCw
+          :size="14"
+          :stroke-width="2"
           :class="state.scanning && 'animate-spin'"
-          fill="none"
-        >
-          <path
-            d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        />
       </button>
       <button
         class="w-6 h-6 grid place-items-center rounded-md transition-colors cursor-pointer border-0 bg-transparent"
@@ -100,30 +107,18 @@ function healthOf(app) {
         title="全部自检（把每个 App 都跑一遍 check.ps1）"
         @click="runCheckAll"
       >
-        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" :class="checkingAll && 'animate-pulse'" fill="none">
-          <path
-            d="M12 3 4.5 6v6c0 4.4 3.1 8.1 7.5 9 4.4-.9 7.5-4.6 7.5-9V6z"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linejoin="round"
-          />
-          <path
-            d="m9 12 2.2 2.2L15.5 10"
-            stroke="currentColor"
-            stroke-width="1.9"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <ShieldCheck
+          :size="14"
+          :stroke-width="1.8"
+          :class="checkingAll && 'animate-pulse'"
+        />
       </button>
       <button
         class="w-6 h-6 grid place-items-center rounded-md text-faint hover:text-accent hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent"
         title="新建 App（Demo / 正式版 / 新平台）"
         @click="openWizard"
       >
-        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none">
-          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
-        </svg>
+        <Plus :size="14" :stroke-width="2.2" />
       </button>
     </div>
 
@@ -141,34 +136,18 @@ function healthOf(app) {
         @click="selectApp(app.dirName)"
       >
         <div class="flex items-center gap-2 min-w-0">
-          <!--
-            三态：绿点 = 干净；黄地球 = 有待处理（照样能传，只是有事没处理）；
-            红三角 = 结构性坏了（depot 脚本缺了 / 没有 AppID / AppID 撞车）。
-            之前「有待处理」也是红的，会让人以为构建跑不了。
-          -->
-          <svg
-            v-if="healthOf(app) === 'warn'"
-            viewBox="0 0 24 24"
-            class="w-3.5 h-3.5 shrink-0 text-amber"
-            fill="none"
-          >
-            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7" />
-            <path
-              d="M3 12h18M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"
-              stroke="currentColor"
-              stroke-width="1.4"
-            />
-          </svg>
-          <svg
-            v-else-if="healthOf(app) === 'bad'"
-            viewBox="0 0 24 24"
-            class="w-3.5 h-3.5 shrink-0 text-danger"
-            fill="none"
-          >
-            <path d="M12 3.5 2.8 19.5h18.4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
-            <path d="M12 9.8v4.2M12 16.9v.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
-          </svg>
-          <span v-else class="w-1.5 h-1.5 rounded-full shrink-0 bg-success" />
+          <!-- 三态一律是圆点，只有颜色不同；语义写在 title 里 -->
+          <span
+            class="w-2 h-2 rounded-full shrink-0"
+            :class="
+              healthOf(app) === 'bad'
+                ? 'bg-danger'
+                : healthOf(app) === 'warn'
+                  ? 'bg-amber'
+                  : 'bg-success'
+            "
+            :title="healthTitle(app)"
+          />
           <span class="text-[13px] font-medium truncate">{{ app.dirName }}</span>
         </div>
         <div class="mt-1.5 flex items-center gap-2 text-[11px] text-faint num">

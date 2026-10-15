@@ -8,6 +8,7 @@ import {
   submitDepotSlide,
   pickDepotRoot
 } from '../store.js'
+import { X } from '@lucide/vue'
 
 const el = ref(null)
 const idInput = ref(null)
@@ -95,9 +96,7 @@ async function copyBackend() {
           class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
           @click="closeDepotSlide"
         >
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-            <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
+          <X :size="16" :stroke-width="2" />
         </button>
       </header>
 

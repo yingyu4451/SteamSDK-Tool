@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { state, closeDrop, dropApply, openDepotSlide } from '../store.js'
 import { PLATFORM_LABEL } from '../store.js'
 import { fmtSize } from '../format.js'
+import { X } from '@lucide/vue'
 
 const el = ref(null)
 
@@ -116,9 +117,7 @@ function pickPlatform(id) {
           class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer shrink-0"
           @click="closeDrop"
         >
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-            <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
+          <X :size="16" :stroke-width="2" />
         </button>
       </header>
 

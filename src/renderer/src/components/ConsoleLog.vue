@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { state, clearLogs, cancelRun, answerPrompt } from '../store.js'
 import { fmtClock } from '../format.js'
 import { reducedMotion } from '../motion.js'
+import { Check, TriangleAlert } from '@lucide/vue'
 
 const bodyEl = ref(null)
 const autoScroll = ref(true)
@@ -150,10 +151,7 @@ const exitTone = computed(() => {
         v-if="state.prompt"
         class="px-5 py-2.5 border-b border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)] flex items-center gap-3 shrink-0"
       >
-        <svg viewBox="0 0 24 24" class="w-4 h-4 text-amber shrink-0" fill="none">
-          <path d="M12 9v4m0 4h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"
-            stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <TriangleAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
         <span class="text-[12.5px] text-amber">{{ state.prompt.hint }}</span>
         <input
           ref="promptEl"
@@ -178,9 +176,7 @@ const exitTone = computed(() => {
         v-if="state.uploaded"
         class="px-5 py-2.5 border-b border-[rgba(74,222,128,.24)] bg-[rgba(74,222,128,.06)] flex items-center gap-3 shrink-0"
       >
-        <svg viewBox="0 0 24 24" class="w-4 h-4 text-success shrink-0" fill="none">
-          <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <Check :size="16" :stroke-width="2.4" class="text-success shrink-0" />
         <span class="text-[12.5px] text-success">
           上传成功。还差一步：去 Steamworks 把这次构建设为 live（分支由 SetLive 决定）。
         </span>

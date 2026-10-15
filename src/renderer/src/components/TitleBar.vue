@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { state, goSettings } from '../store.js'
+import { Upload } from '@lucide/vue'
 
 const sdkOk = computed(
   () => !!(state.sdk?.steamcmdExists && state.sdk?.scriptsDirExists && state.sdk?.buildScriptExists)
@@ -19,15 +20,7 @@ const upd = computed(() => state.update?.data || null)
         class="w-[22px] h-[22px] rounded-[7px] grid place-items-center"
         style="background: linear-gradient(145deg, #66c0f4, #17a58d)"
       >
-        <svg viewBox="0 0 24 24" class="w-[13px] h-[13px]" fill="none">
-          <path
-            d="M12 3v10.5M12 13.5 7.5 9M12 13.5 16.5 9M5 19h14"
-            stroke="#04231e"
-            stroke-width="2.4"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <Upload :size="13" :stroke-width="2.4" color="#04231e" />
       </div>
       <span class="text-[13px] font-semibold tracking-tight">SteamSDK 上传工作台</span>
     </div>

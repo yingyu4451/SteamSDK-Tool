@@ -20,6 +20,7 @@ import {
   selectedPicks,
   publicName
 } from '../store.js'
+import { ExternalLink, GripVertical, ListFilter, SlidersHorizontal, X } from '@lucide/vue'
 
 const el = ref(null)
 const nameInput = ref(null)
@@ -203,9 +204,7 @@ function openSettings() {
           class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
           @click="closeWizard"
         >
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-            <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
+          <X :size="16" :stroke-width="2" />
         </button>
       </header>
 
@@ -251,27 +250,14 @@ function openSettings() {
               </option>
             </select>
             <button class="btn h-9 px-2.5 no-drag" title="在 Steamworks 后台打开" @click="openPartner">
-              <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none">
-                <path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
+              <ExternalLink :size="14" :stroke-width="2" />
             </button>
             <button
               class="btn h-9 px-2.5 no-drag"
               title="设置（账号 / Web API 密钥）"
               @click="openSettings"
             >
-              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-                <path
-                  d="M4 7h8M18 7h2M4 12h2M12 12h8M4 17h10M20 17h0"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                />
-                <circle cx="15" cy="7" r="2.1" stroke="currentColor" stroke-width="1.8" />
-                <circle cx="9" cy="12" r="2.1" stroke="currentColor" stroke-width="1.8" />
-                <circle cx="17" cy="17" r="2.1" stroke="currentColor" stroke-width="1.8" />
-              </svg>
+              <SlidersHorizontal :size="16" :stroke-width="1.8" />
             </button>
           </div>
           <span v-if="resolvedName === '查询中…'" class="text-[11px] text-faint">查询中…</span>
@@ -293,9 +279,7 @@ function openSettings() {
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2 flex-wrap">
             <button class="btn h-8 px-3 text-[11.5px]" :disabled="!appIdOk || lk?.busy" @click="doLookup">
-              <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 mr-1.5" fill="none">
-                <path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-              </svg>
+              <ListFilter :size="14" :stroke-width="1.8" class="mr-1.5" />
               {{ lk?.busy ? '读取中…' : '读取后台 Depot' }}
             </button>
             <button v-if="anyUnowned" class="btn h-8 px-3 text-[11.5px]" @click="wizardApplyAllSteam">
@@ -405,14 +389,7 @@ function openSettings() {
                   @dragstart="onDragStart(p.id, $event)"
                   @dragend="onDragEnd"
                 >
-                <svg viewBox="0 0 16 16" class="w-3 h-3" fill="currentColor">
-                  <circle cx="5.5" cy="4" r="1.15" />
-                  <circle cx="10.5" cy="4" r="1.15" />
-                  <circle cx="5.5" cy="8" r="1.15" />
-                  <circle cx="10.5" cy="8" r="1.15" />
-                  <circle cx="5.5" cy="12" r="1.15" />
-                  <circle cx="10.5" cy="12" r="1.15" />
-                </svg>
+                <GripVertical :size="12" :stroke-width="2" />
               </span>
               <input
                 type="checkbox"

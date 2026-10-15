@@ -27,6 +27,7 @@ import {
   setAppLocal
 } from '../store.js'
 import { fmtSize } from '../format.js'
+import { Check, Eye, Lock, ShieldCheck, Upload } from '@lucide/vue'
 
 const confirming = ref(false)
 const pwDraft = ref('')
@@ -130,29 +131,19 @@ const localHost = computed(() => {
 <template>
   <div class="card p-3 flex items-center gap-2 flex-wrap min-w-0 relative" v-reveal="{ delay: 0.02 }">
     <button class="btn no-drag" :disabled="disabled" @click="doCheck">
-      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-        <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
+      <Check :size="16" :stroke-width="2.2" />
       自检
     </button>
 
     <button class="btn no-drag" :disabled="disabled || state.preflight.busy" @click="runPreflight()">
-      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-        <path d="M12 3 4.5 6v6c0 4.4 3.1 8.1 7.5 9 4.4-.9 7.5-4.6 7.5-9V6z"
-          stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-        <path d="m9 12 2.2 2.2L15.5 10" stroke="currentColor" stroke-width="1.9"
-          stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
+      <ShieldCheck :size="16" :stroke-width="1.8" />
       {{ state.preflight.busy ? '预检中…' : '预检' }}
     </button>
 
     <div class="w-px h-6 bg-line mx-1" />
 
     <button class="btn no-drag" :disabled="disabled" @click="doPreview">
-      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-        <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z" stroke="currentColor" stroke-width="1.8" />
-        <circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8" />
-      </svg>
+      <Eye :size="16" :stroke-width="1.8" />
       Preview 空跑
     </button>
 
@@ -162,15 +153,7 @@ const localHost = computed(() => {
       :disabled="disabled"
       @click="doLive"
     >
-      <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
-        <path
-          d="M12 19V5M12 5 6.5 10.5M12 5l5.5 5.5"
-          stroke="currentColor"
-          stroke-width="2.2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
+      <Upload :size="16" :stroke-width="2.2" />
       {{ confirming ? '再点一次确认上传' : '正式上传' }}
     </button>
 
@@ -229,10 +212,7 @@ const localHost = computed(() => {
         class="bar-pop rounded-[10px] border border-[rgba(255,180,84,.3)] px-3 py-2.5"
       >
         <div class="flex items-center gap-2 text-[12px] text-amber">
-          <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="none">
-            <path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z"
-              stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <Lock :size="16" :stroke-width="1.9" class="shrink-0" />
           {{ state.askPasswordError }}
         </div>
 

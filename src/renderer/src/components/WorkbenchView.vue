@@ -7,6 +7,7 @@ import StatCard from './StatCard.vue'
 import DepotMatrix from './DepotMatrix.vue'
 import BranchPanel from './BranchPanel.vue'
 import ConsoleLog from './ConsoleLog.vue'
+import { TriangleAlert, Upload } from '@lucide/vue'
 
 const detail = computed(() => state.detail)
 
@@ -37,10 +38,7 @@ const totalMb = computed(() => agg.value.totalBytes / 1024 / 1024)
       v-reveal
     >
       <div class="flex items-start gap-3">
-        <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0 text-amber mt-0.5" fill="none">
-          <path d="M12 8v5m0 3.5v.5M10.3 3.9 2.6 17.2A1.9 1.9 0 0 0 4.3 20h15.4a1.9 1.9 0 0 0 1.7-2.8L13.7 3.9a1.9 1.9 0 0 0-3.4 0z"
-            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <TriangleAlert :size="20" :stroke-width="1.9" class="shrink-0 text-amber mt-0.5" />
         <div class="min-w-0 flex-1">
           <div class="text-[12.5px] text-amber font-medium">
             scripts 根目录下有 {{ state.orphans.length }} 个 vdf 没有被任何 App 管着
@@ -73,10 +71,7 @@ const totalMb = computed(() => agg.value.totalBytes / 1024 / 1024)
       <div
         class="w-12 h-12 rounded-2xl grid place-items-center border border-line bg-surface-2"
       >
-        <svg viewBox="0 0 24 24" class="w-6 h-6 text-faint" fill="none">
-          <path d="M12 3v10.5M12 13.5 7.5 9M12 13.5 16.5 9M5 19h14"
-            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <Upload :size="24" :stroke-width="1.8" class="text-faint" />
       </div>
       <div class="text-[14px] font-medium">左侧选一个 App</div>
     </div>

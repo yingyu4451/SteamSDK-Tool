@@ -211,7 +211,7 @@ gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md "release\SteamSD
 
 ## Stack and development
 
-Vue 3 + Electron + Tailwind CSS v4 + GSAP, built with electron-vite, packaged with electron-builder.
+Vue 3 + Electron + Tailwind CSS v4 + GSAP, icons from [Lucide](https://lucide.dev) (`@lucide/vue`), built with electron-vite, packaged with electron-builder.
 
 ```powershell
 pnpm install
