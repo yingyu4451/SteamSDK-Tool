@@ -223,10 +223,46 @@ function makeHandler(root) {
 
 /* ---------------- 对外 ---------------- */
 
+/**
+ * htdocs 里现在有多少东西。
+ * 空的话说明「构建先送本地服务器」这个开关还没配上一次真正的构建 ——
+ * 光勾复选框没用，"Local" 那行只在跑构建时才生效。
+ * SDK 自带一个 index.html 说明页，所以真正的构建产物从第 2 个文件算起。
+ */
+function htdocsStats(dir) {
+  let files = 0
+  let bytes = 0
+  const walk = (d, depth = 0) => {
+    if (depth > 12) return
+    let ents = []
+    try {
+      ents = fs.readdirSync(d, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of ents) {
+      const full = path.join(d, e.name)
+      if (e.isDirectory()) walk(full, depth + 1)
+      else if (e.isFile()) {
+        files++
+        try {
+          bytes += fs.statSync(full).size
+        } catch {
+          /* 读不到就只记个数 */
+        }
+      }
+    }
+  }
+  walk(dir)
+  return { files, bytes }
+}
+
 export function localStatus(settings) {
   const L = localPaths(settings)
   const running = !!server && server.listening
   const port = running ? serverPort : DEFAULT_PORT
+  const exists = fs.existsSync(L.htdocs)
+  const stats = exists ? htdocsStats(L.htdocs) : { files: 0, bytes: 0 }
   return {
     ok: true,
     running,
@@ -234,7 +270,10 @@ export function localStatus(settings) {
     pid: running ? process.pid : 0,
     port,
     htdocs: L.htdocs,
-    htdocsExists: fs.existsSync(L.htdocs),
+    htdocsExists: exists,
+    // 减去 SDK 自带的那张说明页
+    contentFiles: Math.max(0, stats.files - (exists ? 1 : 0)),
+    contentBytes: stats.bytes,
     root: serveRoot || L.htdocs,
     url: url(port),
     kind: 'builtin'

@@ -32,11 +32,21 @@ const appCount = computed(() => state.apps.length)
  * 三个状态用**同一个形状**（圆点），只换颜色 —— 之前黄的是地球、红的是三角、
  * 绿的是圆点，同一个语义轴三种形状，看着像三回事。
  */
+/**
+ * 还被当回事的待处理条数 —— 永久忽略和「本次忽略」的都不算。
+ * 待处理清单本身现在是常驻的（忽略项也留在列表里），所以这里得自己减。
+ */
+function activeProblems(app) {
+  const perm = new Set(app.problemsIgnored || [])
+  const sess = new Set(state.sessionIgnored?.[app.dirName] || [])
+  return (app.problems || []).filter((t) => !perm.has(t) && !sess.has(t)).length
+}
+
 function healthOf(app) {
   if ((app.depots || []).some((d) => d.missing)) return 'bad'
   if (!app.appId) return 'bad'
   if (app.appId && state.duplicates?.some((d) => String(d.appId) === String(app.appId))) return 'bad'
-  if (app.problems?.length) return 'warn'
+  if (activeProblems(app)) return 'warn'
   if (!app.analysis?.exists) return 'warn'
   return 'ok'
 }
@@ -50,7 +60,7 @@ function healthTitle(app) {
     return 'AppID 和别的本地 App 撞车'
   }
   if (h === 'warn') {
-    const n = app.problems?.length || 0
+    const n = activeProblems(app)
     return n ? `有待处理 ${n} 项` : '内容根目录不存在'
   }
   return '一切正常'

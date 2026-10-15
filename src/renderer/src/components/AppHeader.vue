@@ -1,15 +1,40 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { state, openDrawer, ignoreProblem } from '../store.js'
+import { computed } from 'vue'
+import {
+  state,
+  openDrawer,
+  ignoreProblem,
+  ignoreProblemThisRun,
+  restoreProblemThisRun
+} from '../store.js'
 import PathLink from './PathLink.vue'
 
 const app = computed(() => state.detail)
-const showIgnored = ref(false)
+
+/**
+ * 待处理清单**常驻**：忽略不等于消失，只是换个显示状态。
+ * 这样用户随时能看到自己忽略过什么、也能收回。
+ */
+const rows = computed(() => {
+  const dir = app.value?.dirName
+  const perm = new Set(app.value?.problemsIgnored || [])
+  const sess = new Set((dir && state.sessionIgnored?.[dir]) || [])
+  return (app.value?.problems || []).map((text) => ({
+    text,
+    perm: perm.has(text),
+    sess: sess.has(text)
+  }))
+})
+
+/** 还该当回事的条数（去掉两种忽略） */
+const activeCount = computed(() => rows.value.filter((r) => !r.perm && !r.sess).length)
+const ignoredCount = computed(() => rows.value.length - activeCount.value)
 
 const status = computed(() => {
   if (!app.value || app.value.error) return { tone: 'pill-bad', text: '读取失败' }
   if (dup.value) return { tone: 'pill-bad', text: 'AppID 冲突' }
-  if (app.value.problems?.length) return { tone: 'pill-warn', text: `${app.value.problems.length} 项待处理` }
+  if (activeCount.value) return { tone: 'pill-warn', text: `${activeCount.value} 项待处理` }
+  if (ignoredCount.value) return { tone: 'pill-ok', text: '一切正常' }
   return { tone: 'pill-ok', text: '一切正常' }
 })
 
@@ -70,40 +95,53 @@ const dup = computed(() => {
       </div>
     </div>
 
-    <!-- 问题清单 -->
+    <!-- 问题清单：常驻。忽略只是把某一条换成「已忽略」的样子，不消失 -->
     <div
-      v-if="app.problems?.length"
-      class="mt-4 rounded-[10px] border border-[rgba(255,180,84,.22)] bg-[rgba(255,180,84,.05)] p-3"
+      v-if="rows.length"
+      class="mt-4 rounded-[10px] border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
     >
-      <div class="text-[11.5px] font-semibold text-amber mb-1.5">待处理</div>
-      <div class="flex flex-col gap-1">
-        <div v-for="(p, i) in app.problems" :key="i" class="flex items-start gap-2 group">
-          <span class="text-[12px] text-[#d7c3a0] leading-relaxed min-w-0 flex-1">{{ p }}</span>
-          <button
-            class="btn h-6 px-2 text-[10.5px] no-drag shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-            title="这条不再提示（原文一样才认作同一条，路径变了会重新报）"
-            @click="ignoreProblem(p, true)"
-          >
-            忽略
-          </button>
-        </div>
+      <div class="flex items-center gap-2 mb-1.5">
+        <span class="text-[11.5px] font-semibold text-amber">待处理</span>
+        <span class="text-[11px] text-faint num">
+          {{ activeCount }} 项{{ ignoredCount ? ` · 已忽略 ${ignoredCount} 项` : '' }}
+        </span>
       </div>
-    </div>
 
-    <!-- 已忽略的 -->
-    <div v-if="app.problemsIgnored?.length" class="mt-3 text-[11.5px]">
-      <button
-        class="bg-transparent border-0 p-0 cursor-pointer text-faint hover:text-muted underline decoration-dotted"
-        @click="showIgnored = !showIgnored"
-      >
-        已忽略 {{ app.problemsIgnored.length }} 条{{ showIgnored ? '，收起' : '' }}
-      </button>
-      <div v-if="showIgnored" class="mt-2 flex flex-col gap-1">
-        <div v-for="(p, i) in app.problemsIgnored" :key="'ig' + i" class="flex items-start gap-2">
-          <span class="text-[11.5px] text-faint leading-relaxed min-w-0 flex-1 line-through">{{ p }}</span>
-          <button class="btn h-6 px-2 text-[10.5px] no-drag shrink-0" @click="ignoreProblem(p, false)">
-            恢复
-          </button>
+      <div class="flex flex-col gap-1">
+        <div v-for="(r, i) in rows" :key="i" class="flex items-start gap-2 group">
+          <span
+            class="text-[12px] leading-relaxed min-w-0 flex-1"
+            :class="r.perm || r.sess ? 'text-faint line-through' : 'text-[#d7c3a0]'"
+          >{{ r.text }}</span>
+
+          <template v-if="r.perm || r.sess">
+            <span class="pill shrink-0" :class="r.perm ? 'pill-warn' : ''" style="font-size: 10px">
+              {{ r.perm ? '永久忽略' : '本次忽略' }}
+            </span>
+            <button
+              class="btn h-6 px-2 text-[10.5px] no-drag shrink-0"
+              @click="r.perm ? ignoreProblem(r.text, false) : restoreProblemThisRun(r.text)"
+            >
+              恢复
+            </button>
+          </template>
+
+          <template v-else>
+            <button
+              class="btn h-6 px-2 text-[10.5px] no-drag shrink-0"
+              title="只这一次不提示 —— 重开应用会回来"
+              @click="ignoreProblemThisRun(r.text)"
+            >
+              本次忽略
+            </button>
+            <button
+              class="btn h-6 px-2 text-[10.5px] no-drag shrink-0"
+              title="写进设置，以后都不再提示（原文完全一样才算同一条，路径变了会重新报）"
+              @click="ignoreProblem(r.text, true)"
+            >
+              永久忽略
+            </button>
+          </template>
         </div>
       </div>
     </div>

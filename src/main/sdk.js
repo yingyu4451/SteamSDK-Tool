@@ -359,19 +359,16 @@ export function readApp(appDirName, settings) {
 }
 
 /**
- * 把待处理清单拆成「还该提示的」和「用户说过本次忽略的」。
+ * 待处理清单**全部**返回给界面，已忽略的用 problemsIgnored 标出来。
+ *
+ * 以前是在这里把忽略过的过滤掉，界面上就看不见了 —— 那样用户没法确认
+ * 自己忽略过什么，也没法撤销。现在改成：清单常驻，忽略只是换个显示状态。
  *
  * 原文完全一样才算同一条 —— 所以路径变了会自动重新报出来，
  * 这正是想要的：忽略的是那次的具体情况，不是这一类问题。
  */
 function splitProblems(all, dirName) {
-  const ignoredList = readIgnoredProblems(dirName)
-  if (!ignoredList.length) return { problems: all, problemsIgnored: [] }
-  const set = new Set(ignoredList)
-  return {
-    problems: all.filter((t) => !set.has(t)),
-    problemsIgnored: all.filter((t) => set.has(t))
-  }
+  return { problems: all, problemsIgnored: readIgnoredProblems(dirName) }
 }
 
 function collectProblems({ appId, contentRoot, depots, appText }) {

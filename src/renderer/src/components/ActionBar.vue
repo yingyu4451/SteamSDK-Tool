@@ -529,6 +529,23 @@ const localHost = computed(() => {
           {{ state.local.error }}
         </div>
 
+        <!-- 本地服务器里到底有没有东西 —— 光勾复选框不跑构建，Steam 那边下到的就是空 depot -->
+        <div v-if="state.local.status" class="mt-2 text-[11.5px] leading-relaxed">
+          <template v-if="state.local.status.contentFiles > 0">
+            <span class="text-success">
+              本地服务器里已有 {{ state.local.status.contentFiles }} 个文件 ·
+              {{ fmtSize(state.local.status.contentBytes) }}
+            </span>
+          </template>
+          <template v-else>
+            <span class="text-amber">
+              本地服务器里还是空的。勾上这个复选框只是把路径写进 vdf ——
+              <strong>还得再跑一次构建</strong>，内容才会真的写进来。
+              只勾不跑，Steam 那边下载到的就是空 depot。
+            </span>
+          </template>
+        </div>
+
         <div class="mt-2.5 pt-2.5 border-t border-line-soft text-[11px] text-muted leading-relaxed">
           客户端要从本机下载，得在 Steam.exe 旁边放一个
           <span class="font-mono text-ink">steam_dev.cfg</span>，写一行
@@ -540,6 +557,7 @@ const localHost = computed(() => {
           <template v-else-if="state.local.devcfg">
             <br /><span class="text-amber">{{ state.local.devcfg.error }}</span>
           </template>
+          <br /><span class="text-amber">Steam 只在启动时读这个文件 —— 写完要重启 Steam 才生效。</span>
         </div>
 
         <div class="mt-2 flex items-center gap-2 flex-wrap">

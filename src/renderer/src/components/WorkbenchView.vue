@@ -27,6 +27,21 @@ const agg = computed(() => {
 
 const uploadMb = computed(() => agg.value.uploadBytes / 1024 / 1024)
 const totalMb = computed(() => agg.value.totalBytes / 1024 / 1024)
+
+/**
+ * 还被当回事的待处理条数 —— 永久忽略和「本次忽略」的都不算。
+ * 清单本身是常驻的（忽略项也留在里面），所以这里得自己减，
+ * 否则会出现「上面写着一切正常、这张卡还报 2 项」。
+ */
+const activeProblems = computed(() => {
+  const d = detail.value
+  if (!d) return 0
+  const perm = new Set(d.problemsIgnored || [])
+  const sess = new Set(state.sessionIgnored?.[d.dirName] || [])
+  return (d.problems || []).filter((t) => !perm.has(t) && !sess.has(t)).length
+})
+
+const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - activeProblems.value)
 </script>
 
 <template>
@@ -112,10 +127,16 @@ const totalMb = computed(() => agg.value.totalBytes / 1024 / 1024)
         />
         <StatCard
           label="待处理"
-          :value="detail.problems?.length || 0"
+          :value="activeProblems"
           unit="项"
-          :tone="detail.problems?.length ? 'danger' : 'success'"
-          :hint="detail.problems?.length ? '见上方问题清单' : '没有发现问题'"
+          :tone="activeProblems ? 'danger' : 'success'"
+          :hint="
+            activeProblems
+              ? '见上方问题清单'
+              : ignoredProblems
+                ? `还有 ${ignoredProblems} 项已忽略`
+                : '没有发现问题'
+          "
           v-reveal="{ delay: 0.08 }"
         />
       </div>

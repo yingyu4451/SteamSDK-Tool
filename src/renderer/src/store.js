@@ -76,6 +76,11 @@ export const state = reactive({
   deleteDialog: null,
   // 同步 Depot 的结果（有 Web API 密钥走密钥，没有就走 steamcmd + 已保存账号）
   verify: { busy: false, error: null, needsKey: false, data: null },
+  /**
+   * 「本次忽略」的待处理项 —— 按 App 目录名分组，只存在内存里。
+   * 重开应用就清空，所以它和永久忽略是两件事。
+   */
+  sessionIgnored: {},
   // 同步面板上勾了哪些后台 Depot 要加进来：{ [depotId]: true }
   syncPicks: {},
   syncAdding: false,
@@ -101,6 +106,9 @@ export const state = reactive({
     installed: true,
     busy: false,
     devcfg: null,
+    // 最近一次 local.status() 的结果：里面有 contentFiles / contentBytes，
+    // 用来告诉用户「本地服务器里到底是空的还是有东西」
+    status: null,
     error: null
   },
   // 拖进来的文件夹 / 压缩包：{ over, busy, data, error }
@@ -372,7 +380,7 @@ export async function selectApp(dirName) {
   }
 }
 
-/** 待处理里某一条「本次忽略 / 恢复提示」 */
+/** 待处理里某一条「永久忽略 / 恢复提示」—— 写进 settings，重开还在 */
 export async function ignoreProblem(text, on = true) {
   const dir = state.selectedDir
   if (!dir || !text) return
@@ -385,7 +393,25 @@ export async function ignoreProblem(text, on = true) {
     row.problems = res.app.problems
     row.problemsIgnored = res.app.problemsIgnored
   }
-  toast(on ? '这条不再提示了' : '恢复提示')
+  toast(on ? '永久忽略了，重开也不会再提示' : '恢复提示')
+}
+
+/** 只忽略这一次 —— 只存在内存里，重开应用就回来 */
+export function ignoreProblemThisRun(text) {
+  const dir = state.selectedDir
+  if (!dir || !text) return
+  const list = state.sessionIgnored[dir] || (state.sessionIgnored[dir] = [])
+  if (!list.includes(text)) list.push(text)
+  toast('这次先不提示了（重开应用会回来）')
+}
+
+/** 撤销「本次忽略」 */
+export function restoreProblemThisRun(text) {
+  const dir = state.selectedDir
+  const list = state.sessionIgnored[dir]
+  if (!list) return
+  const i = list.indexOf(text)
+  if (i >= 0) list.splice(i, 1)
 }
 
 export async function reloadDetail() {
@@ -1624,7 +1650,14 @@ export async function loadLocalStatus() {
   try {
     const st = await api.local.status()
     if (st?.ok) {
-      state.local = { ...state.local, ...st, busy: false, devcfg: state.local.devcfg }
+      state.local = {
+        ...state.local,
+        ...st,
+        // 原样留一份，面板要用 contentFiles / contentBytes
+        status: st,
+        busy: false,
+        devcfg: state.local.devcfg
+      }
     }
   } catch {
     /* 主进程没起来也无所谓 */
