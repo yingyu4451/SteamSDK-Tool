@@ -1,6 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { Download } from '@lucide/vue'
 import { state, rescan, openLogin, checkUpdateNow, downloadUpdateNow, installUpdateNow, openReleases } from '../store.js'
+
+/** 官方 SDK 下载页。要 Steamworks 账号登录（就是上传构建那个），没有匿名直链 */
+const SDK_DOWNLOAD = 'https://partner.steamgames.com/downloads/list'
 
 const sdkDraft = ref('')
 const accountDraft = ref('')
@@ -173,6 +177,19 @@ function openExternal(url) {
               placeholder="D:\SteamSDK"
             />
             <button class="btn no-drag" @click="pick">选择…</button>
+          </div>
+
+          <div class="mt-2 flex items-center gap-2 flex-wrap">
+            <button
+              class="btn h-7 px-2.5 text-[11px] no-drag"
+              title="打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链"
+              @click="openExternal(SDK_DOWNLOAD)"
+            >
+              <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
+            </button>
+            <span v-if="!state.sdk?.sdkRootExists" class="text-[11px] text-amber">
+              还没装 SDK —— 下完解压到任意目录，再把上面的路径指过去
+            </span>
           </div>
 
           <div class="mt-3.5 flex gap-2">

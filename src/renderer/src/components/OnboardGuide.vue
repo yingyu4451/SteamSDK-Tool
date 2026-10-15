@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, nextTick } from 'vue'
 import gsap from 'gsap'
+import { Download } from '@lucide/vue'
 import {
   state,
   onboardGo,
@@ -18,6 +19,10 @@ const o = computed(() => state.onboard)
 const STEPS = ['欢迎', 'SDK 路径', 'Steam 账号']
 
 const sdkOk = computed(() => !!state.sdk?.contentBuilderExists)
+
+/** Steamworks SDK 只能从后台下（要登录），没有匿名直链 */
+const openSdkDownload = () =>
+  window.api.shell.openExternal('https://partner.steamgames.com/downloads/list')
 
 onMounted(async () => {
   if (el.value) {
@@ -192,6 +197,20 @@ function goCreateApp() {
             </div>
           </div>
 
+          <!-- 还没有 SDK 的人大概率就卡在这一步，给个直达入口 -->
+          <div class="mt-3 flex items-center gap-2 flex-wrap">
+            <button
+              class="btn h-8 px-3 text-[11.5px]"
+              title="打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链"
+              @click="openSdkDownload"
+            >
+              <Download :size="13" class="mr-1.5" /> 还没装？去下载 Steamworks SDK
+            </button>
+            <span v-if="!o.candidates.length && !sdkOk" class="text-[11px] text-amber">
+              解压到任意目录，再把路径填到上面
+            </span>
+          </div>
+
           <div
             v-if="sdkOk"
             class="mt-3 rounded-md border border-[rgba(139,197,63,.28)] bg-[rgba(139,197,63,.07)] px-3 py-2 text-[11.5px] text-success"
@@ -213,7 +232,7 @@ function goCreateApp() {
               <span class="text-[11.5px] text-muted">账号名（不是邮箱）</span>
               <input
                 :value="o.account"
-                placeholder="例如 445140823"
+                placeholder="例如 my_steam_login"
                 class="h-9 px-3 rounded-md bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
                 @input="o.account = $event.target.value"
               />
