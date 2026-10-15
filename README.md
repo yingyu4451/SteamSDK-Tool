@@ -6,6 +6,8 @@
 
 > **下载**：[最新版本](https://github.com/yingyu4451/SteamSDK-Tool/releases/latest) —— 装完第一次打开会有三步引导。
 
+![工作台](docs/workbench.png)
+
 ---
 
 ## 它解决什么问题
@@ -29,6 +31,13 @@
 3. 点「读取后台 Depot」，它会列出 Steamworks 后台这个 App 下**已经配好的 Depot**，勾上就自动填好 DepotID；
 4. 点「自检」确认配置没问题，点「Preview 空跑」走一遍完整流程但不真的上传；
 5. 没问题了点「正式上传」。
+
+<table>
+<tr>
+<td width="50%"><img src="docs/onboard.png" alt="首次运行引导"><br><sub>首次运行的三步引导，老用户可以直接跳过</sub></td>
+<td width="50%"><img src="docs/wizard.png" alt="新建 App"><br><sub>新建 App：读后台真实 DepotID，平台可拖动排序</sub></td>
+</tr>
+</table>
 
 ---
 
@@ -99,6 +108,8 @@ D:\SteamSDK\tools\ContentBuilder\
 3. 选「直接指过去」（把内容目录改成这个文件夹，不复制）或「复制进现有内容目录」。
 
 zip 会被解到临时目录，解完如果只套了一层同名文件夹会自动往下钻。当前只支持 `.zip`（`.7z` / `.rar` 需要先手动解压）。
+
+![拖放](docs/drop.png)
 
 ### 上传前预检
 
