@@ -543,14 +543,18 @@ function registerIpc() {
 
   ipcMain.handle('app:delete', (_e, { dirName, deleteContent } = {}) => {
     const s = loadSettings()
+    // depotMeta 是按 depotId 存的，删完脚本就读不到了 —— 先把 id 记下来
+    const depotIds = (readApp(dirName, s)?.depots || []).map((d) => String(d.id))
     const res = deleteApp(dirName, { deleteContent: !!deleteContent }, s)
     if (res.ok) {
-      // 顺手把这个 App 的分支历史清掉，免得设置文件里越积越多
+      // 顺手把这个 App 的分支历史和 depot 属性清掉，免得设置文件里越积越多
       const branches = { ...(s.branches || {}) }
       if (res.appId && branches[res.appId]) {
         delete branches[res.appId]
       }
-      saveSettings({ branches, ...(s.lastApp === dirName ? { lastApp: null } : {}) })
+      const depotMeta = { ...(s.depotMeta || {}) }
+      for (const id of depotIds) delete depotMeta[id]
+      saveSettings({ branches, depotMeta, ...(s.lastApp === dirName ? { lastApp: null } : {}) })
     }
     return res
   })
