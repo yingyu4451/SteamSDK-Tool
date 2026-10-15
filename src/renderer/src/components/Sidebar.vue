@@ -1,13 +1,13 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { LayoutDashboard, History, Settings, RefreshCw, ShieldCheck, Plus } from '@lucide/vue'
+import { LayoutDashboard, History, Settings, RefreshCw, ShieldCheck, Plus, BookOpen } from '@lucide/vue'
 import { state, selectApp, rescan, openWizard, runCheckAll } from '../store.js'
 import { useListStagger } from '../motion.js'
 
 const listEl = ref(null)
 const { run } = useListStagger(listEl, (el) => el.dataset.dir)
 
-/** 「全部自检」跑起来的时候，图标要亮着 */
+/** 「全部检查配置」跑起来的时候，图标要亮着 */
 const checkingAll = computed(() => state.running && state.runKind === 'check')
 
 watch(
@@ -19,6 +19,7 @@ watch(
 const nav = [
   { id: 'workbench', label: '工作台', icon: LayoutDashboard },
   { id: 'history', label: '构建历史', icon: History },
+  { id: 'manual', label: '使用手册', icon: BookOpen },
   { id: 'settings', label: '设置', icon: Settings }
 ]
 
@@ -104,7 +105,7 @@ function healthTitle(app) {
             ? 'text-accent'
             : 'text-faint hover:text-accent hover:bg-surface-2'
         "
-        title="全部自检（把每个 App 都跑一遍 check.ps1）"
+        title="把所有 App 都跑一遍 check.ps1"
         @click="runCheckAll"
       >
         <ShieldCheck

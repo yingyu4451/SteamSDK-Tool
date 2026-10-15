@@ -3,7 +3,7 @@ import { reactive, computed } from 'vue'
 const api = window.api
 
 /* 构建输出控制台按 App 分开：每个 App 一份缓冲区，切走再切回来还在。
-   没有选中 App 时（「全部自检」）落在 '__all__' 这一份。 */
+   没有选中 App 时（「全部检查配置」）落在 '__all__' 这一份。 */
 const consoleBuckets = new Map()
 function consoleBucket() {
   const key = state.selectedDir || '__all__'
@@ -90,7 +90,7 @@ export const state = reactive({
   // scripts 根目录下游离的 vdf（不属于任何 App 文件夹）
   orphans: [],
   orphanDialog: null,
-  // 上传前预检
+  // 检查文件
   preflight: { busy: false, error: null, data: null },
   // 本地内容服务器
   local: { running: false, port: 80, url: '', installed: true, busy: false, devcfg: null, error: null },
@@ -908,8 +908,16 @@ export async function openDepotSlide(platform) {
     contentRoot: defaultRootFor(p),
     allowDup: false,
     busy: false,
-    error: null
+    error: null,
+    // 这个 Depot 属于哪个 App —— 填表的时候能看见
+    appId,
+    appName: '',
+    // 后台这个 App 下的 depot（点「读后台」才有；已有对账结果就直接用）
+    backend: null,
+    lookupBusy: false,
+    lookupError: ''
   }
+  slideLoadApp()
   // 平台选项从主进程拿一次
   if (!state.depotOptions.os.length) {
     const d = await api.app.defaults({ platform: p })
@@ -920,6 +928,71 @@ export async function openDepotSlide(platform) {
     }
     if (!state.settings) state.settings = { buildsRoot: d.buildsRoot }
   }
+}
+
+/** 侧边栏一打开就把这个 App 的名字查出来（本地名字优先，其次后台公开名） */
+export async function slideLoadApp() {
+  const s = state.depotSlide
+  if (!s) return
+  const id = String(s.appId || '').trim()
+  if (!/^\d+$/.test(id)) return
+  const local = (state.apps || []).find((a) => String(a.appId) === id)
+  if (local) s.appName = local.dirName
+  const name = await publicName(id)
+  if (state.depotSlide === s && name) s.appName = name
+  // 已经有对账结果就直接拿来用，不再打一次接口
+  if (state.depotSlide === s && !s.backend && state.verify?.data?.steamDepots?.length) {
+    s.backend = state.verify.data.steamDepots
+  }
+}
+
+/** 点「读后台」时才真去拉一次这个 App 的 depot 列表（走 steamcmd，几秒到几十秒） */
+export async function slideLookupBackend() {
+  const s = state.depotSlide
+  if (!s) return
+  const id = String(s.appId || '').trim()
+  if (!/^\d+$/.test(id)) {
+    s.lookupError = '这个 App 还没有 AppID，读不了后台'
+    return
+  }
+  s.lookupBusy = true
+  s.lookupError = ''
+  try {
+    const r = await api.steam.appDepots(id)
+    if (state.depotSlide !== s) return
+    if (r?.ok) {
+      s.backend = r.depots || []
+      if (r.appName) s.appName = r.appName
+    } else {
+      s.lookupError = r?.error || (r?.needsPassword ? '需要先在设置里保存 Steam 账号密码' : '读不到后台')
+    }
+  } catch (e) {
+    if (state.depotSlide === s) s.lookupError = e.message || '读取失败'
+  } finally {
+    if (state.depotSlide === s) s.lookupBusy = false
+  }
+}
+
+/** 正在填的 DepotID 在后台是什么情况 */
+export function slideDepotHint() {
+  const s = state.depotSlide
+  if (!s) return null
+  const id = String(s.depotId || '').trim()
+  if (!/^\d+$/.test(id)) return null
+  const local = (state.detail?.depots || []).find((d) => String(d.id) === id)
+  if (local) return { tone: 'bad', text: `本地已经有 Depot ${id}（${local.platformLabel || local.platform}）了` }
+  const list = s.backend
+  if (!list) {
+    return { tone: 'idle', text: '本地还没有这个 DepotID。点右上角「读后台」能核对后台有没有。' }
+  }
+  const hit = list.find((d) => String(d.depotId) === id)
+  if (hit) {
+    return {
+      tone: 'ok',
+      text: `后台有：${hit.platformLabel || '平台未知'}${hit.hasBuild ? ` · 最近构建 ${hit.buildId || hit.manifestId}` : ' · 还没有构建'}`
+    }
+  }
+  return { tone: 'warn', text: '后台这个 App 下没有这个 DepotID —— 要么打错了，要么后台还没建' }
 }
 
 export function closeDepotSlide() {
@@ -1338,7 +1411,7 @@ export function wireEvents() {
       code !== 0
         ? '出错了'
         : kind === 'check'
-          ? '自检通过'
+          ? '检查配置通过'
           : wasPreview
             ? 'Preview 完成'
             : '上传完成'
@@ -1358,7 +1431,7 @@ export function wireEvents() {
 }
 
 /* ------------------------------------------------------------------ *
- *  全部 App 一起自检
+ *  全部 App 一起检查配置
  * ------------------------------------------------------------------ */
 
 export async function runCheckAll() {
@@ -1452,7 +1525,7 @@ export async function dropApply(spec) {
 }
 
 /* ------------------------------------------------------------------ *
- *  上传前预检
+ *  检查文件
  * ------------------------------------------------------------------ */
 
 export async function runPreflight(dirName) {
@@ -1467,12 +1540,12 @@ export async function runPreflight(dirName) {
     return null
   }
   if (!res || res.ok === false) {
-    state.preflight = { busy: false, error: res?.error || '预检失败', data: null }
+    state.preflight = { busy: false, error: res?.error || '检查文件失败', data: null }
     return null
   }
   state.preflight = { busy: false, error: null, data: res }
   const n = res.errors || 0
-  toast(n ? `预检发现 ${n} 个会挡住上传的问题` : '预检通过，没有会挡住上传的问题', n ? 'warn' : 'ok')
+  toast(n ? `检查文件发现 ${n} 个会挡住上传的问题` : '检查文件通过，没有会挡住上传的问题', n ? 'warn' : 'ok')
   return res
 }
 

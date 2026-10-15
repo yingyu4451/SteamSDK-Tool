@@ -115,7 +115,7 @@ const exitTone = computed(() => {
 
       <span v-if="state.running" class="pill pill-warn">
         <span class="w-1.5 h-1.5 rounded-full bg-amber animate-pulse" />
-        {{ state.runKind === 'check' ? '自检中' : '上传中' }} · {{ elapsed }}
+        {{ state.runKind === 'check' ? '检查配置中' : '上传中' }} · {{ elapsed }}
       </span>
       <span v-else-if="state.lastExit" class="pill" :class="exitTone === 'ok' ? 'pill-ok' : 'pill-bad'">
         退出码 {{ state.lastExit.code }}
@@ -188,7 +188,7 @@ const exitTone = computed(() => {
 
     <div
       ref="bodyEl"
-      class="flex-1 min-h-[220px] max-h-[420px] overflow-y-auto scroll-thin px-5 py-3 bg-[#080b10]"
+      class="flex-1 min-h-[180px] overflow-y-auto scroll-thin px-5 py-3 bg-[#080b10]"
       @scroll="onScroll"
     >
       <div v-for="(l, i) in state.logs" :key="i" class="log-line">
@@ -196,8 +196,11 @@ const exitTone = computed(() => {
         <span :class="`log-${l.stream}`">{{ l.line }}</span>
       </div>
 
-      <div v-if="!state.logs.length" class="text-[12px] text-faint py-6 text-center">
-        点「自检」或「Preview 空跑」开始
+      <div
+        v-if="!state.logs.length"
+        class="h-full grid place-items-center text-[12px] text-faint"
+      >
+        点「检查配置」或「Preview 空跑」开始
       </div>
     </div>
   </section>

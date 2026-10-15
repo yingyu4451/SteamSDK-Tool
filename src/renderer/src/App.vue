@@ -9,6 +9,7 @@ import Sidebar from './components/Sidebar.vue'
 import WorkbenchView from './components/WorkbenchView.vue'
 import HistoryView from './components/HistoryView.vue'
 import SettingsView from './components/SettingsView.vue'
+import ManualView from './components/ManualView.vue'
 import NewAppWizard from './components/NewAppWizard.vue'
 import NewDepotSlideover from './components/NewDepotSlideover.vue'
 import EditDrawer from './components/EditDrawer.vue'
@@ -18,7 +19,7 @@ import DropDialog from './components/DropDialog.vue'
 import OnboardGuide from './components/OnboardGuide.vue'
 import { Upload } from '@lucide/vue'
 
-const views = { workbench: WorkbenchView, history: HistoryView, settings: SettingsView }
+const views = { workbench: WorkbenchView, history: HistoryView, settings: SettingsView, manual: ManualView }
 const current = computed(() => views[state.view] || WorkbenchView)
 
 /* 拖文件夹/压缩包进来。

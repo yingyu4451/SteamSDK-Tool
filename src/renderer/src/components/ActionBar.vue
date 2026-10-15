@@ -100,7 +100,7 @@ async function openPath(p) {
 }
 
 const partner = (seg) => `https://partner.steamgames.com/apps/${seg}/${appId.value}`
-/* ---- 上传前预检 ---- */
+/* ---- 检查文件 ---- */
 
 const pf = computed(() => state.preflight.data || null)
 const pfTone = computed(() => {
@@ -130,14 +130,24 @@ const localHost = computed(() => {
 
 <template>
   <div class="card p-3 flex items-center gap-2 flex-wrap min-w-0 relative" v-reveal="{ delay: 0.02 }">
-    <button class="btn no-drag" :disabled="disabled" @click="doCheck">
+    <button
+      class="btn no-drag"
+      :disabled="disabled"
+      title="检查配置：跑 check.ps1，核对 vdf 里的 AppID / DepotID / 内容目录 / 排除规则，以及 depot 脚本之间对不对得上。不看实际文件。"
+      @click="doCheck"
+    >
       <Check :size="16" :stroke-width="2.2" />
-      自检
+      检查配置
     </button>
 
-    <button class="btn no-drag" :disabled="disabled || state.preflight.busy" @click="runPreflight()">
+    <button
+      class="btn no-drag"
+      :disabled="disabled || state.preflight.busy"
+      title="检查文件：扫一遍真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app bundle。配置没问题但文件有问题时，只有这一关能发现。"
+      @click="runPreflight()"
+    >
       <ShieldCheck :size="16" :stroke-width="1.8" />
-      {{ state.preflight.busy ? '预检中…' : '预检' }}
+      {{ state.preflight.busy ? '检查中…' : '检查文件' }}
     </button>
 
     <div class="w-px h-6 bg-line mx-1" />
@@ -364,7 +374,7 @@ const localHost = computed(() => {
       </div>
     </Transition>
 
-    <!-- 上传前预检 -->
+    <!-- 检查文件 -->
     <Transition
       enter-active-class="transition duration-200"
       enter-from-class="opacity-0 -translate-y-1"
@@ -381,7 +391,7 @@ const localHost = computed(() => {
         "
       >
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="font-semibold text-[12px]">上传前预检</span>
+          <span class="font-semibold text-[12px]">检查文件</span>
           <span v-if="pf" class="text-[11px]" :class="pfTone">
             {{ pf.errors }} 个会拦住上传 · {{ pf.warns }} 个警告 · {{ pf.infos }} 条提示
           </span>

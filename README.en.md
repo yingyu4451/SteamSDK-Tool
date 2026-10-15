@@ -115,9 +115,9 @@ Zip files are extracted to a temp directory, and a single wrapping folder is unw
 
 ![Drag and drop](docs/drop.png)
 
-### Preflight checks
+### Checking the files
 
-The **Preflight** button catches things **self-check can't see but Steam will choke on**:
+The **检查文件 (Check files)** button catches things **检查配置 (Check config) can't see but Steam will choke on**:
 
 - Illegal characters in filenames, and over-long paths (relative path > 200 chars, or a single segment > 120);
 - Case collisions (`Readme.txt` next to `README.TXT` — Steam depots are case-sensitive, Windows players get a clash);
@@ -153,6 +153,14 @@ The alternative — parse to objects and re-serialise — wipes them all out. Th
 - Three-state status light: **green** = fine, **yellow** = things to look at, **red** = structurally broken (missing AppID, missing depot script, AppID collision);
 - Every "to do" item can be **ignored individually** (say, a Depot that intentionally points at `Downloads`); the choice persists and can be restored anytime;
 - Paths — depot content roots, build scripts — are **clickable** and open in Explorer.
+
+### There's a manual inside the app
+
+The sidebar's **使用手册** entry is built in and works offline: core concepts, the five steps of first-time setup, what each toolbar button actually checks, and where to look when something fails. It has a search box that filters sections. This README is more complete; the manual links here at the bottom.
+
+### Spaces in app names
+
+The app name is the folder name under `scripts/`, and it **may contain spaces and parentheses** — Valve's own examples (`ABYA-PB Steam(Body-2670430) B0.7.9`) do. The only things rejected are `\ / : * ? " < > |`, control characters, and a leading underscore (directories starting with `_` are skipped by the scanner).
 
 ---
 
@@ -230,7 +238,7 @@ Main-process code lives in `src/main/`:
 | `sdk.js` | App / Depot CRUD, path checks, scanning |
 | `steamapi.js` | Steamworks Web API (needs a publisher key) |
 | `steamcmdinfo.js` | `steamcmd +app_info_print` parsing (**no key needed**) |
-| `preflight.js` | Pre-upload checks |
+| `preflight.js` | Checks the files that will actually be uploaded |
 | `dropzone.js` | Drag-and-drop analysis (folders / zip) |
 | `localserver.js` | Local content server |
 | `updater.js` | GitHub Releases update check |

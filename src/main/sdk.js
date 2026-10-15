@@ -991,9 +991,13 @@ export function validateAppName(name) {
   const n = String(name || '').trim()
   if (!n) return { ok: false, error: '名字不能为空' }
   if (n.startsWith('_')) return { ok: false, error: '名字不能以下划线开头（_ 开头的目录会被扫描跳过）' }
-  if (/[\\/:*?"<>|]/.test(n)) return { ok: false, error: '名字里不能有 \\ / : * ? " < > | 这些字符' }
-  if (!/^[\w\u4e00-\u9fa5.-]+$/.test(n)) {
-    return { ok: false, error: '名字只能用字母、数字、下划线、点、横线或中文' }
+  if (/[\\/:*?"<>|]/.test(n)) return { ok: false, error: '名字里不能有 \\ / : * ? " < > | 这几个字符' }
+  // 空格是允许的 —— Valve 自己的例子（ABYA-PB Steam(Body-2670430) B0.7.9）就带空格。
+  // 只是不许有控制字符，也不许只有空格（上面 trim 之后为空的已经拦掉了）。
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(n)) return { ok: false, error: '名字里不能有控制字符' }
+  if (!/^[\w\u4e00-\u9fa5.\- ()（）[\]【】]+$/.test(n)) {
+    return { ok: false, error: '名字里只能用字母、数字、下划线、点、横线、空格、括号或中文' }
   }
   if (n === '.' || n === '..') return { ok: false, error: '名字不合法' }
   if (n.length > 64) return { ok: false, error: '名字太长了（最多 64 字）' }

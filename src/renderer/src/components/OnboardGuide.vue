@@ -133,7 +133,7 @@ function goCreateApp() {
             <div class="flex gap-2.5 text-[12.5px]">
               <span class="text-accent shrink-0">②</span>
               <span class="text-muted"
-                >填一次 <span class="text-ink">Steam 账号</span>，之后自检、空跑、正式上传都在界面里点</span
+                >填一次 <span class="text-ink">Steam 账号</span>，之后检查配置、空跑、正式上传都在界面里点</span
               >
             </div>
             <div class="flex gap-2.5 text-[12.5px]">

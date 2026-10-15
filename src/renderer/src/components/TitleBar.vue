@@ -45,7 +45,7 @@ const upd = computed(() => state.update?.data || null)
         >
           <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
           <span class="text-[11.5px] text-accent font-medium">
-            {{ state.runKind === 'check' ? '自检中' : state.runPreview ? 'Preview 中' : '上传中' }}
+            {{ state.runKind === 'check' ? '检查配置中' : state.runPreview ? 'Preview 中' : '上传中' }}
           </span>
         </div>
       </Transition>

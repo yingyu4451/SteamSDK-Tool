@@ -181,7 +181,7 @@ function pickPlatform(id) {
 
             <!-- .app bundle -->
             <div v-if="d.hasAppBundle" class="mt-2 text-[11.5px] text-amber">
-              macOS 的 .app bundle 传上去容易坏签名 —— 跑预检能看到详情，Valve 的 tools\ContentPrep 是专门处理这个的。
+              macOS 的 .app bundle 传上去容易坏签名 —— 跑「检查文件」能看到详情，Valve 的 tools\ContentPrep 是专门处理这个的。
             </div>
           </div>
 

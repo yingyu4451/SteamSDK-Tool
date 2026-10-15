@@ -62,23 +62,27 @@ const totalMb = computed(() => agg.value.totalBytes / 1024 / 1024)
       </div>
     </div>
 
-    <!-- 没选 App -->
-    <div
-      v-if="!detail && !state.detailLoading"
-      class="card p-10 flex flex-col items-center gap-3 text-center"
-      v-reveal
-    >
+    <!-- 切 App 时淡出淡入。只动 opacity / transform，不碰布局尺寸，
+         所以不会像早期那些面板一样把整页顶得跳一下。 -->
+    <Transition name="appswitch" mode="out-in">
+      <!-- 没选 App -->
       <div
-        class="w-12 h-12 rounded-2xl grid place-items-center border border-line bg-surface-2"
+        v-if="!detail && !state.detailLoading"
+        key="__none"
+        class="card p-10 flex flex-col items-center gap-3 text-center"
+        v-reveal
       >
-        <Upload :size="24" :stroke-width="1.8" class="text-faint" />
+        <div
+          class="w-12 h-12 rounded-2xl grid place-items-center border border-line bg-surface-2"
+        >
+          <Upload :size="24" :stroke-width="1.8" class="text-faint" />
+        </div>
+        <div class="text-[14px] font-medium">左侧选一个 App</div>
       </div>
-      <div class="text-[14px] font-medium">左侧选一个 App</div>
-    </div>
 
-    <template v-else-if="detail">
-      <AppHeader />
-      <ActionBar />
+      <div v-else-if="detail" :key="state.selectedDir" class="flex flex-col gap-4 min-w-0">
+        <AppHeader />
+        <ActionBar />
 
       <!-- 概览数字 -->
       <div class="grid grid-cols-4 gap-3">
@@ -116,22 +120,24 @@ const totalMb = computed(() => agg.value.totalBytes / 1024 / 1024)
         />
       </div>
 
-      <!-- 左边 Depot（下面挂分支），右边构建输出 -->
-      <div class="grid grid-cols-[1.55fr_1fr] gap-4 items-start">
+      <!-- 左边 Depot（下面挂分支），右边构建输出。
+           两列都 stretch：构建输出的底边就跟分支那块的底边齐平，不再各高各的。 -->
+      <div class="grid grid-cols-[1.2fr_1fr] gap-4 min-w-0">
         <div class="flex flex-col gap-4 min-w-0">
           <DepotMatrix :depots="detail.depots || []" />
           <BranchPanel />
         </div>
         <ConsoleLog />
       </div>
-    </template>
-
-    <!-- 加载中 -->
-    <div v-else class="card p-10 grid place-items-center text-muted text-[13px]">
-      <div class="flex items-center gap-3">
-        <div class="w-5 h-5 rounded-full border-2 border-[#23303d] border-t-[#66c0f4] animate-spin" />
-        正在读取 {{ state.selectedDir }}…
       </div>
-    </div>
+
+      <!-- 加载中 -->
+      <div v-else key="__loading" class="card p-10 grid place-items-center text-muted text-[13px]">
+        <div class="flex items-center gap-3">
+          <div class="w-5 h-5 rounded-full border-2 border-[#23303d] border-t-[#66c0f4] animate-spin" />
+          正在读取 {{ state.selectedDir }}…
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
