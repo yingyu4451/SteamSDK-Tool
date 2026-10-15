@@ -152,7 +152,9 @@ const shown = computed(() => {
 })
 
 function openRepo() {
-  window.api.shell.openExternal('https://github.com/yingyu4451/SteamSDK-Tool#readme')
+  // 仓库地址由主进程从 package.json 的 repository 推出来，fork 之后不用改这里
+  const repo = state.update?.repo || ''
+  if (repo) window.api.shell.openExternal(`${repo}#readme`)
 }
 </script>
 

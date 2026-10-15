@@ -5,22 +5,49 @@
  * latest.yml、还有它自己的一套事件模型；我们只要「查一下有没有新版 →
  * 下载那个 .exe → 起安装程序」这三步，自己写反而更好控（进度、错误文案都能自己定）。
  *
- * 仓库是公开的，所以匿名读 releases 就行，不需要 token。
+ * 仓库是公开的，所以不需要 token。
+ *
+ * 刻意**不走 api.github.com**：匿名 API 是 60 次/小时/IP，用的人一多
+ * （同一个办公室/学校出口 IP 下几十个人）就会被限流，更新检查直接失效。
+ * 改走网页端点，没有这个额度：
+ *   1. HEAD /releases/latest        → 302，Location 里带最新 tag
+ *   2. GET  /releases/expanded_assets/<tag>  → 一小段 HTML，里面有资产的真实地址
+ *   3. GET  /releases/tag/<tag>     → 只有真有新版时才取，从正文里抠更新说明
  */
-import { app, shell } from 'electron'
+import { app, net, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
-import https from 'node:https'
 
-const OWNER = 'yingyu4451'
-const REPO = 'SteamSDK-Tool'
-const API = 'https://api.github.com'
+const FALLBACK_OWNER = 'yingyu4451'
+const FALLBACK_REPO = 'SteamSDK-Tool'
 const UA = 'SteamSDK-Tool-Updater'
 const TIMEOUT = 20000
 
+/**
+ * 仓库地址从 package.json 的 repository 推，不写死在源码里 ——
+ * 别人 fork 之后改一下 package.json 就能用自己的 Releases，不用动代码。
+ * 读不到（package.json 被改坏、asar 里没有）就回落到内置的那份。
+ */
+let _slug = null
+function slug() {
+  if (_slug) return _slug
+  _slug = { owner: FALLBACK_OWNER, repo: FALLBACK_REPO }
+  try {
+    const raw = fs.readFileSync(path.join(app.getAppPath(), 'package.json'), 'utf8')
+    const r = JSON.parse(raw).repository
+    const url = typeof r === 'string' ? r : (r && r.url) || ''
+    const m = /github\.com[/:]([^/\s]+)\/([^/.#\s]+)/i.exec(url)
+    if (m) _slug = { owner: m[1], repo: m[2].replace(/\.git$/i, '') }
+  } catch {
+    /* 用回落值 */
+  }
+  return _slug
+}
+
 export function repoUrl() {
-  return `https://github.com/${OWNER}/${REPO}`
+  const s = slug()
+  return `https://github.com/${s.owner}/${s.repo}`
 }
 
 export function releasesPage() {
@@ -48,94 +75,207 @@ export function compareVersions(a, b) {
   return 0
 }
 
-/** GET，自己跟 302（release asset 会跳到 objects.githubusercontent.com） */
-function get(url, hdrs = {}, { maxRedirect = 6 } = {}) {
+/**
+ * 走 Chromium 的网络栈（electron 的 net），**不用 node:https**。
+ *
+ * 原因是实测出来的：node:https 不认系统代理。机器上挂着 127.0.0.1:7897 这类
+ * 本地代理时，浏览器和 Electron 自己的请求都出得去，
+ * node:https 会直连 github.com:443 然后 20 秒超时 —— 同一个 URL：
+ *   .NET / Chromium  → 302，秒回
+ *   node:https       → 连续 5 次全部 timeout after 20000ms
+ * 用户机器上装代理的比例不低，所以这条必须走 Chromium。
+ */
+function netRequest(url, { method = 'GET', headers = {}, timeout = TIMEOUT, follow = true } = {}) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: hdrs, timeout: TIMEOUT }, (res) => {
-      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && maxRedirect > 0) {
-        res.resume()
-        const next = new URL(res.headers.location, url).toString()
-        resolve(get(next, { 'User-Agent': UA, Accept: hdrs.Accept || '*/*' }, { maxRedirect: maxRedirect - 1 }))
-        return
-      }
-      resolve(res)
-    })
-    req.on('timeout', () => req.destroy(new Error('请求超时')))
-    req.on('error', reject)
-  })
-}
+    let req
+    try {
+      req = net.request({ method, url, redirect: follow ? 'follow' : 'manual' })
+    } catch (e) {
+      reject(e)
+      return
+    }
+    try {
+      req.setHeader('User-Agent', UA)
+      for (const [k, v] of Object.entries(headers)) req.setHeader(k, v)
+    } catch {
+      /* 个别头不允许设，忽略 */
+    }
 
-function readJson(res) {
-  return new Promise((resolve) => {
-    let body = ''
-    res.setEncoding('utf8')
-    res.on('data', (c) => (body += c))
-    res.on('end', () => {
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
       try {
-        resolve({ status: res.statusCode, json: body ? JSON.parse(body) : null })
+        req.abort()
       } catch {
-        resolve({ status: res.statusCode, json: null })
+        /* ignore */
       }
+      reject(new Error('请求超时'))
+    }, timeout)
+    const done = (fn) => (arg) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      fn(arg)
+    }
+
+    req.on('response', (res) => {
+      const chunks = []
+      res.on('data', (c) => chunks.push(c))
+      res.on('end', done(() => resolve({ statusCode: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) })))
+      res.on('error', done(reject))
     })
-    res.on('error', () => resolve({ status: res.statusCode, json: null }))
+    req.on('error', done(reject))
+    req.end()
   })
 }
 
-/** 从 release 里挑安装包：优先名字里带 setup 的 .exe */
-function pickAsset(assets = []) {
-  const exe = assets.filter((a) => /\.exe$/i.test(a.name || ''))
-  return exe.find((a) => /setup/i.test(a.name)) || exe[0] || null
+/** Electron 的 net 把头都做成数组，取第一个 */
+function h1(headers, name) {
+  const v = headers?.[name] ?? headers?.[name.toLowerCase()]
+  return Array.isArray(v) ? v[0] || '' : String(v || '')
 }
 
 /**
- * 查最新版。
+ * HEAD 并跟着跳转走 —— 只为了拿资产的准确字节数，不会真下文件。
+ * （Electron 的 net 在 redirect:'manual' 下会直接报 "Redirect was cancelled"，
+ *  所以这里让 Chromium 自己跟，拿最终的 content-length。）
+ */
+async function headFollow(url) {
+  return netRequest(url, { method: 'HEAD', headers: { Accept: '*/*' }, follow: true })
+}
+
+/** GET 一段文本（自己跟跳转） */
+async function getText(url, accept = 'text/html') {
+  const res = await netRequest(url, { headers: { Accept: accept } })
+  return { statusCode: res.statusCode, text: res.body.toString('utf8') }
+}
+
+const SIZE_UNITS = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 }
+function parseSize(t) {
+  const m = /([\d.]+)\s*(B|KB|MB|GB)/i.exec(String(t || ''))
+  return m ? Math.round(parseFloat(m[1]) * (SIZE_UNITS[m[2].toUpperCase()] || 1)) : 0
+}
+
+/** 从 expanded_assets 片段里抠出资产列表（名字 / 地址 / 体积） */
+function parseAssets(html) {
+  const out = []
+  const seen = new Set()
+  const re = /href="(\/[^"]*\/releases\/download\/([^/"]+)\/([^"]+))"/g
+  let m
+  while ((m = re.exec(html))) {
+    let name
+    try {
+      name = decodeURIComponent(m[3])
+    } catch {
+      name = m[3]
+    }
+    if (seen.has(name)) continue
+    seen.add(name)
+    // 体积紧跟在链接元素后面
+    const sz = /([\d.]+\s*(?:B|KB|MB|GB))\s*</i.exec(html.slice(m.index, m.index + 700))
+    out.push({ name, url: `https://github.com${m[1]}`, size: parseSize(sz && sz[1]), tag: m[2] })
+  }
+  return out
+}
+
+/** 把转义过的 HTML 还原回标签（atom 的 <content> 里是转义过的） */
+function unescapeHtml(s) {
+  return String(s || '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+}
+
+function htmlToText(html) {
+  return String(html || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n- ')
+    .replace(/<\/(p|li|h[1-6]|div|tr|ul|ol|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/**
+ * 查最新版。全程走网页端点，不碰 api.github.com。
  * @returns {Promise<{ok:boolean, hasUpdate?:boolean, current:string, latest?:string,
  *   notes?:string, publishedAt?:string, asset?:object, htmlUrl?:string, error?:string}>}
  */
 export async function checkUpdate() {
   const current = currentVersion()
-  let res
+
+  // 1) releases.atom —— 不跳转、无额度，一次就拿到 tag / 发布时间 / 更新说明。
+  //    （原来用 HEAD /releases/latest 拿 302 的 Location，但 Electron 的 net
+  //     在 redirect:'manual' 下会直接抛 "Redirect was cancelled"，索性换成 feed。）
+  let feed
   try {
-    res = await get(`${API}/repos/${OWNER}/${REPO}/releases/latest`, {
-      'User-Agent': UA,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28'
-    })
+    feed = await getText(`${repoUrl()}/releases.atom`, 'application/atom+xml')
   } catch (e) {
     return { ok: false, current, error: `连不上 GitHub：${e.message}` }
   }
-
-  if (res.statusCode === 404) {
-    res.resume()
+  if (feed.statusCode === 404) {
     return { ok: false, current, error: '仓库里还没有发布过 release。' }
   }
-  if (res.statusCode === 403 || res.statusCode === 429) {
-    res.resume()
-    return { ok: false, current, error: `GitHub 限流了（${res.statusCode}），过一会儿再试。` }
-  }
-  if (res.statusCode !== 200) {
-    res.resume()
-    return { ok: false, current, error: `GitHub 返回 ${res.statusCode}` }
+  if (feed.statusCode !== 200) {
+    return { ok: false, current, error: `GitHub 返回 ${feed.statusCode}` }
   }
 
-  const { json } = await readJson(res)
-  if (!json) return { ok: false, current, error: 'GitHub 返回的内容看不懂' }
-
-  const latest = String(json.tag_name || json.name || '').replace(/^v/i, '')
-  const asset = pickAsset(json.assets)
-
-  return {
-    ok: true,
-    current,
-    latest,
-    hasUpdate: compareVersions(latest, current) > 0,
-    notes: String(json.body || '').slice(0, 2000),
-    publishedAt: json.published_at || '',
-    htmlUrl: json.html_url || releasesPage(),
-    asset: asset
-      ? { name: asset.name, size: asset.size, url: asset.browser_download_url || asset.url }
-      : null
+  const entry = /<entry>([\s\S]*?)<\/entry>/.exec(feed.text)
+  if (!entry) {
+    return { ok: false, current, error: '仓库里还没有发布过 release。' }
   }
+  const tagM = /\/releases\/tag\/([^"<]+)/.exec(entry[1])
+  if (!tagM) {
+    return { ok: false, current, error: 'feed 里没找到 release 地址。' }
+  }
+
+  const tag = decodeURIComponent(tagM[1])
+  const latest = tag.replace(/^v/i, '')
+  const hasUpdate = compareVersions(latest, current) > 0
+  const htmlUrl = `${repoUrl()}/releases/tag/${encodeURIComponent(tag)}`
+  const publishedAt = (/<updated>([^<]+)<\/updated>/.exec(entry[1]) || [])[1] || ''
+
+  // 更新说明在 <content> 里，是转义过的 HTML
+  let notes = ''
+  const cm = /<content[^>]*>([\s\S]*?)<\/content>/.exec(entry[1])
+  if (cm) notes = htmlToText(unescapeHtml(cm[1])).slice(0, 2000)
+
+  // 2) 资产列表 —— 拿不到也不算什么，用户还能点「在 GitHub 上看」
+  //    名字不能自己拼：本地是 "SteamSDK Tool-0.1.1-setup.exe"（带空格），
+  //    gh 上传之后 GitHub 会把它变成 "SteamSDK.Tool-0.1.1-setup.exe"
+  let asset = null
+  try {
+    const frag = await getText(`${repoUrl()}/releases/expanded_assets/${encodeURIComponent(tag)}`)
+    const exes = parseAssets(frag.text).filter((a) => /\.exe$/i.test(a.name))
+    asset = exes.find((a) => /setup/i.test(a.name)) || exes[0] || null
+  } catch {
+    /* 忽略 */
+  }
+
+  // 3) 体积：expanded_assets 片段里只有 sha256，没有字节数，单独 HEAD 一下。
+  //    只有真有新版才做 —— 界面只在有新版时显示体积。
+  if (hasUpdate && asset && !asset.size) {
+    try {
+      const h = await headFollow(asset.url)
+      const len = Number(h1(h.headers, 'content-length') || 0)
+      if (len > 0) asset.size = len
+    } catch {
+      /* 拿不到就不显示体积 */
+    }
+  }
+
+  return { ok: true, current, latest, hasUpdate, notes, publishedAt, htmlUrl, asset, via: 'web' }
 }
 
 /**
@@ -148,43 +288,70 @@ export async function downloadUpdate({ url, name, onProgress } = {}) {
   fs.mkdirSync(dir, { recursive: true })
   const dest = path.join(dir, String(name || 'SteamSDK-Tool-setup.exe').replace(/[\\/:*?"<>|]/g, '_'))
 
-  let res
+  let req
   try {
-    res = await get(url, { 'User-Agent': UA, Accept: 'application/octet-stream' })
+    req = net.request({ method: 'GET', url, redirect: 'follow' })
+    req.setHeader('User-Agent', UA)
+    req.setHeader('Accept', 'application/octet-stream')
   } catch (e) {
     return { ok: false, error: `下载失败：${e.message}` }
   }
-  if (res.statusCode !== 200) {
-    res.resume()
-    return { ok: false, error: `下载失败：GitHub 返回 ${res.statusCode}` }
-  }
-
-  const total = Number(res.headers['content-length'] || 0)
-  let got = 0
-  const out = fs.createWriteStream(dest)
 
   return new Promise((resolve) => {
-    res.on('data', (chunk) => {
-      got += chunk.length
+    let settled = false
+    let timer = null
+    const done = (v) => {
+      if (settled) return
+      settled = true
+      if (timer) clearTimeout(timer)
+      resolve(v)
+    }
+    // 这个超时只管「连上」这一段；开始收数据之后不再限时（100MB 的包要几分钟）
+    timer = setTimeout(() => {
       try {
-        onProgress?.(got, total)
+        req.abort()
       } catch {
-        /* 进度回调不该影响下载 */
+        /* ignore */
       }
-    })
-    res.pipe(out)
-    out.on('finish', () => {
-      out.close(() => {
-        if (total && got < total) {
-          fs.rmSync(dest, { force: true })
-          resolve({ ok: false, error: `下载不完整（${got}/${total} 字节）` })
-          return
+      done({ ok: false, error: '下载超时（20 秒内没连上）' })
+    }, TIMEOUT)
+
+    req.on('response', (res) => {
+      if (timer) clearTimeout(timer)
+      if (res.statusCode !== 200) {
+        res.resume()
+        done({ ok: false, error: `下载失败：GitHub 返回 ${res.statusCode}` })
+        return
+      }
+
+      const total = Number(h1(res.headers, 'content-length') || 0)
+      let got = 0
+      const out = fs.createWriteStream(dest)
+
+      res.on('data', (chunk) => {
+        got += chunk.length
+        try {
+          onProgress?.(got, total)
+        } catch {
+          /* 进度回调不该影响下载 */
         }
-        resolve({ ok: true, path: dest, bytes: got })
       })
+      res.pipe(out)
+      out.on('finish', () => {
+        out.close(() => {
+          if (total && got < total) {
+            fs.rmSync(dest, { force: true })
+            done({ ok: false, error: `下载不完整（${got}/${total} 字节）` })
+            return
+          }
+          done({ ok: true, path: dest, bytes: got })
+        })
+      })
+      out.on('error', (e) => done({ ok: false, error: `写文件失败：${e.message}` }))
+      res.on('error', (e) => done({ ok: false, error: `下载中断：${e.message}` }))
     })
-    out.on('error', (e) => resolve({ ok: false, error: `写文件失败：${e.message}` }))
-    res.on('error', (e) => resolve({ ok: false, error: `下载中断：${e.message}` }))
+    req.on('error', (e) => done({ ok: false, error: `下载失败：${e.message}` }))
+    req.end()
   })
 }
 

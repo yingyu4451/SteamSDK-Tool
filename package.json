@@ -4,6 +4,10 @@
   "private": true,
   "description": "SteamSDK 上传工作台 — App 列表 / 内容体检 / 一键检查 / Preview 与正式上传 / 实时日志 / 分支管理",
   "author": "YingYu",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yingyu4451/SteamSDK-Tool.git"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
