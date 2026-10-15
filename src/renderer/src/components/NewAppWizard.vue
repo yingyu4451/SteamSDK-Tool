@@ -5,9 +5,11 @@ import {
   state,
   closeWizard,
   submitWizard,
+  selectApp,
   wizardAppIdChanged,
   wizardNameChanged,
   wizardTogglePlatform,
+  wizardMovePlatform,
   wizardSetDepotId,
   wizardSetRoot,
   wizardPickRoot,
@@ -135,6 +137,52 @@ function onPickPlatform(d, e) {
   e.target.value = ''
   if (plat) wizardToggleSteamDepot(d.depotId, plat)
 }
+
+/* ---- 平台行拖拽排序：从上到下的次序就是 DepotID +1 的次序 ---- */
+
+const dragId = ref('')
+const overId = ref('')
+
+function onDragStart(id, e) {
+  dragId.value = id
+  try {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', id)
+  } catch {
+    /* 某些环境不给设，忽略 */
+  }
+}
+
+function onDragOver(id) {
+  if (!dragId.value || dragId.value === id) return
+  overId.value = id
+}
+
+function onDrop(id) {
+  const from = dragId.value
+  dragId.value = ''
+  overId.value = ''
+  if (from && from !== id) wizardMovePlatform(from, id)
+}
+
+function onDragEnd() {
+  dragId.value = ''
+  overId.value = ''
+}
+
+/* ---- AppID 撞车：本地已经有 App 用这个 AppID ---- */
+
+const appIdConflict = computed(() => {
+  const id = String(w.value?.appId || '').trim()
+  if (!/^\d+$/.test(id)) return []
+  return (state.apps || []).filter((a) => String(a.appId) === id).map((a) => a.dirName)
+})
+
+function goExisting() {
+  const dir = appIdConflict.value[0]
+  closeWizard()
+  if (dir) selectApp(dir)
+}
 </script>
 
 <template>
@@ -204,6 +252,17 @@ function onPickPlatform(d, e) {
           </div>
           <span v-if="resolvedName === '查询中…'" class="text-[11px] text-faint">查询中…</span>
           <span v-else-if="resolvedName" class="text-[11.5px] text-accent">{{ resolvedName }}</span>
+
+          <div
+            v-if="appIdConflict.length"
+            class="rounded-[10px] border border-[rgba(255,180,84,.26)] bg-[rgba(255,180,84,.06)] px-3 py-2 flex items-center gap-2 flex-wrap"
+          >
+            <span class="text-[11.5px] text-amber">
+              AppID {{ w.appId }} 已经被本地 App「{{ appIdConflict.join('、') }}」用了 ——
+              再建一个就是两个本地 App 指着同一个 Steam App，构建会传到同一处。
+            </span>
+            <button class="btn h-6 px-2 text-[11px]" @click="goExisting">改用它</button>
+          </div>
         </div>
 
         <!-- 从后台读 Depot -->
@@ -294,10 +353,11 @@ function onPickPlatform(d, e) {
 
           <div class="rounded-[10px] border border-line overflow-hidden">
             <div
-              class="grid grid-cols-[20px_104px_116px_1fr_70px] items-center gap-2 px-3 h-7 bg-[rgba(255,255,255,.022)] text-[10.5px] text-faint tracking-wider uppercase"
+              class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-7 bg-[rgba(255,255,255,.022)] text-[10.5px] text-faint tracking-wider uppercase"
             >
               <span />
-              <span>平台</span>
+              <span />
+              <span>平台 ↑↓</span>
               <span>DepotID</span>
               <span>内容目录</span>
               <span />
@@ -306,9 +366,31 @@ function onPickPlatform(d, e) {
             <div
               v-for="p in w.platforms"
               :key="p.id"
-              class="grid grid-cols-[20px_104px_116px_1fr_70px] items-center gap-2 px-3 h-10 border-t border-line-soft transition-colors"
-              :class="w.picks[p.id].on ? 'bg-[rgba(46,230,197,.035)]' : ''"
+              class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-10 border-t border-line-soft transition-colors"
+              :class="[
+                w.picks[p.id].on ? 'bg-[rgba(46,230,197,.035)]' : '',
+                overId === p.id ? 'shadow-[inset_0_2px_0_0_#2ee6c5]' : '',
+                dragId === p.id ? 'opacity-45' : ''
+              ]"
+              @dragover.prevent="onDragOver(p.id)"
+              @drop.prevent="onDrop(p.id)"
             >
+              <span
+                class="cursor-grab active:cursor-grabbing text-faint hover:text-muted select-none grid place-items-center"
+                draggable="true"
+                title="拖动排序：从上到下就是 DepotID +1、+2… 的顺序"
+                @dragstart="onDragStart(p.id, $event)"
+                @dragend="onDragEnd"
+              >
+                <svg viewBox="0 0 16 16" class="w-3 h-3" fill="currentColor">
+                  <circle cx="5.5" cy="4" r="1.15" />
+                  <circle cx="10.5" cy="4" r="1.15" />
+                  <circle cx="5.5" cy="8" r="1.15" />
+                  <circle cx="10.5" cy="8" r="1.15" />
+                  <circle cx="5.5" cy="12" r="1.15" />
+                  <circle cx="10.5" cy="12" r="1.15" />
+                </svg>
+              </span>
               <input
                 type="checkbox"
                 :checked="w.picks[p.id].on"

@@ -267,6 +267,23 @@ export function wizardTogglePlatform(platform) {
   autoAssign(w)
 }
 
+/**
+ * 拖动平台行：把 fromId 插到 toId 的位置。
+ * 顺序就是自上而下 +1 的顺序 —— autoAssign 按 w.platforms 的次序发号，所以移动完直接重排。
+ * 手填过或从后台读来的 DepotID（autoDepot=false）不会被覆盖。
+ */
+export function wizardMovePlatform(fromId, toId) {
+  const w = state.wizard
+  if (!w || !fromId || !toId || fromId === toId) return
+  const arr = w.platforms
+  const fi = arr.findIndex((p) => p.id === fromId)
+  const ti = arr.findIndex((p) => p.id === toId)
+  if (fi < 0 || ti < 0) return
+  const [moved] = arr.splice(fi, 1)
+  arr.splice(ti, 0, moved)
+  autoAssign(w)
+}
+
 export function wizardSetDepotId(platform, value) {
   const w = state.wizard
   if (!w?.picks[platform]) return
