@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { state, rescan, openLogin } from '../store.js'
+import { state, rescan, openLogin, checkUpdateNow, downloadUpdateNow, installUpdateNow, openReleases } from '../store.js'
 
 const sdkDraft = ref('')
 const accountDraft = ref('')
@@ -120,6 +120,35 @@ async function clearPw() {
   await window.api.settings.clearPassword()
   await reloadSettings()
   flash('已清除保存的密码')
+}
+
+/* ---- 工具自身的更新 ---- */
+
+const u = computed(() => state.update)
+
+const pct = computed(() => {
+  const { got, total } = u.value
+  if (!total) return 0
+  return Math.min(100, Math.round((got / total) * 100))
+})
+
+function fmtSize(n) {
+  const b = Number(n) || 0
+  if (!b) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let i = 0
+  let v = b
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024
+    i++
+  }
+  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function openExternal(url) {
@@ -253,9 +282,68 @@ function openExternal(url) {
       </div>
     </section>
 
-    <!-- 关于 -->
+    <!-- 关于 & 更新 -->
     <section class="card p-5" v-reveal="{ delay: 0.08 }">
-      <h2 class="text-[13px] font-semibold m-0">关于</h2>
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <h2 class="text-[13px] font-semibold m-0">关于</h2>
+        <span class="pill">{{ u.current ? `v${u.current}` : '读取版本中…' }}</span>
+        <span v-if="u.data?.hasUpdate" class="pill pill-warn">有新版本 v{{ u.data.latest }}</span>
+        <span v-else-if="u.checked && u.data" class="pill pill-ok">已是最新</span>
+        <button
+          class="ml-auto btn h-7 px-2.5 text-[11.5px] no-drag"
+          :disabled="u.busy"
+          @click="checkUpdateNow()"
+        >
+          {{ u.busy ? '检查中…' : '检查更新' }}
+        </button>
+      </div>
+
+      <div v-if="u.error" class="mt-2.5 text-[11.5px] text-amber">{{ u.error }}</div>
+
+      <div
+        v-if="u.data?.hasUpdate"
+        class="mt-3 rounded-[10px] border border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.06)] p-3"
+      >
+        <div class="text-[12px] text-[#d7c3a0]">
+          新版本 <b>v{{ u.data.latest }}</b>（当前 v{{ u.current }}）<template v-if="u.data.publishedAt">
+            · {{ fmtDate(u.data.publishedAt) }}</template
+          >
+        </div>
+
+        <pre
+          v-if="u.data.notes"
+          class="mt-2 mb-0 text-[11px] text-muted whitespace-pre-wrap max-h-[150px] overflow-y-auto scroll-thin font-sans"
+          >{{ u.data.notes }}</pre
+        >
+
+        <div v-if="u.downloading" class="mt-2.5">
+          <div class="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+            <div class="h-full bg-accent transition-[width] duration-150" :style="{ width: pct + '%' }" />
+          </div>
+          <div class="mt-1.5 text-[11px] text-faint num">
+            {{ fmtSize(u.got) }} / {{ u.total ? fmtSize(u.total) : '未知大小' }} · {{ pct }}%
+          </div>
+        </div>
+
+        <div class="mt-2.5 flex items-center gap-2 flex-wrap">
+          <button
+            v-if="!u.ready"
+            class="btn btn-primary h-8 px-3 text-[11.5px] no-drag"
+            :disabled="u.downloading || !u.data.asset"
+            @click="downloadUpdateNow()"
+          >
+            {{ u.downloading ? '下载中…' : u.data.asset ? '下载更新' : '这个 release 里没有 .exe' }}
+          </button>
+          <button v-else class="btn btn-primary h-8 px-3 text-[11.5px] no-drag" @click="installUpdateNow()">
+            重启并安装
+          </button>
+          <button class="btn h-8 px-3 text-[11.5px] no-drag" @click="openReleases()">在 GitHub 上看</button>
+        </div>
+
+        <div v-if="u.ready" class="mt-2 text-[11px] text-faint">
+          安装包已经下好了。点「重启并安装」会关掉工具、起安装程序。
+        </div>
+      </div>
 
       <div class="mt-3.5 flex gap-2 flex-wrap">
         <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/doc/sdk/uploading')">
@@ -264,6 +352,7 @@ function openExternal(url) {
         <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/apps/builds')">
           Steamworks 构建页
         </button>
+        <button class="btn no-drag" @click="openReleases()">GitHub 仓库</button>
       </div>
     </section>
   </div>

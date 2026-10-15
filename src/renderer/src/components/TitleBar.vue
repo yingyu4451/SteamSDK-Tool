@@ -1,10 +1,12 @@
 <script setup>
 import { computed } from 'vue'
-import { state } from '../store.js'
+import { state, goSettings } from '../store.js'
 
 const sdkOk = computed(
   () => !!(state.sdk?.steamcmdExists && state.sdk?.scriptsDirExists && state.sdk?.buildScriptExists)
 )
+
+const upd = computed(() => state.update?.data || null)
 </script>
 
 <template>
@@ -63,6 +65,17 @@ const sdkOk = computed(
       <span v-if="state.hasPassword" class="pill pill-idle" title="密码已用 DPAPI 加密保存">
         凭据已存
       </span>
+
+      <!-- 有新版本就点一下，直接去设置页 -->
+      <button
+        v-if="upd?.hasUpdate"
+        class="pill pill-warn no-drag cursor-pointer border-0"
+        title="有新版本，点开去设置里更新"
+        @click="goSettings()"
+      >
+        <span class="w-1.5 h-1.5 rounded-full bg-amber" />
+        v{{ upd.latest }} 可更新
+      </button>
     </div>
   </header>
 </template>

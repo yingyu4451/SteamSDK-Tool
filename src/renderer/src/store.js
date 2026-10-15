@@ -93,7 +93,20 @@ export const state = reactive({
   local: { running: false, port: 80, url: '', installed: true, busy: false, devcfg: null, error: null },
   // 拖进来的文件夹 / 压缩包：{ over, busy, data, error }
   // over 是「正拖着东西悬在窗口上」，data 是分析结果
-  drop: { over: false, busy: false, data: null, error: null }
+  drop: { over: false, busy: false, data: null, error: null },
+  // 工具自身的更新（GitHub Releases）
+  update: {
+    current: '',
+    repo: '',
+    busy: false,
+    checked: false,
+    data: null, // checkUpdate 的返回值
+    error: null,
+    downloading: false,
+    got: 0,
+    total: 0,
+    ready: '' // 下载好的安装包路径
+  }
 })
 
 /** 平台 id → 显示名（和主进程 vdf-edit.js 的 PLATFORMS 一一对应） */
@@ -129,7 +142,85 @@ export async function boot() {
     state.bootError = e.message
     state.booted = true
   }
+  // 更新检查不挡启动：先让界面出来，再悄悄问一次 GitHub。
+  // quiet = true 表示「没网 / 没发布过 release」这种情况不弹错误，只在设置页里留一句话。
+  loadUpdateInfo().then(() => checkUpdateNow(true))
 }
+
+/* ------------------------------------------------------------------ *
+ *  工具自身的更新（GitHub Releases）
+ * ------------------------------------------------------------------ */
+
+export async function loadUpdateInfo() {
+  try {
+    const r = await api.update.info()
+    if (r?.ok) {
+      state.update.current = r.current
+      state.update.repo = r.repo
+    }
+  } catch {
+    /* 拿不到就算了，不是关键路径 */
+  }
+}
+
+export async function checkUpdateNow(quiet = false) {
+  const u = state.update
+  if (u.busy) return
+  u.busy = true
+  if (!quiet) u.error = null
+  try {
+    const r = await api.update.check()
+    u.checked = true
+    if (r?.ok) {
+      u.data = r
+      u.error = null
+      u.got = 0
+      u.total = 0
+      u.ready = ''
+    } else {
+      u.data = null
+      u.error = quiet ? null : r?.error || '检查失败'
+    }
+  } catch (e) {
+    u.error = quiet ? null : e.message
+  } finally {
+    u.busy = false
+  }
+}
+
+export async function downloadUpdateNow() {
+  const u = state.update
+  const a = u.data?.asset
+  if (!a) return toast('这个 release 里没有 .exe 安装包', 'bad')
+  u.downloading = true
+  u.got = 0
+  u.total = a.size || 0
+  u.error = null
+  try {
+    const r = await api.update.download(a.url, a.name)
+    if (r?.ok) {
+      u.ready = r.path
+      toast('下载好了，点「重启并安装」')
+    } else {
+      u.error = r?.error || '下载失败'
+      toast(u.error, 'bad')
+    }
+  } finally {
+    u.downloading = false
+  }
+}
+
+export async function installUpdateNow() {
+  const u = state.update
+  if (!u.ready) return toast('先点「下载更新」', 'bad')
+  const r = await api.update.install(u.ready)
+  if (!r?.ok) toast(r?.error || '安装失败', 'bad')
+}
+
+export function openReleases() {
+  api.update.openReleases()
+}
+
 
 export async function rescan() {
   state.scanning = true
@@ -1104,6 +1195,11 @@ export function pushLog(stream, line) {
  * ------------------------------------------------------------------ */
 
 export function wireEvents() {
+  api.update.onProgress(({ got, total }) => {
+    state.update.got = got
+    state.update.total = total || state.update.total
+  })
+
   api.run.onData((d) => {
     if (d.stream === 'system') pushLog('system', d.line)
     else pushLog(d.stream, d.line)

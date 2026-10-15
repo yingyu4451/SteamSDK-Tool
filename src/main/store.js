@@ -6,7 +6,8 @@ const DEFAULTS = {
   sdkRoot: 'D:\\SteamSDK',
   // 这是 Steam 的「账号名」，不是登录邮箱。steamcmd 自己的
   // builder\config\config.vdf 里 Accounts 段的键就是它。
-  account: '445140823',
+  // 留空 —— 首次运行时从 config.vdf 里自动认，认不到就让用户在设置里填。
+  account: '',
   // 新建 App 时默认把内容目录放在这里：<buildsRoot>\<App 名>\<平台>
   buildsRoot: 'D:\\SteamBuilds',
   rememberPassword: false,

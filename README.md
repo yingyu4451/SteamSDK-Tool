@@ -259,7 +259,7 @@ password:
 但 Node 这边永远收不到）。只能提前把密码写进 stdin。
 
 **「登录一次」这条路还没被证实**：界面上有个按钮会开一个真正的控制台窗口跑 steamcmd，
-本意是让你在里面 `login 445140823` 输入密码 + Steam Guard，让 steamcmd 自己保存凭据。
+本意是让你在里面 `login <你的 Steam 账号名>` 输入密码 + Steam Guard，让 steamcmd 自己保存凭据。
 但 2026-10-14 14:29 那次尝试在 `builder\config\config.vdf` 里**没有留下任何 token 或
 ssfn 文件**，steamcmd 自己的 `console_log.txt` 里也没有 `Logging in user` 记录 ——
 所以「登一次以后就免密码」目前**没有证据支持**，先当作不成立。

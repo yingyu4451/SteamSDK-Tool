@@ -45,6 +45,16 @@ import {
   getPaths
 } from './sdk.js'
 import { preflightApp } from './preflight.js'
+import {
+  checkUpdate,
+  downloadUpdate,
+  installUpdate,
+  cleanupDownloads,
+  pruneOldDownloads,
+  openReleases,
+  currentVersion,
+  repoUrl
+} from './updater.js'
 import { analyzeTarget, applyDrop } from './dropzone.js'
 import { localStatus, startLocal, stopLocal, steamDevCfg, writeSteamDevCfg } from './localserver.js'
 import {
@@ -609,6 +619,31 @@ function registerIpc() {
   ipcMain.handle('local:enableDevcfg', (_e, { port } = {}) =>
     writeSteamDevCfg(loadSettings(), port || 80)
   )
+  ipcMain.handle('update:info', () => ({ ok: true, current: currentVersion(), repo: repoUrl() }))
+
+  ipcMain.handle('update:check', () => checkUpdate())
+
+  ipcMain.handle('update:download', async (e, { url, name } = {}) => {
+    let last = 0
+    return downloadUpdate({
+      url,
+      name,
+      onProgress: (got, total) => {
+        // 进度事件别刷太密，一秒钟几十次对界面没意义
+        const now = Date.now()
+        if (now - last < 150 && got !== total) return
+        last = now
+        if (!e.sender.isDestroyed()) e.sender.send('update:progress', { got, total })
+      }
+    })
+  })
+
+  ipcMain.handle('update:install', (_e, { path: filePath } = {}) => installUpdate(filePath))
+
+  ipcMain.handle('update:openReleases', () => openReleases())
+
+  ipcMain.handle('update:cleanup', () => cleanupDownloads())
+
   ipcMain.handle('local:open', async () => {
     const st = localStatus(loadSettings())
     if (!st.running) return { ok: false, error: '服务器没在跑' }
@@ -744,6 +779,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     app.setAppUserModelId('com.yingyu.steamsdktool')
+    pruneOldDownloads()
     registerIpc()
     createWindow()
 

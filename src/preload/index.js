@@ -115,6 +115,17 @@ const api = {
   shell: {
     openPath: (p) => ipcRenderer.invoke('shell:openPath', p),
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
+  },
+
+  // 工具自身的更新（GitHub Releases）
+  update: {
+    info: () => ipcRenderer.invoke('update:info'),
+    check: () => ipcRenderer.invoke('update:check'),
+    download: (url, name) => ipcRenderer.invoke('update:download', { url, name }),
+    install: (p) => ipcRenderer.invoke('update:install', { path: p }),
+    openReleases: () => ipcRenderer.invoke('update:openReleases'),
+    cleanup: () => ipcRenderer.invoke('update:cleanup'),
+    onProgress: (h) => subscribe('update:progress', h)
   }
 }
 
