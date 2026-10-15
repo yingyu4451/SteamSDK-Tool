@@ -512,20 +512,25 @@ function registerIpc() {
     }
   })
 
-  /** 已知的 App 列表：本地已配置的 + 用过的历史，给下拉框用 */
+  /**
+   * 「已知的 App」下拉框的数据源。
+   *
+   * 只用 appIdHistory：那是用户真填过、而且从 Steam 查回了真实产品名的 AppID。
+   * 以前把 scripts\ 下本地建出来的 App 也算进来，可那些名字是「我们给他起的文件夹名」，
+   * 不是 Steam 上的产品名 —— 列在「已知的 App」里只会让人以为后台真有这么一个 App。
+   * 本地有对应脚本的，只挂一个 local 标记当装饰。
+   */
   ipcMain.handle('app:knownApps', () => {
     const s = loadSettings()
-    const seen = new Map()
-    for (const a of scanApps(s).apps || []) {
-      seen.set(String(a.appId), { appId: String(a.appId), name: a.dirName, local: true })
-    }
-    for (const h of s.appIdHistory || []) {
-      const id = String(h.appId)
-      const cur = seen.get(id)
-      if (cur) cur.used = h.name || ''
-      else seen.set(id, { appId: id, name: h.name || '', local: false })
-    }
-    return [...seen.values()]
+    const localIds = new Set((scanApps(s).apps || []).map((a) => String(a.appId)))
+    return (s.appIdHistory || [])
+      .map((h) => ({
+        appId: String((h && h.appId) || '').trim(),
+        name: String((h && h.name) || '').trim(),
+        at: (h && h.at) || ''
+      }))
+      .filter((h) => /^\d+$/.test(h.appId) && h.name)
+      .map((h) => ({ ...h, local: localIds.has(h.appId) }))
   })
 
   ipcMain.handle('app:create', (_e, spec) => createApp(spec || {}, loadSettings()))

@@ -241,12 +241,18 @@ function openSettings() {
               </option>
             </datalist>
             <select
-              class="h-9 px-2 rounded-[9px] bg-surface border border-line text-[11.5px] outline-none max-w-[190px]"
+              class="h-9 px-2 rounded-[9px] bg-surface border border-line text-[11.5px] outline-none max-w-[190px] disabled:opacity-45"
+              :disabled="!knownApps.length"
+              :title="
+                knownApps.length
+                  ? '填过的 AppID 里，能从 Steam 查到产品名的那些'
+                  : '还没有记录 —— 填一个 AppID，读到名字之后就会记在这里'
+              "
               @change="pickKnown($event); $event.target.value = ''"
             >
-              <option value="">已知的 App…</option>
+              <option value="">{{ knownApps.length ? '已知的 App…' : '还没有记录' }}</option>
               <option v-for="a in knownApps" :key="'s' + a.appId" :value="a.appId">
-                {{ a.appId }} · {{ a.name || '（没名字）' }}
+                {{ a.appId }} · {{ a.name }}
               </option>
             </select>
             <button class="btn h-9 px-2.5 no-drag" title="在 Steamworks 后台打开" @click="openPartner">

@@ -4,107 +4,98 @@ import { state, goSettings } from '../store.js'
 import { ExternalLink, BookOpen } from '@lucide/vue'
 
 /* 手册纯静态内容。
-   写成数据而不是一大坨模板：改文案不用碰结构，加一节只是多一个数组元素。 */
+   写成数据而不是一大坨模板：改文案不用碰结构，加一节只是多一个数组元素。
+   第一节刻意做成「能做什么」的功能清单 —— 先让人知道这东西能帮上什么忙，
+   再看概念和步骤。 */
 
 const q = ref('')
 
 const SECTIONS = [
   {
-    id: 'what',
-    title: '这个工具是干什么的',
+    id: 'features',
+    title: '能做什么',
     blocks: [
       {
-        t: 'p',
-        v: 'SteamPipe 上传本身不难，难的是它散在 vdf 脚本、steamcmd、后台网页三处，而且出错时只说「失败了」。'
-      },
-      {
-        t: 'p',
-        v: '这个工作台把三者放进一个窗口：左边列 App，中间是那个 App 的 Depot 和构建输出，构建直接在界面里跑，日志逐行流回来。'
+        t: 'dl',
+        v: [
+          ['游戏包拖进来', '窗口任意位置拖入文件夹或 zip。自动认出平台（看 UnityPlayer.dll / .app / .so），告诉你该放进哪个 Depot；同一个平台还没 Depot，就现场建一个。'],
+          ['读后台 Depot', '向导里填 AppID，点「读取后台 Depot」，拿回后台真实的 DepotID 和体积，不用照着 AppID+1 猜。'],
+          ['同步 Depot', '后台建好、本地还没配的 Depot，勾上一次性补进 scripts。'],
+          ['一个 App 管多平台', 'win64 / macOS / linux 各建一个 Depot，一次构建全传。不用为了多平台拆成好几个 App。'],
+          ['界面里改 vdf', 'AppID、项目文件夹、构建缓存目录、排除规则、存档保护，都在抽屉里改。写走的是行级替换，你手写的注释不会被动。'],
+          ['内容目录就地打包', '把 Unity 的输出目录设成 Depot 的内容目录（输出模式 DirectFolder），打完包不用再复制到任何地方。'],
+          ['上传前两道关', '「检查配置」查 vdf，「检查文件」查真实文件 —— 非法字符、超长路径、大小写冲突、符号链接、.app bundle。'],
+          ['空跑', 'Preview 走一遍完整构建，但一个字节都不传到 Steam，看 manifest 确认到底传了什么。'],
+          ['本机试玩', '本地内容服务器把内容指到本机，Steam 客户端直接读，不用先上传就能试。'],
+          ['日志留在窗口里', 'steamcmd 和 PowerShell 的输出逐行流回来，随时中止，整棵进程树一起杀。'],
+          ['构建历史', 'output 目录下所有日志，按 App 筛、按名字搜。'],
+          ['自动更新', '从 GitHub Releases 检查新版本，下载完点一下就能换。']
+        ]
       }
     ]
   },
   {
     id: 'concepts',
-    title: '三个词，先分清楚',
+    title: '三个词',
     blocks: [
       {
         t: 'dl',
         v: [
-          ['App', 'Steam 上的一个「产品」，用 AppID 标识。Demo、正式版、Playtest 是三个不同的 App，各有各的 AppID。'],
-          ['Depot', '一个 App 下面的一个内容包，用 DepotID 标识。Windows 一个、macOS 一个、Linux 一个 —— 一个平台一个 Depot。'],
-          ['项目文件夹', '你电脑上放构建产物的目录，比如 D:\\SteamBuilds\\AbyaDemo。它下面按平台分子目录（win64、macos），每个子目录绑一个 Depot。']
+          ['App', 'Steam 上的一个「产品」，用 AppID 标识。Demo、正式版、Playtest 是三个不同的 App。'],
+          ['Depot', '一个 App 下面的一个内容包，用 DepotID 标识。一个平台一个 Depot。'],
+          ['项目文件夹', '你电脑上放构建产物的目录，比如 D:\\SteamBuilds\\AbyaDemo。下面按平台分子目录（win64、macos），每个子目录绑一个 Depot。']
         ]
       },
       {
         t: 'note',
-        v: '这三个 ID 全都只在 Steamworks 后台看得见。工具能读回来后两个，但写不回去 —— 后台的 App 和 Depot 得你自己建。'
+        v: '这三个 ID 只在 Steamworks 后台看得见。工具能读回来，但写不回去 —— 后台的 App 和 Depot 得你自己先建。'
       }
     ]
   },
   {
     id: 'first',
-    title: '第一次用：从零到能上传',
+    title: '第一次用',
     blocks: [
       {
         t: 'ol',
         v: [
-          '设置里填 Steam 账号密码（就是平时用 steamcmd 上传的那个账号）。密码用 Windows 的 DPAPI 加密后存本地，只有你这台机器上的这个 Windows 用户能解开。',
-          '点侧栏的 ＋ 新建 App：填个本地名字、填后台的 AppID。如果后台已经建过 Depot，点「读取后台 Depot」会把真实 DepotID 拉回来，比照着 AppID+1 猜准。',
-          '内容目录填你 Unity 打包的输出目录。工具会立刻把这个目录建出来。',
-          '先把 Unity 打包面板的输出目录设成同一个路径（输出模式选 DirectFolder），以后打包完就不用再复制到任何地方。',
-          '点「检查配置」确认 vdf 没问题，再点「Preview 空跑」走一遍完整流程但不上传。都没问题，再「正式上传」。'
+          '设置里填 Steam 账号密码（平时用 steamcmd 上传的那个账号）。密码用 Windows 的 DPAPI 加密后存本地。',
+          '侧栏 ＋ 新建 App：填本地名字和后台 AppID。后台建过 Depot 就点「读取后台 Depot」，把真实 DepotID 拉回来。',
+          '内容目录填 Unity 打包的输出目录，工具会立刻把它建出来。',
+          'Unity 打包面板的输出目录设成同一个路径（模式选 DirectFolder），以后打完包不用再复制。',
+          '点「检查配置」→「Preview 空跑」→「正式上传」。'
         ]
       }
     ]
   },
   {
     id: 'buttons',
-    title: '工具条上那几个按钮',
+    title: '工具条按钮',
     blocks: [
       {
         t: 'dl',
         v: [
           ['检查配置', '跑 check.ps1。核对 vdf 里的 AppID / DepotID / 内容目录 / 排除规则，以及 depot 脚本之间对不对得上。不看实际文件，很快。'],
-          ['检查文件', '扫一遍真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app bundle。配置没问题但文件有问题时，只有这一关能发现。'],
-          ['Preview 空跑', '完整走一遍构建，但一个字节都不传到 Steam。会生成 manifest 让你看清到底会上传什么。'],
-          ['正式上传', '真上传。要点两次才生效 —— 第一次按钮变红，第二次才真的跑。'],
-          ['同步 Depot', '读后台这个 App 下的 Depot 列表，勾上就把本地没有的补进 scripts。不需要管理员权限，走的是 steamcmd。'],
-          ['本地服务器', '把内容指到本地 ContentServer，Steam 客户端会直接从你机器读，不用先上传就能试。']
+          ['检查文件', '扫真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app bundle。'],
+          ['Preview 空跑', '完整走一遍构建，但一个字节都不传到 Steam。'],
+          ['正式上传', '真上传。要点两次才生效。'],
+          ['同步 Depot', '读后台这个 App 下的 Depot 列表，勾上就把本地没有的补进 scripts。'],
+          ['本地服务器', '把内容指到本地 ContentServer，Steam 客户端直接从你机器读。']
         ]
       },
       {
         t: 'note',
-        v: '「检查配置」查的是配置，「检查文件」查的是文件。两个都要跑 —— 上传失败最常见的原因就是配置对、但路径里有问题。'
-      }
-    ]
-  },
-  {
-    id: 'daily',
-    title: '日常：改完包怎么传',
-    blocks: [
-      {
-        t: 'ol',
-        v: [
-          'Unity 打包到一个平台子目录（比如 win64）。',
-          '回工作台，点「检查文件」看有没有问题。',
-          '点「Preview 空跑」，确认 manifest 里没有多出来的东西。',
-          '点「正式上传」，点两次。',
-          '上传完控制台顶部会出现「打开构建页」，去后台把这次构建设为 live。'
-        ]
-      },
-      {
-        t: 'note',
-        v: '也可以直接把打包出来的文件夹拖进窗口 —— 工具会认平台、告诉你该放进哪个 Depot，没有就现场建一个。'
+        v: '「检查配置」查的是配置，「检查文件」查的是文件。两个都跑 —— 上传失败最常见的原因就是配置对、但路径里有问题。'
       }
     ]
   },
   {
     id: 'exclude',
-    title: '什么不该传上去',
+    title: '什么不该传',
     blocks: [
       {
         t: 'p',
-        v: '每个 Depot 都有自己的排除规则（vdf 里的 FileExclusion），在 Depot 卡片下面的「编辑」里改。默认已经挡掉了几类：'
+        v: '每个 Depot 都有自己的排除规则（vdf 里的 FileExclusion），在 Depot 卡片右上角「编辑」里改。默认已经挡掉：'
       },
       {
         t: 'ul',
@@ -118,7 +109,7 @@ const SECTIONS = [
       },
       {
         t: 'note',
-        v: '玩家存档（Progress、Settings 这类运行时会改的文件）走另一条路：在 Depot 编辑里加进「存档保护」。加了之后 Steam 更新时不会覆盖玩家改过的那个文件。'
+        v: '玩家存档（Progress、Settings 这类运行时会改的文件）走另一条路：Depot 编辑里加进「存档保护」，Steam 更新时就不会覆盖玩家改过的文件。'
       }
     ]
   },
@@ -128,26 +119,23 @@ const SECTIONS = [
     blocks: [
       {
         t: 'p',
-        v: '分支必须在 Steamworks 后台先建好，本地读不到列表。vdf 里的 SetLive 写哪个分支名，那次构建就进哪个分支。'
+        v: '分支必须先在 Steamworks 后台建好，本地读不到列表。vdf 里的 SetLive 写哪个分支名，那次构建就进哪个分支。'
       },
-      {
-        t: 'note',
-        v: 'SetLive 不能写 default —— default 分支要在后台网页上手动设 live。'
-      }
+      { t: 'note', v: 'SetLive 不能写 default —— default 分支要在后台网页上手动设 live。' }
     ]
   },
   {
     id: 'trouble',
-    title: '出问题了往哪看',
+    title: '出问题往哪看',
     blocks: [
       {
         t: 'dl',
         v: [
-          ['界面里没反应', '看右边「构建输出」，每一行都是原样流回来的。上传失败的原因通常就在最后几行。'],
-          ['想知道历史上传了什么', '侧栏「构建历史」，按 App 筛，或者在 groups 里按名字搜。'],
-          ['上传失败但看不出为什么', '去 output 目录找那次的 .log，工具的「构建目录」按钮能直接打开。'],
+          ['界面里没反应', '看右边「构建输出」，每行都是原样流回来的。失败原因通常就在最后几行。'],
+          ['想知道历史上传了什么', '侧栏「构建历史」，按 App 筛，或按名字搜。'],
+          ['上传失败看不出为什么', '去 output 目录找那次的 .log，「构建目录」按钮能直接打开。'],
           ['提示密码不对', '设置里重新存一次。Steam Guard 要的是当时那个验证码，不是固定密码。'],
-          ['怀疑 vdf 有问题', '用「用系统编辑器打开」直接看文件本身。工具编辑 vdf 时是行级替换，不会动你手写的注释。']
+          ['怀疑 vdf 有问题', '抽屉里「用系统编辑器打开」直接看文件本身。']
         ]
       }
     ]
@@ -174,9 +162,7 @@ function openRepo() {
       <BookOpen :size="20" :stroke-width="1.8" class="text-accent shrink-0" />
       <div class="min-w-0">
         <h1 class="text-[15px] font-semibold m-0">使用手册</h1>
-        <p class="mt-1 mb-0 text-[11.5px] text-faint">
-          从第一次配置到出错排查。下面每一节都可以直接搜。
-        </p>
+        <p class="mt-1 mb-0 text-[11.5px] text-faint">能做什么、怎么开始、出错往哪看。</p>
       </div>
       <input
         v-model="q"
@@ -233,9 +219,7 @@ function openRepo() {
     <div class="card p-4 flex items-center gap-3" v-reveal>
       <div class="min-w-0">
         <div class="text-[12.5px] text-ink">完整文档在仓库里</div>
-        <div class="mt-0.5 text-[11.5px] text-faint">
-          中文 README 和 English README 内容更全，含已知限制和开发说明。
-        </div>
+        <div class="mt-0.5 text-[11.5px] text-faint">中文和 English README 内容更全，含已知限制和开发说明。</div>
       </div>
       <div class="ml-auto flex items-center gap-2 shrink-0">
         <button class="btn no-drag" @click="openRepo">

@@ -122,6 +122,27 @@ textarea {
   transform: translateY(-4px);
 }
 
+/* ---------- 侧边栏（新建 Depot）进出场 ----------
+   遮罩淡入淡出，面板横向滑入滑出。 */
+.slideover-enter-active,
+.slideover-leave-active {
+  transition: opacity 0.2s ease;
+}
+.slideover-enter-from,
+.slideover-leave-to {
+  opacity: 0;
+}
+.slideover-enter-active .slideover-panel {
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.slideover-leave-active .slideover-panel {
+  transition: transform 0.18s cubic-bezier(0.4, 0, 1, 1);
+}
+.slideover-enter-from .slideover-panel,
+.slideover-leave-to .slideover-panel {
+  transform: translateX(32px);
+}
+
 /* ---------- 按钮 ---------- */
 .btn {
   display: inline-flex;

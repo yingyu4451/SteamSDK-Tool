@@ -8,7 +8,6 @@ import {
   selectedApp,
   submitPassword,
   cancelPasswordPrompt,
-  openLogin,
   verifyAgainstSteam,
   clearVerify,
   toggleSyncPick,
@@ -158,7 +157,7 @@ const localHost = computed(() => {
     </button>
 
     <button
-      class="btn btn-lg no-drag"
+      class="btn no-drag"
       :class="confirming ? 'btn-danger' : 'btn-primary'"
       :disabled="disabled"
       @click="doLive"
@@ -177,13 +176,6 @@ const localHost = computed(() => {
     <div class="flex-1" />
 
     <div class="flex items-center gap-1.5">
-      <button
-        class="btn no-drag"
-        :disabled="!state.detail?.contentRoot"
-        @click="openPath(state.detail.contentRoot)"
-      >
-        内容目录
-      </button>
       <button class="btn no-drag" :disabled="!state.sdk?.contentBuilder" @click="openPath(state.sdk.contentBuilder)">
         构建目录
       </button>
@@ -208,7 +200,6 @@ const localHost = computed(() => {
         />
         本地服务器
       </button>
-      <button class="btn no-drag" @click="openLogin">登录一次</button>
     </div>
 
     <Transition

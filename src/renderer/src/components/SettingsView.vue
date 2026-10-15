@@ -157,203 +157,197 @@ function openExternal(url) {
 </script>
 
 <template>
-  <div class="p-5 flex flex-col gap-4 max-w-[900px]">
-    <h1 class="text-[17px] font-semibold tracking-tight m-0">设置</h1>
+  <div class="p-5 max-w-[1200px]">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
 
-    <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0 -translate-y-1">
-      <div
-        v-if="message"
-        class="rounded-[10px] px-4 py-2.5 text-[12.5px] border"
-        :class="
-          message.tone === 'ok'
-            ? 'text-accent border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)]'
-            : 'text-danger border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)]'
-        "
-      >
-        {{ message.text }}
-      </div>
-    </Transition>
+      <!-- 左栏：路径 + 凭据 -->
+      <div class="flex flex-col gap-4 min-w-0">
+        <!-- 路径 -->
+        <section class="card p-5" v-reveal>
+          <h2 class="text-[13px] font-semibold m-0">SDK 路径</h2>
 
-    <!-- 路径 -->
-    <section class="card p-5" v-reveal>
-      <h2 class="text-[13px] font-semibold m-0">SDK 路径</h2>
-
-      <div class="mt-3.5 flex gap-2">
-        <input
-          v-model="sdkDraft"
-          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
-          placeholder="D:\SteamSDK"
-        />
-        <button class="btn no-drag" @click="pick">选择…</button>
-      </div>
-
-      <div class="mt-3.5 flex gap-2">
-        <input
-          v-model="accountDraft"
-          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
-          placeholder="Steam 构建账号"
-        />
-        <button class="btn btn-primary no-drag" :disabled="saving" @click="savePaths">保存</button>
-      </div>
-
-      <div class="mt-4 grid grid-cols-1 gap-1.5">
-        <div v-for="c in checks" :key="c.label" class="flex items-center gap-2.5 text-[11.5px]">
-          <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="c.ok ? 'bg-success' : 'bg-danger'" />
-          <span class="w-[110px] shrink-0" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
-          <span class="font-mono text-faint truncate" :title="c.path">{{ c.path }}</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- 凭据 -->
-    <section class="card p-5" v-reveal="{ delay: 0.04 }">
-      <div class="flex items-center gap-2.5">
-        <h2 class="text-[13px] font-semibold m-0">登录凭据</h2>
-        <span class="pill" :class="state.hasPassword ? 'pill-ok' : 'pill-idle'">
-          {{ state.hasPassword ? '已保存' : '未保存' }}
-        </span>
-        <span v-if="!state.encryptionAvailable" class="pill pill-bad">系统不支持加密存储</span>
-      </div>
-
-      <div class="mt-3.5 flex gap-2">
-        <input
-          v-model="passwordDraft"
-          type="password"
-          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
-          placeholder="Steam 账号密码"
-          @keydown.enter="savePw"
-        />
-        <button class="btn no-drag" :disabled="!state.encryptionAvailable" @click="savePw">加密保存</button>
-        <button class="btn btn-danger no-drag" :disabled="!state.hasPassword" @click="clearPw">清除</button>
-      </div>
-
-      <div class="mt-3 pt-3 border-t border-line-soft">
-        <div class="text-[11.5px] text-muted">
-          更省事：先在控制台窗口里 <code class="text-accent">login {{ state.settings?.account || '<账号>' }}</code>
-        </div>
-        <button class="btn no-drag mt-2.5" @click="openLogin">打开登录窗口</button>
-      </div>
-    </section>
-
-    <!-- Steamworks Web API -->
-    <section class="card p-5" v-reveal="{ delay: 0.06 }">
-      <div class="flex items-center gap-2">
-        <h2 class="text-[13px] font-semibold m-0">Steamworks Web API 密钥</h2>
-        <span
-          class="px-2 py-[3px] rounded-full text-[10.5px] border"
-          :class="
-            keyState.has
-              ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
-              : 'text-faint border-line'
-          "
-        >
-          {{ keyState.has ? `已保存 ····${keyState.tail}` : '未保存' }}
-        </span>
-      </div>
-
-      <div class="mt-3 flex gap-2">
-        <input
-          v-model="apiKeyDraft"
-          type="password"
-          placeholder="32 位十六进制 Publisher 密钥"
-          class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12.5px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
-        />
-        <button class="btn no-drag" :disabled="!apiKeyDraft.trim()" @click="saveKey">加密保存</button>
-        <button class="btn no-drag" :disabled="!keyState.has" @click="clearKey">清除</button>
-      </div>
-
-      <div class="mt-2.5 flex items-center gap-2 flex-wrap">
-        <button class="btn no-drag" :disabled="!keyState.has || testingKey" @click="testKey">
-          {{ testingKey ? '测试中…' : '测试密钥' }}
-        </button>
-        <button
-          class="btn no-drag"
-          @click="openExternal('https://partner.steamgames.com/apps/webapikeys')"
-        >
-          去后台取密钥
-        </button>
-        <span v-if="keyMsg" class="text-[11.5px]" :class="keyMsg.tone === 'bad' ? 'text-danger' : 'text-accent'">
-          {{ keyMsg.text }}
-        </span>
-      </div>
-
-      <div class="mt-2.5 text-[11px] text-faint">
-        需要 <span class="text-muted">Publisher</span> 级别（普通 App 管理员拿不到）。
-      </div>
-    </section>
-
-    <!-- 关于 & 更新 -->
-    <section class="card p-5" v-reveal="{ delay: 0.08 }">
-      <div class="flex items-center gap-2.5 flex-wrap">
-        <h2 class="text-[13px] font-semibold m-0">关于</h2>
-        <span class="pill">{{ u.current ? `v${u.current}` : '读取版本中…' }}</span>
-        <span v-if="u.data?.hasUpdate" class="pill pill-warn">有新版本 v{{ u.data.latest }}</span>
-        <span v-else-if="u.checked && u.data" class="pill pill-ok">已是最新</span>
-        <button
-          class="ml-auto btn h-7 px-2.5 text-[11.5px] no-drag"
-          :disabled="u.busy"
-          @click="checkUpdateNow()"
-        >
-          {{ u.busy ? '检查中…' : '检查更新' }}
-        </button>
-      </div>
-
-      <div v-if="u.error" class="mt-2.5 text-[11.5px] text-amber">{{ u.error }}</div>
-
-      <div
-        v-if="u.data?.hasUpdate"
-        class="mt-3 rounded-[10px] border border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.06)] p-3"
-      >
-        <div class="text-[12px] text-[#d7c3a0]">
-          新版本 <b>v{{ u.data.latest }}</b>（当前 v{{ u.current }}）<template v-if="u.data.publishedAt">
-            · {{ fmtDate(u.data.publishedAt) }}</template
-          >
-        </div>
-
-        <pre
-          v-if="u.data.notes"
-          class="mt-2 mb-0 text-[11px] text-muted whitespace-pre-wrap max-h-[150px] overflow-y-auto scroll-thin font-sans"
-          >{{ u.data.notes }}</pre
-        >
-
-        <div v-if="u.downloading" class="mt-2.5">
-          <div class="h-1.5 rounded-full bg-surface-2 overflow-hidden">
-            <div class="h-full bg-accent transition-[width] duration-150" :style="{ width: pct + '%' }" />
+          <div class="mt-3.5 flex gap-2">
+            <input
+              v-model="sdkDraft"
+              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+              placeholder="D:\SteamSDK"
+            />
+            <button class="btn no-drag" @click="pick">选择…</button>
           </div>
-          <div class="mt-1.5 text-[11px] text-faint num">
-            {{ fmtSize(u.got) }} / {{ u.total ? fmtSize(u.total) : '未知大小' }} · {{ pct }}%
+
+          <div class="mt-3.5 flex gap-2">
+            <input
+              v-model="accountDraft"
+              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+              placeholder="Steam 构建账号"
+            />
+            <button class="btn btn-primary no-drag" :disabled="saving" @click="savePaths">保存</button>
           </div>
-        </div>
 
-        <div class="mt-2.5 flex items-center gap-2 flex-wrap">
-          <button
-            v-if="!u.ready"
-            class="btn btn-primary h-8 px-3 text-[11.5px] no-drag"
-            :disabled="u.downloading || !u.data.asset"
-            @click="downloadUpdateNow()"
+          <div class="mt-4 grid grid-cols-1 gap-1.5">
+            <div v-for="c in checks" :key="c.label" class="flex items-center gap-2.5 text-[11.5px]">
+              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="c.ok ? 'bg-success' : 'bg-danger'" />
+              <span class="w-[110px] shrink-0" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
+              <span class="font-mono text-faint truncate" :title="c.path">{{ c.path }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 凭据 -->
+        <section class="card p-5" v-reveal="{ delay: 0.04 }">
+          <div class="flex items-center gap-2.5">
+            <h2 class="text-[13px] font-semibold m-0">登录凭据</h2>
+            <span class="pill" :class="state.hasPassword ? 'pill-ok' : 'pill-idle'">
+              {{ state.hasPassword ? '已保存' : '未保存' }}
+            </span>
+            <span v-if="!state.encryptionAvailable" class="pill pill-bad">系统不支持加密存储</span>
+          </div>
+
+          <div class="mt-3.5 flex gap-2">
+            <input
+              v-model="passwordDraft"
+              type="password"
+              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
+              placeholder="Steam 账号密码"
+              @keydown.enter="savePw"
+            />
+            <button class="btn no-drag" :disabled="!state.encryptionAvailable" @click="savePw">加密保存</button>
+            <button class="btn btn-danger no-drag" :disabled="!state.hasPassword" @click="clearPw">清除</button>
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-line-soft">
+            <div class="text-[11.5px] text-muted">
+              更省事：先在控制台窗口里 <code class="text-accent">login {{ state.settings?.account || '<账号>' }}</code>
+            </div>
+            <button class="btn no-drag mt-2.5" @click="openLogin">打开登录窗口</button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- 右栏：Web API 密钥 + 关于 -->
+      <div class="flex flex-col gap-4 min-w-0">
+        <!-- Steamworks Web API -->
+        <section class="card p-5" v-reveal="{ delay: 0.06 }">
+          <div class="flex items-center gap-2">
+            <h2 class="text-[13px] font-semibold m-0">Steamworks Web API 密钥</h2>
+            <span
+              class="px-2 py-[3px] rounded-full text-[10.5px] border"
+              :class="
+                keyState.has
+                  ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
+                  : 'text-faint border-line'
+              "
+            >
+              {{ keyState.has ? `已保存 ····${keyState.tail}` : '未保存' }}
+            </span>
+          </div>
+
+          <div class="mt-3 flex gap-2">
+            <input
+              v-model="apiKeyDraft"
+              type="password"
+              placeholder="32 位十六进制 Publisher 密钥"
+              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12.5px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+            />
+            <button class="btn no-drag" :disabled="!apiKeyDraft.trim()" @click="saveKey">加密保存</button>
+            <button class="btn no-drag" :disabled="!keyState.has" @click="clearKey">清除</button>
+          </div>
+
+          <div class="mt-2.5 flex items-center gap-2 flex-wrap">
+            <button class="btn no-drag" :disabled="!keyState.has || testingKey" @click="testKey">
+              {{ testingKey ? '测试中…' : '测试密钥' }}
+            </button>
+            <button
+              class="btn no-drag"
+              @click="openExternal('https://partner.steamgames.com/apps/webapikeys')"
+            >
+              去后台取密钥
+            </button>
+            <span v-if="keyMsg" class="text-[11.5px]" :class="keyMsg.tone === 'bad' ? 'text-danger' : 'text-accent'">
+              {{ keyMsg.text }}
+            </span>
+          </div>
+
+          <div class="mt-2.5 text-[11px] text-faint">
+            需要 <span class="text-muted">Publisher</span> 级别（普通 App 管理员拿不到）。
+          </div>
+        </section>
+
+        <!-- 关于 & 更新 -->
+        <section class="card p-5" v-reveal="{ delay: 0.08 }">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h2 class="text-[13px] font-semibold m-0">关于</h2>
+            <span class="pill">{{ u.current ? `v${u.current}` : '读取版本中…' }}</span>
+            <span v-if="u.data?.hasUpdate" class="pill pill-warn">有新版本 v{{ u.data.latest }}</span>
+            <span v-else-if="u.checked && u.data" class="pill pill-ok">已是最新</span>
+            <button
+              class="ml-auto btn h-7 px-2.5 text-[11.5px] no-drag"
+              :disabled="u.busy"
+              @click="checkUpdateNow()"
+            >
+              {{ u.busy ? '检查中…' : '检查更新' }}
+            </button>
+          </div>
+
+          <div v-if="u.error" class="mt-2.5 text-[11.5px] text-amber">{{ u.error }}</div>
+
+          <div
+            v-if="u.data?.hasUpdate"
+            class="mt-3 rounded-[10px] border border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.06)] p-3"
           >
-            {{ u.downloading ? '下载中…' : u.data.asset ? '下载更新' : '这个 release 里没有 .exe' }}
-          </button>
-          <button v-else class="btn btn-primary h-8 px-3 text-[11.5px] no-drag" @click="installUpdateNow()">
-            重启并安装
-          </button>
-          <button class="btn h-8 px-3 text-[11.5px] no-drag" @click="openReleases()">在 GitHub 上看</button>
-        </div>
+            <div class="text-[12px] text-[#d7c3a0]">
+              新版本 <b>v{{ u.data.latest }}</b>（当前 v{{ u.current }}）<template v-if="u.data.publishedAt">
+                · {{ fmtDate(u.data.publishedAt) }}</template
+              >
+            </div>
 
-        <div v-if="u.ready" class="mt-2 text-[11px] text-faint">
-          安装包已经下好了。点「重启并安装」会关掉工具、起安装程序。
-        </div>
-      </div>
+            <pre
+              v-if="u.data.notes"
+              class="mt-2 mb-0 text-[11px] text-muted whitespace-pre-wrap max-h-[150px] overflow-y-auto scroll-thin font-sans"
+              >{{ u.data.notes }}</pre
+            >
 
-      <div class="mt-3.5 flex gap-2 flex-wrap">
-        <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/doc/sdk/uploading')">
-          SteamPipe 文档
-        </button>
-        <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/apps/builds')">
-          Steamworks 构建页
-        </button>
-        <button class="btn no-drag" @click="openReleases()">GitHub 仓库</button>
+            <div v-if="u.downloading" class="mt-2.5">
+              <div class="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                <div class="h-full bg-accent transition-[width] duration-150" :style="{ width: pct + '%' }" />
+              </div>
+              <div class="mt-1.5 text-[11px] text-faint num">
+                {{ fmtSize(u.got) }} / {{ u.total ? fmtSize(u.total) : '未知大小' }} · {{ pct }}%
+              </div>
+            </div>
+
+            <div class="mt-2.5 flex items-center gap-2 flex-wrap">
+              <button
+                v-if="!u.ready"
+                class="btn btn-primary h-8 px-3 text-[11.5px] no-drag"
+                :disabled="u.downloading || !u.data.asset"
+                @click="downloadUpdateNow()"
+              >
+                {{ u.downloading ? '下载中…' : u.data.asset ? '下载更新' : '这个 release 里没有 .exe' }}
+              </button>
+              <button v-else class="btn btn-primary h-8 px-3 text-[11.5px] no-drag" @click="installUpdateNow()">
+                重启并安装
+              </button>
+              <button class="btn h-8 px-3 text-[11.5px] no-drag" @click="openReleases()">在 GitHub 上看</button>
+            </div>
+
+            <div v-if="u.ready" class="mt-2 text-[11px] text-faint">
+              安装包已经下好了。点「重启并安装」会关掉工具、起安装程序。
+            </div>
+          </div>
+
+          <div class="mt-3.5 flex gap-2 flex-wrap">
+            <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/doc/sdk/uploading')">
+              SteamPipe 文档
+            </button>
+            <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/apps/builds')">
+              Steamworks 构建页
+            </button>
+            <button class="btn no-drag" @click="openReleases()">GitHub 仓库</button>
+          </div>
+        </section>
       </div>
-    </section>
+    </div>
   </div>
 </template>
