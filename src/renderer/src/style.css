@@ -454,7 +454,7 @@ textarea {
   position: absolute;
   top: calc(100% + 10px);
   z-index: 30;
-  width: min(620px, calc(100vw - 48px));
+  width: min(660px, calc(100vw - 48px));
   max-height: min(64vh, 580px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -464,6 +464,11 @@ textarea {
   box-shadow:
     0 26px 56px -18px rgba(0, 0, 0, 0.86),
     0 3px 10px -3px rgba(0, 0, 0, 0.6);
+}
+
+/* 内容多的面板（同步 Depot / 检查文件 / 本地服务器）宽一点，不然 depot 行会挤成两行 */
+.bar-pop-wide {
+  width: min(880px, calc(100vw - 48px));
 }
 
 .bar-pop-left {

@@ -292,7 +292,7 @@ const localHost = computed(() => {
     >
       <div
         v-if="state.verify.busy || state.verify.error || state.verify.data"
-        class="bar-pop bar-pop-right rounded-[10px] border px-3 py-2.5"
+        class="bar-pop bar-pop-wide bar-pop-right rounded-[10px] border px-3 py-2.5"
         :style="anchors.verify"
         :class="
           state.verify.error
@@ -342,7 +342,7 @@ const localHost = computed(() => {
           <!-- 后台 Depot，勾选要加进来的 -->
           <div v-if="steamDepots.length" class="mt-2.5 pt-2.5 border-t border-line-soft">
             <div class="flex items-center gap-2 mb-1.5">
-              <span class="text-[11px] text-faint">勾上要加到本地脚本的</span>
+              <span class="text-[11px] text-faint">勾选要加进本地的</span>
               <button class="btn h-6 px-2 text-[10.5px] no-drag" @click="syncPickAll(true)">全选</button>
               <button class="btn h-6 px-2 text-[10.5px] no-drag" @click="syncPickAll(false)">全不选</button>
             </div>
@@ -381,7 +381,6 @@ const localHost = computed(() => {
               >
                 {{ state.syncAdding ? '添加中…' : `添加选中的 ${pickCount} 个` }}
               </button>
-              <span class="text-[11px] text-faint">内容目录默认落在项目文件夹下的平台子目录</span>
             </div>
           </div>
           <div v-else class="mt-2.5 pt-2.5 border-t border-line-soft text-[11.5px] text-faint">
@@ -420,7 +419,7 @@ const localHost = computed(() => {
     >
       <div
         v-if="state.preflight.busy || state.preflight.error || pf"
-        class="bar-pop bar-pop-left rounded-[10px] border px-3 py-2.5"
+        class="bar-pop bar-pop-wide bar-pop-left rounded-[10px] border px-3 py-2.5"
         :style="anchors.pf"
         :class="
           state.preflight.error
@@ -470,7 +469,7 @@ const localHost = computed(() => {
     >
       <div
         v-if="localOpen"
-        class="bar-pop bar-pop-right rounded-[10px] border border-line px-3 py-2.5"
+        class="bar-pop bar-pop-wide bar-pop-right rounded-[10px] border border-line px-3 py-2.5"
         :style="anchors.local"
       >
         <div class="flex items-center gap-2 flex-wrap">
@@ -498,7 +497,6 @@ const localHost = computed(() => {
         <div class="mt-2.5 rounded-[10px] border border-line-soft bg-[rgba(9,15,23,.45)] p-3">
           <div class="flex items-center gap-2 mb-2">
             <span class="text-[11.5px] font-semibold text-ink">一次配好</span>
-            <span class="text-[11px] text-faint">服务器 → 标记 App → 写配置 → 送一份进去</span>
           </div>
 
           <div class="flex flex-col gap-1 mb-2.5">
@@ -588,35 +586,23 @@ const localHost = computed(() => {
           {{ state.local.error }}
         </div>
 
-        <!-- 本地服务器里到底有没有东西 —— 光勾复选框不跑构建，Steam 那边下到的就是空 depot -->
-        <div v-if="state.local.status" class="mt-2 text-[11.5px] leading-relaxed">
-          <template v-if="state.local.status.contentFiles > 0">
-            <span class="text-success">
-              本地服务器里已有 {{ state.local.status.contentFiles }} 个文件 ·
-              {{ fmtSize(state.local.status.contentBytes) }}
-            </span>
-          </template>
-          <template v-else>
-            <span class="text-amber">
-              本地服务器里还是空的。勾上这个复选框只是把路径写进 vdf ——
-              <strong>还得再跑一次构建</strong>，内容才会真的写进来。
-              只勾不跑，Steam 那边下载到的就是空 depot。
-            </span>
-          </template>
+        <!-- 服务器里有没有东西。光勾复选框不跑构建，Steam 那边下到的就是空 depot -->
+        <div v-if="state.local.status" class="mt-1.5 text-[11.5px]">
+          <span v-if="state.local.status.contentFiles > 0" class="text-success">
+            服务器里已有 {{ state.local.status.contentFiles }} 个文件 ·
+            {{ fmtSize(state.local.status.contentBytes) }}
+          </span>
+          <span v-else class="text-amber">服务器里还没有内容</span>
         </div>
 
-        <div class="mt-2.5 pt-2.5 border-t border-line-soft text-[11px] text-muted leading-relaxed">
-          客户端要从本机下载，得在 Steam.exe 旁边放一个
-          <span class="font-mono text-ink">steam_dev.cfg</span>，写一行
-          <span class="font-mono text-ink">@localcontentserver {{ localHost }}</span>。
+        <div class="mt-2 flex items-center gap-2 flex-wrap text-[11px]">
+          <span class="font-mono text-ink">steam_dev.cfg</span>
+          <span class="font-mono text-muted">@localcontentserver {{ localHost }}</span>
           <template v-if="state.local.devcfg?.ok">
-            <br />找到的 Steam 目录：<span class="font-mono">{{ state.local.devcfg.steamPath }}</span>
-            <span v-if="state.local.devcfg.has"> · 已经配好了</span>
+            <span v-if="state.local.devcfg.has" class="text-success">已配好</span>
+            <span v-else class="text-faint">没配</span>
           </template>
-          <template v-else-if="state.local.devcfg">
-            <br /><span class="text-amber">{{ state.local.devcfg.error }}</span>
-          </template>
-          <br /><span class="text-amber">Steam 只在启动时读这个文件 —— 写完要重启 Steam 才生效。</span>
+          <span v-else-if="state.local.devcfg" class="text-amber">{{ state.local.devcfg.error }}</span>
         </div>
 
         <div class="mt-2 flex items-center gap-2 flex-wrap">
@@ -627,7 +613,6 @@ const localHost = computed(() => {
           >
             写入 steam_dev.cfg
           </button>
-          <span class="text-[11px] text-faint">80 端口要管理员；写入前会备份成 .bak</span>
         </div>
       </div>
     </Transition>
