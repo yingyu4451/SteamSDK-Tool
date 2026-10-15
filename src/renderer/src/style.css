@@ -216,6 +216,33 @@ textarea {
   border-color: #ef6a6a;
 }
 
+/*
+ * 面板里的「不抢戏」文字按钮。
+ * 蓝色厚按钮（.btn）放在警告底色上会打架 —— 那是个提示条，不该有东西比提示本身还显眼。
+ */
+.link-btn {
+  background: transparent;
+  border: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--color-faint);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+.link-btn:hover {
+  color: var(--color-accent);
+  background: rgba(102, 192, 244, 0.12);
+}
+.link-btn.is-danger:hover {
+  color: #ff9a9a;
+  background: rgba(226, 75, 75, 0.14);
+}
+
 .btn-lg {
   height: 42px;
   padding: 0 20px;

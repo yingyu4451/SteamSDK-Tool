@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import {
   state,
   openDrawer,
@@ -10,10 +10,12 @@ import {
 import PathLink from './PathLink.vue'
 
 const app = computed(() => state.detail)
+/** 默认只看见「还该当回事」的；忽略过的点一下表头才展开 */
+const showIgnored = ref(false)
 
 /**
- * 待处理清单**常驻**：忽略不等于消失，只是换个显示状态。
- * 这样用户随时能看到自己忽略过什么、也能收回。
+ * 待处理清单本身是常驻的（不会整块消失），但**忽略过的行默认收起来** ——
+ * 否则忽略完还在原地，看着像没生效。表头那行计数可以点开看回来。
  */
 const rows = computed(() => {
   const dir = app.value?.dirName
@@ -26,15 +28,16 @@ const rows = computed(() => {
   }))
 })
 
-/** 还该当回事的条数（去掉两种忽略） */
-const activeCount = computed(() => rows.value.filter((r) => !r.perm && !r.sess).length)
-const ignoredCount = computed(() => rows.value.length - activeCount.value)
+const activeRows = computed(() => rows.value.filter((r) => !r.perm && !r.sess))
+const ignoredRows = computed(() => rows.value.filter((r) => r.perm || r.sess))
+const activeCount = computed(() => activeRows.value.length)
+const ignoredCount = computed(() => ignoredRows.value.length)
+const visibleRows = computed(() => (showIgnored.value ? rows.value : activeRows.value))
 
 const status = computed(() => {
   if (!app.value || app.value.error) return { tone: 'pill-bad', text: '读取失败' }
   if (dup.value) return { tone: 'pill-bad', text: 'AppID 冲突' }
   if (activeCount.value) return { tone: 'pill-warn', text: `${activeCount.value} 项待处理` }
-  if (ignoredCount.value) return { tone: 'pill-ok', text: '一切正常' }
   return { tone: 'pill-ok', text: '一切正常' }
 })
 
@@ -95,31 +98,37 @@ const dup = computed(() => {
       </div>
     </div>
 
-    <!-- 问题清单：常驻。忽略只是把某一条换成「已忽略」的样子，不消失 -->
+    <!-- 问题清单：块本身常驻，忽略过的行默认收起来（点表头的计数展开） -->
     <div
       v-if="rows.length"
       class="mt-4 rounded-[10px] border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
     >
       <div class="flex items-center gap-2 mb-1.5">
         <span class="text-[11.5px] font-semibold text-amber">待处理</span>
-        <span class="text-[11px] text-faint num">
-          {{ activeCount }} 项{{ ignoredCount ? ` · 已忽略 ${ignoredCount} 项` : '' }}
-        </span>
+        <span class="text-[11px] text-faint num">{{ activeCount }} 项</span>
+        <button
+          v-if="ignoredCount"
+          class="link-btn num"
+          :title="showIgnored ? '把忽略过的收起来' : '看看忽略过哪些，可以恢复'"
+          @click="showIgnored = !showIgnored"
+        >
+          已忽略 {{ ignoredCount }} 项{{ showIgnored ? ' · 收起' : '' }}
+        </button>
       </div>
 
       <div class="flex flex-col gap-1">
-        <div v-for="(r, i) in rows" :key="i" class="flex items-start gap-2 group">
+        <div v-for="(r, i) in visibleRows" :key="i" class="flex items-start gap-2 group">
           <span
             class="text-[12px] leading-relaxed min-w-0 flex-1"
             :class="r.perm || r.sess ? 'text-faint line-through' : 'text-[#d7c3a0]'"
           >{{ r.text }}</span>
 
           <template v-if="r.perm || r.sess">
-            <span class="pill shrink-0" :class="r.perm ? 'pill-warn' : ''" style="font-size: 10px">
+            <span class="text-[10px] shrink-0 text-faint pt-[2px]">
               {{ r.perm ? '永久忽略' : '本次忽略' }}
             </span>
             <button
-              class="btn h-6 px-2 text-[10.5px] no-drag shrink-0"
+              class="link-btn shrink-0"
               @click="r.perm ? ignoreProblem(r.text, false) : restoreProblemThisRun(r.text)"
             >
               恢复
@@ -128,14 +137,14 @@ const dup = computed(() => {
 
           <template v-else>
             <button
-              class="btn h-6 px-2 text-[10.5px] no-drag shrink-0"
+              class="link-btn shrink-0"
               title="只这一次不提示 —— 重开应用会回来"
               @click="ignoreProblemThisRun(r.text)"
             >
               本次忽略
             </button>
             <button
-              class="btn h-6 px-2 text-[10.5px] no-drag shrink-0"
+              class="link-btn is-danger shrink-0"
               title="写进设置，以后都不再提示（原文完全一样才算同一条，路径变了会重新报）"
               @click="ignoreProblem(r.text, true)"
             >

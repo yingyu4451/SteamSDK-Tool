@@ -23,10 +23,12 @@ import {
   stopLocalServer,
   openLocalServer,
   enableLocalDevCfg,
-  setAppLocal
+  setAppLocal,
+  runLocalSetup,
+  resetLocalFlow
 } from '../store.js'
 import { fmtSize } from '../format.js'
-import { Check, Eye, Lock, ShieldCheck, Upload } from '@lucide/vue'
+import { Check, Eye, LoaderCircle, Lock, ShieldCheck, Upload, X } from '@lucide/vue'
 
 const confirming = ref(false)
 const pwDraft = ref('')
@@ -490,6 +492,63 @@ const localHost = computed(() => {
             <template v-else>没在跑</template>
           </span>
           <button class="ml-auto btn h-7 px-2.5 text-[11px] no-drag" @click="localOpen = false">收起</button>
+        </div>
+
+        <!-- 一次配好：把这条路上的 5 件事串起来，哪步没成一眼能看出来 -->
+        <div class="mt-2.5 rounded-[10px] border border-line-soft bg-[rgba(9,15,23,.45)] p-3">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-[11.5px] font-semibold text-ink">一次配好</span>
+            <span class="text-[11px] text-faint">服务器 → 标记 App → 写配置 → 送一份进去</span>
+          </div>
+
+          <div class="flex flex-col gap-1 mb-2.5">
+            <div v-for="(s, i) in state.local.flow.steps" :key="s.id" class="flex items-start gap-2">
+              <span class="w-3.5 shrink-0 grid place-items-center pt-[2px]">
+                <Check v-if="s.state === 'done'" class="w-3.5 h-3.5 text-success" />
+                <LoaderCircle v-else-if="s.state === 'doing'" class="w-3.5 h-3.5 text-accent animate-spin" />
+                <X v-else-if="s.state === 'fail'" class="w-3.5 h-3.5 text-danger" />
+                <span v-else class="w-2 h-2 rounded-full border border-[#3d5a7a]"></span>
+              </span>
+              <span
+                class="text-[11.5px] leading-relaxed min-w-0 flex-1"
+                :class="
+                  s.state === 'fail'
+                    ? 'text-danger'
+                    : s.state === 'done'
+                      ? 'text-muted'
+                      : s.state === 'doing'
+                        ? 'text-ink'
+                        : 'text-faint'
+                "
+              >
+                {{ i + 1 }}. {{ s.label }}
+                <span v-if="s.detail" class="text-faint"> · {{ s.detail }}</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button
+              class="btn btn-primary h-8 px-3 text-[11.5px] no-drag"
+              :disabled="state.local.flow.running || state.running"
+              @click="runLocalSetup"
+            >
+              {{ state.local.flow.running ? '正在配…' : state.local.flow.done ? '再送一份进去' : '一键配好并送进去' }}
+            </button>
+            <button
+              v-if="state.local.flow.done || state.local.flow.error"
+              class="btn h-8 px-2.5 text-[11px] no-drag"
+              @click="resetLocalFlow"
+            >
+              重来
+            </button>
+            <span v-if="state.local.flow.done" class="text-[11.5px] text-success">
+              内容已经在服务器里了 —— 重启 Steam 就能下到
+            </span>
+            <span v-else-if="state.local.flow.error" class="text-[11.5px] text-danger">
+              {{ state.local.flow.error }}
+            </span>
+          </div>
         </div>
 
         <div class="mt-2.5 flex items-center gap-2 flex-wrap">

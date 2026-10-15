@@ -109,6 +109,24 @@ export const state = reactive({
     // 最近一次 local.status() 的结果：里面有 contentFiles / contentBytes，
     // 用来告诉用户「本地服务器里到底是空的还是有东西」
     status: null,
+    /**
+     * 「一次配好」的步骤表。本地服务器这条路要串起 5 件事，
+     * 少做一件最后就是空 depot —— 所以把每一步的状态摆在面板上，
+     * 哪一步没成一眼能看出来。
+     */
+    flow: {
+      running: false,
+      building: false,
+      done: false,
+      error: null,
+      steps: [
+        { id: 'server', label: '启动内容服务器', state: 'idle', detail: '' },
+        { id: 'flag', label: '这个 App 标记成「先送本地」', state: 'idle', detail: '' },
+        { id: 'build', label: '跑一次构建，把内容写进服务器', state: 'idle', detail: '' },
+        { id: 'devcfg', label: '写 steam_dev.cfg', state: 'idle', detail: '' },
+        { id: 'steam', label: '重启 Steam', state: 'idle', detail: '客户端只在启动时读这个文件' }
+      ]
+    },
     error: null
   },
   // 拖进来的文件夹 / 压缩包：{ over, busy, data, error }
@@ -1370,7 +1388,8 @@ export async function runBuild({ preview, password, local }) {
   if (res.needsPassword) {
     // 不把这条当成错误刷进日志，而是弹输入行让用户补密码
     state.logs = []
-    state.askPassword = { preview: !!preview }
+    // local 也要带着 —— 否则补完密码会退化成一次普通上传
+    state.askPassword = { preview: !!preview, local: !!local }
     state.askPasswordError = res.error
     return
   }
@@ -1388,7 +1407,7 @@ export async function submitPassword(pw, { remember = false } = {}) {
   }
   state.askPassword = null
   state.askPasswordError = null
-  await runBuild({ preview: req.preview, password: pw })
+  await runBuild({ preview: req.preview, password: pw, local: req.local })
 }
 
 export function cancelPasswordPrompt() {
@@ -1447,13 +1466,40 @@ export function wireEvents() {
     const code = d.code
     const kind = state.runKind
     const wasPreview = state.runPreview
+    const wasLocal = state.runLocal
     const appName = state.selectedDir || ''
     state.lastExit = { code, at: Date.now(), kind }
     pushLog(code === 0 ? 'system' : 'stderr', `— 进程结束，退出码 ${code} —`)
     state.runKind = null
+    state.runLocal = false
+
+    // 「一次配好」里那次构建结束了 —— 收尾并检查内容真进去了没
+    if (wasLocal && state.local.flow?.building) {
+      const f = state.local.flow
+      f.building = false
+      f.running = false
+      if (code === 0) {
+        loadLocalStatus()
+          .then(() => {
+            const n = state.local.status?.contentFiles || 0
+            setStep('build', n > 0 ? 'done' : 'fail', n > 0 ? `${n} 个文件已在服务器里` : '构建成功但服务器里还是空的')
+            setStep('steam', 'doing')
+            f.done = n > 0
+            toast(n > 0 ? '内容已经进本地服务器了 —— 重启 Steam 就能下到' : '构建成功，但 htdocs 里还是空的')
+          })
+          .catch(() => {
+            setStep('build', 'done', '构建成功')
+            f.done = true
+          })
+      } else {
+        setStep('build', 'fail', `退出码 ${code}`)
+        f.error = `构建失败，退出码 ${code}`
+      }
+    }
 
     // 正式上传成功 -> 记下来，界面上给一个直接跳 Steamworks 的入口
-    if (code === 0 && kind === 'build' && !wasPreview) {
+    // 本地服务器构建不算上传 —— 一个字节都没到 Steam
+    if (code === 0 && kind === 'build' && !wasPreview && !wasLocal) {
       state.uploaded = { appId: state.detail?.appId || '', at: Date.now() }
     }
 
@@ -1463,17 +1509,21 @@ export function wireEvents() {
         ? '出错了'
         : kind === 'check'
           ? '检查配置通过'
-          : wasPreview
-            ? 'Preview 完成'
-            : '上传完成'
+          : wasLocal
+            ? '内容已送进本地服务器'
+            : wasPreview
+              ? 'Preview 完成'
+              : '上传完成'
     const body =
       code !== 0
         ? `${appName} · 退出码 ${code}`
         : kind === 'check'
           ? `${appName} · 结构与排除规则都没问题`
-          : wasPreview
-            ? `${appName} · 空跑成功，没有上传任何东西`
-            : `${appName} · 去 Steamworks 把这次构建设为 live`
+          : wasLocal
+            ? `${appName} · 重启 Steam 后就能从本机下到`
+            : wasPreview
+              ? `${appName} · 空跑成功，没有上传任何东西`
+              : `${appName} · 去 Steamworks 把这次构建设为 live`
     api.notify(title, body).catch(() => {})
 
     reloadDetail()
@@ -1716,4 +1766,125 @@ export async function enableLocalDevCfg() {
   await loadLocalDevCfg()
   toast(`已写入 ${r.file}${r.backedUp ? '（原文件备份成 .bak）' : ''}`)
   return r
+}
+
+/* ------------------------------------------------------------------ *
+ *  「一次配好」—— 把这条路上的 5 件事串成一个按钮
+ * ------------------------------------------------------------------ */
+
+function flowStep(id) {
+  return (state.local.flow.steps || []).find((s) => s.id === id)
+}
+
+function setStep(id, st, detail = '') {
+  const s = flowStep(id)
+  if (s) {
+    s.state = st
+    s.detail = detail
+  }
+}
+
+/** 把流程重置成「还没开始」，其它面板按钮也能调 */
+export function resetLocalFlow() {
+  const f = state.local.flow
+  f.running = false
+  f.building = false
+  f.done = false
+  f.error = null
+  for (const s of f.steps) {
+    if (s.id === 'steam') continue
+    s.state = 'idle'
+    s.detail = ''
+  }
+}
+
+/**
+ * 起服务器 + 标记 App + 写 steam_dev.cfg + 跑一次本地构建。
+ *
+ * 顺序是有讲究的：服务器必须先起来（否则构建写进去也没人服务），
+ * 标记必须在构建之前（"Local" 那行是构建时读的），
+ * steam_dev.cfg 什么时候写都行，所以放最后。
+ *
+ * 80 端口常被占（本机上就有别的进程监听 80），所以起不来会自动换 8099 再试一次 ——
+ * 「一次就成功」主要就靠这个。
+ */
+export async function runLocalSetup() {
+  const dir = state.selectedDir
+  const f = state.local.flow
+  if (!dir || f.running) return { ok: false }
+
+  f.running = true
+  f.done = false
+  f.error = null
+  state.local.error = null
+  for (const s of f.steps) {
+    if (s.id === 'steam') continue
+    s.state = 'idle'
+    s.detail = ''
+  }
+
+  const fail = (stepId, msg) => {
+    setStep(stepId, 'fail', msg)
+    f.error = msg
+    f.running = false
+    toast(msg, 'bad')
+    return { ok: false, error: msg }
+  }
+
+  /* 1. 服务器 —— 端口被占就自动换一个 */
+  setStep('server', 'doing')
+  const wanted = state.local.port || 80
+  let r = await api.local.start(wanted).catch((e) => ({ ok: false, error: e.message }))
+  if (!r.ok && wanted !== 8099) {
+    r = await api.local.start(8099).catch((e) => ({ ok: false, error: e.message }))
+    if (r.ok) state.local.port = 8099
+  }
+  if (!r.ok) return fail('server', r.error || '内容服务器起不来')
+  await loadLocalStatus()
+  setStep('server', 'done', `127.0.0.1:${state.local.port}`)
+
+  /* 2. 让这个 App 的构建走本地 */
+  setStep('flag', 'doing')
+  const u = await api.app.update(dir, { local: true }).catch((e) => ({ ok: false, error: e.message }))
+  if (u && u.ok === false) return fail('flag', u.error || '写不进 vdf')
+  await reloadDetail()
+  setStep('flag', 'done')
+
+  /* 3. steam_dev.cfg —— 已经配好就跳过 */
+  setStep('devcfg', 'doing')
+  await loadLocalDevCfg()
+  const cfg = state.local.devcfg
+  if (!cfg?.ok) {
+    setStep('devcfg', 'fail', cfg?.error || '找不到 Steam 目录')
+  } else if (cfg.has) {
+    setStep('devcfg', 'done', '之前就配好了')
+  } else {
+    const w = await api.local.enableDevcfg(state.local.port).catch((e) => ({ ok: false, error: e.message }))
+    if (w.ok) {
+      await loadLocalDevCfg()
+      setStep('devcfg', 'done', w.backedUp ? '已写入（原文件备份成 .bak）' : '已写入')
+    } else {
+      setStep('devcfg', 'fail', w.error || '写不了')
+    }
+  }
+
+  /* 4. 跑构建 —— 这一步是异步的，退出码在 onExit 里回收 */
+  setStep('build', 'doing', '构建进行中，看下面的输出')
+  setStep('steam', 'idle')
+  f.building = true
+  await runBuild({ preview: false, local: true })
+
+  if (!state.running) {
+    // 没起来（多半是缺密码）—— 让密码提示接管，流程先停在这
+    f.building = false
+    if (state.askPassword) {
+      setStep('build', 'idle', '等着你填密码')
+      f.running = false
+      return { ok: false, needsPassword: true }
+    }
+    return fail('build', '构建没能启动')
+  }
+
+  // 构建跑起来了，running 保持 true，等 onExit 收尾
+  return { ok: true, started: true }
 }
