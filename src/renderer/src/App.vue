@@ -1,7 +1,7 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
-import { boot, state, wireEvents, loadHistory } from './store.js'
+import { boot, state, wireEvents, loadHistory, setDropOver, dropAnalyze } from './store.js'
 import { reducedMotion } from './motion.js'
 
 import TitleBar from './components/TitleBar.vue'
@@ -14,14 +14,71 @@ import NewDepotSlideover from './components/NewDepotSlideover.vue'
 import EditDrawer from './components/EditDrawer.vue'
 import DeleteAppDialog from './components/DeleteAppDialog.vue'
 import AdoptOrphansDialog from './components/AdoptOrphansDialog.vue'
+import DropDialog from './components/DropDialog.vue'
 
 const views = { workbench: WorkbenchView, history: HistoryView, settings: SettingsView }
 const current = computed(() => views[state.view] || WorkbenchView)
 
+/* 拖文件夹/压缩包进来。
+ * 只认「从资源管理器拖进来的文件」（dataTransfer.types 里有 Files），
+ * 不然后台那个平台行拖拽排序（text/plain）也会把这层浮层点亮。 */
+let dragDepth = 0
+
+function hasFiles(e) {
+  const t = e.dataTransfer?.types
+  return !!t && Array.from(t).includes('Files')
+}
+
+function onDragEnter(e) {
+  if (!hasFiles(e)) return
+  dragDepth++
+  setDropOver(true)
+}
+
+function onDragOver(e) {
+  if (!hasFiles(e)) return
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'copy'
+}
+
+function onDragLeave(e) {
+  if (!hasFiles(e)) return
+  dragDepth = Math.max(0, dragDepth - 1)
+  if (dragDepth === 0) setDropOver(false)
+}
+
+function onDrop(e) {
+  if (!hasFiles(e)) return
+  e.preventDefault()
+  dragDepth = 0
+  setDropOver(false)
+  const file = e.dataTransfer?.files?.[0]
+  if (!file) return
+  // Electron 32 之后 File.path 没了
+  const p = window.api?.drop?.pathFor(file) || ''
+  if (!p) {
+    setDropOver(false)
+    return
+  }
+  dropAnalyze(p)
+}
+
 onMounted(async () => {
+  window.addEventListener('dragenter', onDragEnter)
+  window.addEventListener('dragover', onDragOver)
+  window.addEventListener('dragleave', onDragLeave)
+  window.addEventListener('drop', onDrop)
+
   wireEvents()
   await boot()
   await loadHistory()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('dragenter', onDragEnter)
+  window.removeEventListener('dragover', onDragOver)
+  window.removeEventListener('dragleave', onDragLeave)
+  window.removeEventListener('drop', onDrop)
 })
 
 /* 视图切换：淡出 + 轻微位移，比直接硬切有方向感 */
@@ -87,6 +144,35 @@ function onLeave(el, done) {
     <EditDrawer />
     <DeleteAppDialog />
     <AdoptOrphansDialog />
+    <DropDialog />
+
+    <!-- 拖着东西悬在窗口上 -->
+    <Transition
+      enter-active-class="transition duration-150"
+      enter-from-class="opacity-0"
+      leave-active-class="transition duration-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="state.drop.over && !state.drop.data"
+        class="fixed inset-0 z-[58] grid place-items-center pointer-events-none"
+      >
+        <div class="absolute inset-3 rounded-[16px] border-2 border-dashed border-[rgba(46,230,197,.5)] bg-[rgba(11,15,22,.72)] backdrop-blur-sm" />
+        <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
+          <svg viewBox="0 0 24 24" class="w-8 h-8" fill="none">
+            <path
+              d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 17v1.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V17"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <div class="text-[13px] font-semibold">松手就分析</div>
+          <div class="text-[11.5px] text-muted">文件夹，或者 .zip</div>
+        </div>
+      </div>
+    </Transition>
 
     <Transition
       enter-active-class="transition duration-200"

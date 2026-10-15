@@ -45,6 +45,7 @@ import {
   getPaths
 } from './sdk.js'
 import { preflightApp } from './preflight.js'
+import { analyzeTarget, applyDrop } from './dropzone.js'
 import { localStatus, startLocal, stopLocal, steamDevCfg, writeSteamDevCfg } from './localserver.js'
 import {
   PLATFORMS,
@@ -571,6 +572,22 @@ function registerIpc() {
   ipcMain.handle('app:preflight', (_e, { dirName } = {}) => {
     try {
       return preflightApp(dirName, loadSettings())
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
+  })
+
+  /* ---- 拖进来的文件夹 / 压缩包 ---- */
+  ipcMain.handle('drop:analyze', (_e, { target } = {}) => {
+    try {
+      return analyzeTarget(target, loadSettings())
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
+  })
+  ipcMain.handle('drop:apply', (_e, spec = {}) => {
+    try {
+      return applyDrop(spec, loadSettings())
     } catch (e) {
       return { ok: false, error: e.message }
     }

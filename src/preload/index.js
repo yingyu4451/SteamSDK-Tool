@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 /**
  * 渲染层唯一能碰到主进程的入口。
@@ -84,6 +84,19 @@ const api = {
   },
 
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),
+
+  /** 拖进来的文件/文件夹：Electron 32 之后 File.path 没了，只能走 webUtils */
+  drop: {
+    pathFor: (file) => {
+      try {
+        return webUtils.getPathForFile(file)
+      } catch {
+        return ''
+      }
+    },
+    analyze: (target) => ipcRenderer.invoke('drop:analyze', { target }),
+    apply: (spec) => ipcRenderer.invoke('drop:apply', spec)
+  },
 
   run: {
     check: (dirName) => ipcRenderer.invoke('run:check', { dirName }),

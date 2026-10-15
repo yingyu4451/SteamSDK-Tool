@@ -278,3 +278,16 @@ textarea {
     transform: translateX(100%);
   }
 }
+
+/* 平台行拖拽排序：靠 <TransitionGroup> 做 FLIP，不然换位是瞬间跳的，看不出来 */
+.plat-move {
+  transition: transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.plat-enter-active,
+.plat-leave-active {
+  transition: opacity 0.12s ease;
+}
+.plat-enter-from,
+.plat-leave-to {
+  opacity: 0;
+}

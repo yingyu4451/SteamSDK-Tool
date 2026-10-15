@@ -66,7 +66,10 @@ export const state = reactive({
   // 上传前预检
   preflight: { busy: false, error: null, data: null },
   // 本地内容服务器
-  local: { running: false, port: 80, url: '', installed: true, busy: false, devcfg: null, error: null }
+  local: { running: false, port: 80, url: '', installed: true, busy: false, devcfg: null, error: null },
+  // 拖进来的文件夹 / 压缩包：{ over, busy, data, error }
+  // over 是「正拖着东西悬在窗口上」，data 是分析结果
+  drop: { over: false, busy: false, data: null, error: null }
 })
 
 /** 平台 id → 显示名（和主进程 vdf-edit.js 的 PLATFORMS 一一对应） */
@@ -1126,6 +1129,80 @@ export async function runCheckAll() {
     state.runKind = null
   } else {
     state.runId = res.id
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  拖进来一个文件夹 / 压缩包
+ * ------------------------------------------------------------------ */
+
+/** 悬停高亮：只在窗口这一层管，子元素不用各自监听 */
+export function setDropOver(on) {
+  state.drop.over = !!on
+}
+
+export function closeDrop() {
+  state.drop.data = null
+  state.drop.error = null
+  state.drop.over = false
+}
+
+/** 第一步：看它是什么。压缩包会先解到 .drop-probe 里探一下 */
+export async function dropAnalyze(target) {
+  const p = String(target || '').trim()
+  if (!p) return
+  state.drop.over = false
+  state.drop.busy = true
+  state.drop.error = null
+  state.drop.data = null
+  try {
+    const res = await api.drop.analyze(p)
+    if (!res || res.ok === false) {
+      state.drop.error = res?.error || '读不了这个路径'
+      state.drop.data = { ok: false, target: p, name: p.split(/[\\/]/).pop() }
+    } else {
+      state.drop.data = res
+    }
+  } catch (e) {
+    state.drop.error = e.message
+    state.drop.data = { ok: false, target: p, name: p.split(/[\\/]/).pop() }
+  } finally {
+    state.drop.busy = false
+  }
+}
+
+/** 第二步：放进选好的 Depot（没有就给新建一个） */
+export async function dropApply(spec) {
+  if (!state.selectedDir) return toast('先选一个 App', 'bad')
+  state.drop.busy = true
+  try {
+    const res = await api.drop.apply({
+      ...spec,
+      appDirName: state.selectedDir,
+      kind: state.drop.data?.kind,
+      archive: state.drop.data?.archive,
+      dir: state.drop.data?.dir,
+      target: state.drop.data?.target
+    })
+    if (!res || res.ok === false) {
+      state.drop.error = res?.error || '放不进去'
+      return res
+    }
+    closeDrop()
+    await rescan()
+    await reloadDetail()
+    toast(
+      res.mode === 'copy'
+        ? `已复制进 ${res.contentRoot}`
+        : `内容目录已指到 ${res.contentRoot}`,
+      'ok'
+    )
+    return res
+  } catch (e) {
+    state.drop.error = e.message
+    return { ok: false, error: e.message }
+  } finally {
+    state.drop.busy = false
   }
 }
 
