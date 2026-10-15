@@ -200,6 +200,24 @@ export const DEPOT_ARCH = [
   { id: 'arm64', label: 'ARM64' }
 ]
 
+/**
+ * 每个操作系统实际存在的架构。
+ * 不该出现的选择就不列出来 —— 选了 Windows 还给人看 ARM64、选了 macOS 还给人看 32 位，
+ * 只会让人以为是自己漏了什么。
+ */
+export const DEPOT_ARCH_BY_OS = {
+  windows: ['64', '32'],
+  macos: ['64'],
+  linux: ['64', 'arm64']
+}
+
+/** 某个操作系统下能选的架构（永远至少有一个） */
+export function depotArchsFor(os) {
+  const ids = DEPOT_ARCH_BY_OS[os] || ['64']
+  const list = DEPOT_ARCH.filter((a) => ids.includes(a.id))
+  return list.length ? list : [DEPOT_ARCH[0]]
+}
+
 /** 后台常用的语言项，够覆盖绝大多数情况 */
 export const DEPOT_LANGUAGES = [
   { id: 'all', label: '所有语言' },

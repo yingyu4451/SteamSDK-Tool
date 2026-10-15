@@ -86,7 +86,7 @@ export const state = reactive({
   // 新建 App 向导的 AppID 下拉框数据
   knownApps: [],
   // Steamworks 新建 Depot 的选项（系统 / 架构 / 语言）
-  depotOptions: { os: [], arch: [], languages: [] },
+  depotOptions: { os: [], arch: [], archByOs: {}, languages: [] },
   // scripts 根目录下游离的 vdf（不属于任何 App 文件夹）
   orphans: [],
   orphanDialog: null,
@@ -924,6 +924,7 @@ export async function openDepotSlide(platform) {
     state.depotOptions = {
       os: d.depotOs || [],
       arch: d.depotArch || [],
+      archByOs: d.depotArchByOs || {},
       languages: d.depotLanguages || []
     }
     if (!state.settings) state.settings = { buildsRoot: d.buildsRoot }
@@ -999,12 +1000,27 @@ export function closeDepotSlide() {
   state.depotSlide = null
 }
 
+/** 某个操作系统下能选的架构。主进程给表，这里只做过滤。 */
+export function archOptionsFor(os) {
+  const all = state.depotOptions?.arch || []
+  const ids = state.depotOptions?.archByOs?.[os]
+  if (!ids || !ids.length) return all.length ? all : [{ id: '64', label: '64 位' }]
+  const list = all.filter((a) => ids.includes(a.id))
+  return list.length ? list : [{ id: '64', label: '64 位' }]
+}
+
 /** 改平台（下拉框里换系统/架构）时，如果内容目录还是自动推的，就跟着变 */
 export function setDepotPlatform({ os, arch }) {
   const s = state.depotSlide
   if (!s) return
   const oldAuto = defaultRootFor(s.platform)
-  if (os != null) s.os = os
+  if (os != null) {
+    s.os = os
+    // 换系统之后，原来选的架构可能在新系统下根本不存在（比如 macOS 没有 32 位），
+    // 不换掉的话会留下一个选不中任何选项的下拉框。
+    const ok = archOptionsFor(s.os).map((a) => a.id)
+    if (!ok.includes(s.arch)) s.arch = ok[0]
+  }
   if (arch != null) s.arch = arch
   const guess =
     s.os === 'windows' ? (s.arch === '32' ? 'win32' : 'win64')

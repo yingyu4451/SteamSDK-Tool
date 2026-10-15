@@ -65,6 +65,7 @@ import {
   defaultExclusionsFor,
   DEPOT_OS,
   DEPOT_ARCH,
+  DEPOT_ARCH_BY_OS,
   DEPOT_LANGUAGES
 } from './vdf-edit.js'
 import {
@@ -469,6 +470,8 @@ function registerIpc() {
       platforms: PLATFORMS,
       depotOs: DEPOT_OS,
       depotArch: DEPOT_ARCH,
+      // 每个 OS 下能选的架构，渲染层用它过滤掉不存在的选项
+      depotArchByOs: DEPOT_ARCH_BY_OS,
       depotLanguages: DEPOT_LANGUAGES,
       suggestedDepotId: suggestDepotId(appId),
       suggestedContentRoot: defaultContentRoot(name || '<App名>', platform, s),
