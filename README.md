@@ -43,6 +43,7 @@ App 列表、内容体检、一键自检、Preview 空跑、正式上传、实�
 | **状态灯是三态** | 侧栏每个 App 左边：绿点 = 干净；**黄地球** = 有待处理（照样能传，只是有事没处理）；**红三角** = 结构性坏了（depot 脚本缺了 / 没有 AppID / AppID 撞车）。之前「有待处理」也是红的，会让人以为构建跑不了 |
 | **待处理可以逐条忽略** | 每条待处理右侧有个「忽略」，点掉后进「已忽略 N 条」，不再占地方。判断依据是**原文完全一致**才算同一条 —— 所以路径变了会重新报出来（你忽略的是那次的具体情况，不是这一类问题）。存在 `settings.json` 的 `ignoredProblems` 里，重启还在，随时「恢复」 |
 | **工具条面板不推布局** | 「同步 Depot / 预检 / 本地服务器 / 密码行」现在都是工具条下面的浮层（`position:absolute`），展开时下面内容一动不动 —— 以前是流式块，一展开整页往下跳 |
+| **自己检查更新** | 启动时静默查一次 GitHub Releases，有新版本标题栏出「v0.1.0 可更新」；在「设置 → 关于」里看更新说明、下载（带进度）、下完直接「重启并安装」。只用 Node 内置 `fetch`，不引 electron-updater |
 
 ### 拖放是怎么判断平台的
 
@@ -194,6 +195,37 @@ pnpm icon             # 重新生成 build\icon.ico
 
 ---
 
+## 更新
+
+不用 electron-updater。那套要 electron-builder 的 `publish` 配置加一个 `latest.yml`，还要接它自己的事件模型；
+这里只需要「查一下、下下来、把安装程序拉起来」三步，自己写反而好控。
+
+启动时会静默查一次 <https://github.com/yingyu4451/SteamSDK-Tool/releases/latest>（仓库是公开的，匿名就能读，不需要 token），
+有新版本就在标题栏右侧出一个「v0.1.0 可更新」，点它跳「设置 → 关于」。
+关于卡片里能看更新说明、下载（带进度）、下完变成「重启并安装」——安装程序用 `detached` 拉起来，然后本进程退出。
+
+下载落在 `%APPDATA%\steamsdk-tool\updates\`，启动时顺手清掉 3 天前的旧安装包。
+更新器只用 Node 内置的 `fetch`（Electron 44 自带），不引任何新依赖。
+
+### 发新版本
+
+版本号写在 `package.json` 的 `version` 里，`electron-builder` 会拿它当安装包版本，更新器也读它。
+
+```powershell
+# 1. 改 package.json 的 version，比如 0.2.0
+pnpm dist
+
+# 2. 提交推送
+git add -A; git commit -m "v0.2.0"; git push
+
+# 3. 发 release —— tag 必须写成 vX.Y.Z，更新器按这个找
+gh release create v0.2.0 --title "v0.2.0" --notes "这次改了什么" "release\SteamSDK Tool-0.2.0-setup.exe"
+```
+
+更新器挑资产时优先找名字里带 `setup` 的 `.exe`，所以安装包和 `blockmap` 一起传也没关系。
+
+---
+
 ## 目录结构
 
 ```
@@ -204,6 +236,7 @@ src/
     sdk.js              扫描 scripts\、内容体检、vdf 读写、构建历史
     runner.js           spawn pwsh、流式输出、日志脱敏、进程树终止
     store.js            设置持久化 + DPAPI 密码存取
+    updater.js          查 GitHub Releases、下载、拉起安装程序
   preload/index.js      contextBridge，只暴露具体能力
   renderer/src/
     store.js            前端状态与动作（不引 Pinia，够用）
