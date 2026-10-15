@@ -20,7 +20,10 @@ const DEFAULTS = {
   // （run_app_build 不需要，键写进去反而可能报错）。所以存在这里，界面上显示。
   depotMeta: {},
   // 用过的 AppID 历史，给新建 App 的下拉框用：{ appId, name, at }
-  appIdHistory: []
+  appIdHistory: [],
+  // appDirName -> [被忽略的问题原文]。有些「待处理」是故意的（比如 depot
+  // 就是要点到 Downloads 里的构建产物），不该每次开界面都报一遍。
+  ignoredProblems: {}
 }
 
 let cache = null
@@ -107,6 +110,35 @@ export function rememberAppId(appId, name) {
   list.unshift({ appId: id, name: String(name || ''), at: Date.now() })
   saveSettings({ appIdHistory: list.slice(0, 30) })
   return { ok: true }
+}
+
+/* ------------------------------------------------------------------ *
+ *  「本次忽略」的问题
+ *
+ *  待处理清单里有些条目是**故意**的（比如 depot 就是指向 Downloads 里的
+ *  构建产物）。按 App + 问题原文记下来，下次不再提示；原文一样才算同一条，
+ *  路径变了会重新报 —— 这正是想要的行为。
+ * ------------------------------------------------------------------ */
+
+export function readIgnoredProblems(appDirName) {
+  const all = loadSettings().ignoredProblems || {}
+  const list = all[appDirName]
+  return Array.isArray(list) ? list : []
+}
+
+export function setIgnoredProblem(appDirName, text, on) {
+  const key = String(appDirName || '').trim()
+  const t = String(text || '').trim()
+  if (!key || !t) return { ok: false, error: '缺少 App 名或问题内容' }
+  const s = loadSettings()
+  const all = { ...(s.ignoredProblems || {}) }
+  const list = new Set(all[key] || [])
+  if (on) list.add(t)
+  else list.delete(t)
+  if (list.size) all[key] = [...list]
+  else delete all[key]
+  saveSettings({ ignoredProblems: all })
+  return { ok: true, ignored: all[key] || [] }
 }
 
 /* ------------------------------------------------------------------ *

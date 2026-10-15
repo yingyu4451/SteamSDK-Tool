@@ -128,7 +128,7 @@ const localHost = computed(() => {
 </script>
 
 <template>
-  <div class="card p-3 flex items-center gap-2 flex-wrap min-w-0" v-reveal="{ delay: 0.02 }">
+  <div class="card p-3 flex items-center gap-2 flex-wrap min-w-0 relative" v-reveal="{ delay: 0.02 }">
     <button class="btn no-drag" :disabled="disabled" @click="doCheck">
       <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none">
         <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
@@ -226,7 +226,7 @@ const localHost = computed(() => {
     >
       <div
         v-if="state.askPassword"
-        class="mt-1 w-full rounded-[10px] border border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)] px-3 py-2.5"
+        class="bar-pop rounded-[10px] border border-[rgba(255,180,84,.3)] px-3 py-2.5"
       >
         <div class="flex items-center gap-2 text-[12px] text-amber">
           <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" fill="none">
@@ -266,11 +266,11 @@ const localHost = computed(() => {
     >
       <div
         v-if="state.verify.busy || state.verify.error || state.verify.data"
-        class="mt-1 w-full rounded-[10px] border px-3 py-2.5"
+        class="bar-pop rounded-[10px] border px-3 py-2.5"
         :class="
           state.verify.error
-            ? 'border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)]'
-            : 'border-line bg-surface-2/40'
+            ? 'border-[rgba(255,180,84,.3)]'
+            : 'border-line'
         "
       >
         <template v-if="state.verify.error">
@@ -393,11 +393,11 @@ const localHost = computed(() => {
     >
       <div
         v-if="state.preflight.busy || state.preflight.error || pf"
-        class="mt-1 w-full rounded-[10px] border px-3 py-2.5"
+        class="bar-pop rounded-[10px] border px-3 py-2.5"
         :class="
           state.preflight.error
-            ? 'border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)]'
-            : 'border-line bg-surface-2/40'
+            ? 'border-[rgba(255,180,84,.3)]'
+            : 'border-line'
         "
       >
         <div class="flex items-center gap-2 flex-wrap">
@@ -442,7 +442,7 @@ const localHost = computed(() => {
     >
       <div
         v-if="localOpen"
-        class="mt-1 w-full rounded-[10px] border border-line bg-surface-2/40 px-3 py-2.5"
+        class="bar-pop rounded-[10px] border border-line px-3 py-2.5"
       >
         <div class="flex items-center gap-2 flex-wrap">
           <span class="font-semibold text-[12px]">本地内容服务器</span>

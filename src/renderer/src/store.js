@@ -151,6 +151,9 @@ export async function rescan() {
 
 export async function selectApp(dirName) {
   state.selectedDir = dirName
+  // 从「构建历史 / 设置」点左侧的 App，应该跳回工作台 —— 只换 selectedDir
+  // 的话页面还停在原处，看起来像「点了没反应」
+  state.view = 'workbench'
   state.detailLoading = true
   try {
     state.detail = await api.sdk.app(dirName)
@@ -159,6 +162,22 @@ export async function selectApp(dirName) {
   } finally {
     state.detailLoading = false
   }
+}
+
+/** 待处理里某一条「本次忽略 / 恢复提示」 */
+export async function ignoreProblem(text, on = true) {
+  const dir = state.selectedDir
+  if (!dir || !text) return
+  const res = await api.app.ignoreProblem(dir, text, on)
+  if (!res?.ok) return toast(res?.error || '没记下来', 'bad')
+  if (res.app) state.detail = res.app
+  // 侧栏那颗灯也要跟着变
+  const row = state.apps.find((a) => a.dirName === dir)
+  if (row && res.app) {
+    row.problems = res.app.problems
+    row.problemsIgnored = res.app.problemsIgnored
+  }
+  toast(on ? '这条不再提示了' : '恢复提示')
 }
 
 export async function reloadDetail() {

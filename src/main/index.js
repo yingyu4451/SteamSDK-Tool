@@ -17,7 +17,8 @@ import {
   clearApiKey,
   setDepotMeta,
   readDepotMeta,
-  rememberAppId
+  rememberAppId,
+  setIgnoredProblem
 } from './store.js'
 import {
   sdkStatus,
@@ -535,9 +536,15 @@ function registerIpc() {
     syncDepotRoots(dirName, projectDir, loadSettings())
   )
 
+  /* ---- 待处理清单里「本次忽略」 ---- */
+  ipcMain.handle('app:ignoreProblem', (_e, { dirName, text, on } = {}) => {
+    const res = setIgnoredProblem(dirName, text, on !== false)
+    if (!res.ok) return res
+    return { ...res, app: readApp(dirName, loadSettings()) }
+  })
+
   /* ---- 删除 App ---- */
   ipcMain.handle('app:previewDelete', (_e, { dirName }) => describeDelete(dirName, loadSettings()))
-
   ipcMain.handle('app:delete', (_e, { dirName, deleteContent } = {}) => {
     const s = loadSettings()
     // depotMeta 是按 depotId 存的，删完脚本就读不到了 —— 先把 id 记下来

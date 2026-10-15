@@ -355,3 +355,20 @@ textarea {
 .plat-leave-to {
   opacity: 0;
 }
+
+/*
+ * 工具条下面那些面板（同步 Depot / 预检 / 本地服务器 / 密码行）。
+ * 原来它们是条内流式块，一展开就把下面所有内容顶下去 —— 看起来像“按钮弹了个 div”。
+ * 改成绝对定位的浮层，完全不占布局。
+ */
+.bar-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: #0f141c;
+  box-shadow:
+    0 18px 40px -12px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(255, 255, 255, 0.02);
+}

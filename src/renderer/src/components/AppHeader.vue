@@ -1,9 +1,10 @@
 <script setup>
-import { computed } from 'vue'
-import { state, openDrawer } from '../store.js'
+import { computed, ref } from 'vue'
+import { state, openDrawer, ignoreProblem } from '../store.js'
 import PathLink from './PathLink.vue'
 
 const app = computed(() => state.detail)
+const showIgnored = ref(false)
 
 const status = computed(() => {
   if (!app.value || app.value.error) return { tone: 'pill-bad', text: '读取失败' }
@@ -42,13 +43,13 @@ const dup = computed(() => {
         </div>
 
         <div class="mt-3 flex flex-col gap-1.5 min-w-0">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="shrink-0 w-[52px] text-[11.5px] text-faint">内容根目录</span>
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="shrink-0 w-[64px] text-[11.5px] text-faint whitespace-nowrap">内容根目录</span>
             <PathLink :path="app.contentRoot" kind="folder" class="min-w-0" />
           </div>
 
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="shrink-0 w-[52px] text-[11.5px] text-faint">构建脚本</span>
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="shrink-0 w-[64px] text-[11.5px] text-faint whitespace-nowrap tracking-[0.3em]">构建脚本</span>
             <PathLink :path="app.appPath" kind="file" class="min-w-0" />
           </div>
         </div>
@@ -75,9 +76,36 @@ const dup = computed(() => {
       class="mt-4 rounded-[10px] border border-[rgba(255,180,84,.22)] bg-[rgba(255,180,84,.05)] p-3"
     >
       <div class="text-[11.5px] font-semibold text-amber mb-1.5">待处理</div>
-      <ul class="m-0 pl-4 flex flex-col gap-1">
-        <li v-for="(p, i) in app.problems" :key="i" class="text-[12px] text-[#d7c3a0]">{{ p }}</li>
-      </ul>
+      <div class="flex flex-col gap-1">
+        <div v-for="(p, i) in app.problems" :key="i" class="flex items-start gap-2 group">
+          <span class="text-[12px] text-[#d7c3a0] leading-relaxed min-w-0 flex-1">{{ p }}</span>
+          <button
+            class="btn h-6 px-2 text-[10.5px] no-drag shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+            title="这条不再提示（原文一样才认作同一条，路径变了会重新报）"
+            @click="ignoreProblem(p, true)"
+          >
+            忽略
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 已忽略的 -->
+    <div v-if="app.problemsIgnored?.length" class="mt-3 text-[11.5px]">
+      <button
+        class="bg-transparent border-0 p-0 cursor-pointer text-faint hover:text-muted underline decoration-dotted"
+        @click="showIgnored = !showIgnored"
+      >
+        已忽略 {{ app.problemsIgnored.length }} 条{{ showIgnored ? '，收起' : '' }}
+      </button>
+      <div v-if="showIgnored" class="mt-2 flex flex-col gap-1">
+        <div v-for="(p, i) in app.problemsIgnored" :key="'ig' + i" class="flex items-start gap-2">
+          <span class="text-[11.5px] text-faint leading-relaxed min-w-0 flex-1 line-through">{{ p }}</span>
+          <button class="btn h-6 px-2 text-[10.5px] no-drag shrink-0" @click="ignoreProblem(p, false)">
+            恢复
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

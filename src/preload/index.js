@@ -52,7 +52,9 @@ const api = {
     openVdf: (dirName, depotFile) => ipcRenderer.invoke('app:openVdf', { dirName, depotFile }),
     publicName: (appId) => ipcRenderer.invoke('app:publicName', { appId }),
     knownApps: () => ipcRenderer.invoke('app:knownApps'),
-    preflight: (dirName) => ipcRenderer.invoke('app:preflight', { dirName })
+    preflight: (dirName) => ipcRenderer.invoke('app:preflight', { dirName }),
+    ignoreProblem: (dirName, text, on) =>
+      ipcRenderer.invoke('app:ignoreProblem', { dirName, text, on })
   },
 
   /** 本地内容服务器：把构建写进 tools\ContentServer\htdocs，不上传 Steam */

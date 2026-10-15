@@ -21,7 +21,7 @@ import {
   readUserConfig,
   setUserConfig
 } from './vdf-edit.js'
-import { readDepotMeta, setDepotMeta } from './store.js'
+import { readDepotMeta, setDepotMeta, readIgnoredProblems } from './store.js'
 
 /* ------------------------------------------------------------------ *
  *  路径
@@ -315,7 +315,23 @@ export function readApp(appDirName, settings) {
     depots,
     // 概览用第一个 depot 的数据；多平台时界面上按 depot 分开看
     analysis: primary?.analysis ?? analyzeContent(null, []),
-    problems: collectProblems({ appId, contentRoot, depots, appText })
+    ...splitProblems(collectProblems({ appId, contentRoot, depots, appText }), appDirName)
+  }
+}
+
+/**
+ * 把待处理清单拆成「还该提示的」和「用户说过本次忽略的」。
+ *
+ * 原文完全一样才算同一条 —— 所以路径变了会自动重新报出来，
+ * 这正是想要的：忽略的是那次的具体情况，不是这一类问题。
+ */
+function splitProblems(all, dirName) {
+  const ignoredList = readIgnoredProblems(dirName)
+  if (!ignoredList.length) return { problems: all, problemsIgnored: [] }
+  const set = new Set(ignoredList)
+  return {
+    problems: all.filter((t) => !set.has(t)),
+    problemsIgnored: all.filter((t) => set.has(t))
   }
 }
 

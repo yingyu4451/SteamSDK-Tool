@@ -23,8 +23,16 @@ const nav = [
 
 const appCount = computed(() => state.apps.length)
 
+/**
+ * 指示灯：红 = 结构性坏了（脚本缺了 / 没有 AppID / AppID 撞车），
+ * 黄 = 有待处理但不致命，绿 = 干净。
+ * 「有待处理」一律用黄色 —— 用红色会让人以为构建都跑不了。
+ */
 function healthOf(app) {
-  if (app.problems?.length) return 'bad'
+  if ((app.depots || []).some((d) => d.missing)) return 'bad'
+  if (!app.appId) return 'bad'
+  if (app.appId && state.duplicates?.some((d) => String(d.appId) === String(app.appId))) return 'bad'
+  if (app.problems?.length) return 'warn'
   if (!app.analysis?.exists) return 'warn'
   return 'ok'
 }
@@ -132,15 +140,35 @@ function healthOf(app) {
         "
         @click="selectApp(app.dirName)"
       >
-        <div class="flex items-center gap-2">
-          <span
-            class="w-1.5 h-1.5 rounded-full shrink-0"
-            :class="{
-              'bg-success': healthOf(app) === 'ok',
-              'bg-amber': healthOf(app) === 'warn',
-              'bg-danger': healthOf(app) === 'bad'
-            }"
-          />
+        <div class="flex items-center gap-2 min-w-0">
+          <!--
+            三态：绿点 = 干净；黄地球 = 有待处理（照样能传，只是有事没处理）；
+            红三角 = 结构性坏了（depot 脚本缺了 / 没有 AppID / AppID 撞车）。
+            之前「有待处理」也是红的，会让人以为构建跑不了。
+          -->
+          <svg
+            v-if="healthOf(app) === 'warn'"
+            viewBox="0 0 24 24"
+            class="w-3.5 h-3.5 shrink-0 text-amber"
+            fill="none"
+          >
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7" />
+            <path
+              d="M3 12h18M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"
+              stroke="currentColor"
+              stroke-width="1.4"
+            />
+          </svg>
+          <svg
+            v-else-if="healthOf(app) === 'bad'"
+            viewBox="0 0 24 24"
+            class="w-3.5 h-3.5 shrink-0 text-danger"
+            fill="none"
+          >
+            <path d="M12 3.5 2.8 19.5h18.4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+            <path d="M12 9.8v4.2M12 16.9v.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+          </svg>
+          <span v-else class="w-1.5 h-1.5 rounded-full shrink-0 bg-success" />
           <span class="text-[13px] font-medium truncate">{{ app.dirName }}</span>
         </div>
         <div class="mt-1.5 flex items-center gap-2 text-[11px] text-faint num">
