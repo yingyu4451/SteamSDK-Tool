@@ -26,7 +26,6 @@ import {
   listHistory,
   readLog,
   setAppBranch,
-  setAppPreview,
   cleanupPreviewArtifacts,
   createApp,
   renameApp,
@@ -423,8 +422,6 @@ function registerIpc() {
     if (res.ok && branch) rememberBranch(readApp(dirName, loadSettings()).appId, branch)
     return res
   })
-
-  ipcMain.handle('vdf:setPreview', (_e, { dirName, on }) => setAppPreview(dirName, on, loadSettings()))
 
   /* ---- 新建 / 编辑 App 与 Depot ---- */
   ipcMain.handle('app:defaults', (_e, { appId, name, platform = 'win64' } = {}) => {

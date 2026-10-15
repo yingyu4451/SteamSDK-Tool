@@ -121,13 +121,14 @@ const totalMb = computed(() => agg.value.totalBytes / 1024 / 1024)
         />
       </div>
 
-      <!-- Depot 矩阵 + 分支 -->
+      <!-- 左边 Depot（下面挂分支），右边构建输出 -->
       <div class="grid grid-cols-[1.55fr_1fr] gap-4 items-start">
-        <DepotMatrix :depots="detail.depots || []" />
-        <BranchPanel />
+        <div class="flex flex-col gap-4 min-w-0">
+          <DepotMatrix :depots="detail.depots || []" />
+          <BranchPanel />
+        </div>
+        <ConsoleLog />
       </div>
-
-      <ConsoleLog />
     </template>
 
     <!-- 加载中 -->

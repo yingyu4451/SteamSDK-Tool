@@ -7,13 +7,28 @@ const selected = ref(null)
 const content = ref('')
 const loading = ref(false)
 const filter = ref('')
+// '__all__' = 所有 App 的构建（保底不丢），其余是某个 App 自己的那份
+const appFilter = ref('__all__')
+
+/** output 下每个 App 一个目录，group 就是 App 名 */
+const groups = computed(() => {
+  const map = new Map()
+  for (const h of state.history) {
+    if (!map.has(h.group)) map.set(h.group, [])
+    map.get(h.group).push(h)
+  }
+  return [...map.entries()]
+})
 
 const shown = computed(() => {
   const q = filter.value.trim().toLowerCase()
-  return q ? state.history.filter((h) => h.name.toLowerCase().includes(q)) : state.history
+  return state.history.filter((h) => {
+    if (appFilter.value !== '__all__' && h.group !== appFilter.value) return false
+    return q ? h.name.toLowerCase().includes(q) : true
+  })
 })
 
-const groups = computed(() => {
+const shownGroups = computed(() => {
   const map = new Map()
   for (const h of shown.value) {
     if (!map.has(h.group)) map.set(h.group, [])
@@ -52,10 +67,32 @@ async function refresh() {
       <button class="btn h-8 no-drag" @click="refresh">刷新</button>
     </div>
 
+    <!-- 全部 / 每个 App 一份 -->
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <button
+        class="chip"
+        :class="appFilter === '__all__' ? 'chip-on' : ''"
+        @click="appFilter = '__all__'"
+      >
+        全部
+        <span class="num text-faint">{{ state.history.length }}</span>
+      </button>
+      <button
+        v-for="[group, items] in groups"
+        :key="group"
+        class="chip"
+        :class="appFilter === group ? 'chip-on' : ''"
+        @click="appFilter = group"
+      >
+        {{ group }}
+        <span class="num text-faint">{{ items.length }}</span>
+      </button>
+    </div>
+
     <div class="grid grid-cols-[330px_1fr] gap-4 flex-1 min-h-0">
       <!-- 列表 -->
       <div class="card overflow-y-auto scroll-thin min-h-0 min-w-0" v-reveal>
-        <div v-for="[group, items] in groups" :key="group" class="p-2.5">
+        <div v-for="[group, items] in shownGroups" :key="group" class="p-2.5">
           <div class="px-2 py-1.5 text-[10.5px] font-semibold tracking-wider text-faint uppercase">
             {{ group }}
           </div>

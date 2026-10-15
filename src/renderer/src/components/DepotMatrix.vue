@@ -2,14 +2,25 @@
 import { computed, ref } from 'vue'
 import { fmtSize, fmtInt } from '../format.js'
 import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL } from '../store.js'
+import PathLink from './PathLink.vue'
 
 const props = defineProps({ depots: { type: Array, default: () => [] } })
 
 const showExcluded = ref(false)
 const showSuspicious = ref(true)
 
+/** 选项卡固定按 DepotID 从小到大排 —— 就是新建时从上到下 +1、+2 的那个顺序 */
+const sortedDepots = computed(() =>
+  [...props.depots].sort((x, y) => {
+    const a1 = Number(x.id)
+    const b1 = Number(y.id)
+    if (Number.isFinite(a1) && Number.isFinite(b1) && a1 !== b1) return a1 - b1
+    return String(x.id).localeCompare(String(y.id))
+  })
+)
+
 const current = computed(() => {
-  const list = props.depots
+  const list = sortedDepots.value
   if (!list.length) return null
   return list.find((d) => String(d.id) === String(state.activeDepot)) || list[0]
 })
@@ -24,6 +35,15 @@ function depotState(d) {
 }
 
 const a = computed(() => current.value?.analysis || null)
+
+/** depot 脚本的完整路径：vdf 里可能写的是绝对路径，也可能只是文件名 */
+const scriptPath = computed(() => {
+  const f = current.value?.file
+  if (!f) return ''
+  if (/^[a-zA-Z]:[\\/]/.test(f) || f.startsWith('\\\\')) return f
+  const dir = state.detail?.dir || ''
+  return dir ? `${dir}\\${f}` : f
+})
 
 /** 按命中的规则分组，比一长串文件名好读 */
 const excludedByRule = computed(() => {
@@ -69,7 +89,7 @@ async function openPath(p) {
   <section class="card overflow-hidden min-w-0" v-reveal="{ delay: 0.04 }">
     <header class="px-5 pt-4 pb-3 flex items-center gap-3 flex-wrap">
       <h2 class="text-[13px] font-semibold tracking-tight m-0">Depot</h2>
-      <span class="text-[11.5px] text-faint num">{{ depots.length }}</span>
+      <span class="text-[11.5px] text-faint num">{{ sortedDepots.length }}</span>
       <button class="ml-auto btn h-7 px-2.5 text-[11.5px] no-drag" @click="openDepotSlide()">
         ＋ 新建 Depot
       </button>
@@ -77,12 +97,12 @@ async function openPath(p) {
 
     <!-- 平台卡片：只列已经建了 Depot 的平台，点一张切换一张 -->
     <div
-      v-if="depots.length"
+      v-if="sortedDepots.length"
       class="px-5 pb-4 grid gap-2"
       style="grid-template-columns: repeat(auto-fill, minmax(156px, 1fr))"
     >
       <button
-        v-for="d in depots"
+        v-for="d in sortedDepots"
         :key="d.id"
         class="text-left rounded-[10px] border px-3 py-2 transition-colors cursor-pointer min-w-0 bg-transparent"
         :class="
@@ -170,23 +190,25 @@ async function openPath(p) {
           </div>
         </div>
 
-        <div class="mt-2.5 flex flex-col gap-0.5">
-          <button
-            v-if="a?.contentRoot"
-            class="group flex items-center gap-2 text-left text-[11.5px] text-faint hover:text-accent transition-colors bg-transparent border-0 p-0 cursor-pointer min-w-0"
-            :title="a.contentRoot"
-            @click="openPath(a.contentRoot)"
-          >
+        <div class="mt-2.5 flex flex-col gap-1">
+          <div class="flex items-center gap-2 text-[11.5px] min-w-0">
             <span class="shrink-0 w-[52px] text-faint/70">内容目录</span>
-            <span class="font-mono truncate">{{ a.contentRoot }}</span>
-          </button>
-          <div class="flex items-center gap-2 text-[11.5px] text-faint min-w-0">
-            <span class="shrink-0 w-[52px] text-faint/70">脚本</span>
-            <span class="font-mono truncate" :title="current.file">{{ current.file }}</span>
+            <PathLink
+              v-if="a?.contentRoot"
+              :path="a.contentRoot"
+              kind="folder"
+              :exists="!!a.exists"
+              class="min-w-0 flex-1"
+            />
+            <span v-else class="text-faint">未设置</span>
           </div>
-          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-[11.5px] text-faint min-w-0">
+          <div class="flex items-center gap-2 text-[11.5px] min-w-0">
+            <span class="shrink-0 w-[52px] text-faint/70">脚本</span>
+            <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
+          </div>
+          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-[11.5px] min-w-0">
             <span class="shrink-0 w-[52px] text-faint/70">存档保护</span>
-            <span class="font-mono break-all">
+            <span class="font-mono break-all text-muted">
               {{ current.userConfig.join('、') }}
             </span>
           </div>

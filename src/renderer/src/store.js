@@ -2,6 +2,19 @@ import { reactive, computed } from 'vue'
 
 const api = window.api
 
+/* 构建输出控制台按 App 分开：每个 App 一份缓冲区，切走再切回来还在。
+   没有选中 App 时（「全部自检」）落在 '__all__' 这一份。 */
+const consoleBuckets = new Map()
+function consoleBucket() {
+  const key = state.selectedDir || '__all__'
+  let b = consoleBuckets.get(key)
+  if (!b) {
+    b = { logs: [], lastExit: null }
+    consoleBuckets.set(key, b)
+  }
+  return b
+}
+
 export const state = reactive({
   booted: false,
   bootError: null,
@@ -29,9 +42,20 @@ export const state = reactive({
   runId: null,
   runPreview: true,
   runLocal: false,
-  logs: [],
+  // 构建输出：转发到「当前 App」自己的那份缓冲区（见文件顶部 consoleBucket）
+  get logs() {
+    return consoleBucket().logs
+  },
+  set logs(v) {
+    consoleBucket().logs = v
+  },
   prompt: null,
-  lastExit: null,
+  get lastExit() {
+    return consoleBucket().lastExit
+  },
+  set lastExit(v) {
+    consoleBucket().lastExit = v
+  },
 
   // 构建需要密码但本地没有时，界面弹出输入行：{ preview: boolean }
   askPassword: null,
@@ -208,7 +232,6 @@ export async function openWizard() {
     name: '',
     appId: '',
     desc: '',
-    preview: true,
     picks,
     lookup: emptyLookup(),
     busy: false,
@@ -492,7 +515,6 @@ export async function submitWizard() {
       name: w.name.trim(),
       appId: w.appId.trim(),
       desc: w.desc.trim(),
-      preview: w.preview,
       // 项目文件夹：各平台构建的父目录。各 Depot 默认取它下面的平台子目录。
       // 用户自己改过某个平台的目录时，那个平台以用户填的为准（下面的 contentRoot）。
       projectDir: `${String(w.buildsRoot || '').replace(/[\\/]+$/, '')}\\${w.name.trim()}`,

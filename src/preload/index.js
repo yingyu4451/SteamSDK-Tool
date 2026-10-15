@@ -29,8 +29,7 @@ const api = {
   },
 
   vdf: {
-    setBranch: (dirName, branch) => ipcRenderer.invoke('vdf:setBranch', { dirName, branch }),
-    setPreview: (dirName, on) => ipcRenderer.invoke('vdf:setPreview', { dirName, on })
+    setBranch: (dirName, branch) => ipcRenderer.invoke('vdf:setBranch', { dirName, branch })
   },
 
   app: {

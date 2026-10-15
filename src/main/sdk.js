@@ -717,7 +717,7 @@ export function defaultProjectDir(name, settings) {
   return path.join(base, name)
 }
 
-/** 改 app vdf 的字段：appId / desc / contentRoot / buildOutput / preview / setLive */
+/** 改 app vdf 的字段：appId / desc / contentRoot / buildOutput / setLive / verbose / local */
 export function updateAppFields(appDirName, patch, settings) {
   const app = readApp(appDirName, settings)
   if (app.error) return { ok: false, error: app.error }
@@ -737,11 +737,6 @@ export function updateAppFields(appDirName, patch, settings) {
     const r = setField(text, key, patch[field] == null ? '' : String(patch[field]))
     text = r.text
     if (r.changed) changed.push(key)
-  }
-  if ('preview' in patch) {
-    const r = setField(text, 'preview', patch.preview ? '1' : '0')
-    text = r.text
-    if (r.changed) changed.push('preview')
   }
   if ('verbose' in patch) {
     const r = setField(text, 'verbose', patch.verbose ? '1' : '0')
@@ -1042,7 +1037,6 @@ export function createApp(spec, settings) {
         // 构建缓存按 App 分开：共用一个目录时，两个 App 的缓存会互相干扰，
         // 增量上传也会算错。Valve 模板的注释也提到缓存分开能更快。
         buildOutput: String(spec.buildOutput ?? '').trim() || path.join(p.outputDir, name),
-        preview: spec.preview !== false,
         setLive: spec.setLive || '',
         verbose: !!spec.verbose,
         depots
@@ -1182,10 +1176,6 @@ export function deleteApp(appDirName, { deleteContent = false } = {}, settings) 
 
 export function setAppBranch(appDirName, branch, settings) {
   return updateAppFields(appDirName, { setLive: branch || '' }, settings)
-}
-
-export function setAppPreview(appDirName, on, settings) {
-  return updateAppFields(appDirName, { preview: !!on }, settings)
 }
 
 /* ------------------------------------------------------------------ *

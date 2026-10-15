@@ -360,7 +360,6 @@ export function renderAppVdf({
   desc = '',
   contentRoot = '',
   buildOutput = '',
-  preview = false,
   setLive = '',
   verbose = false,
   local = '',
@@ -403,7 +402,9 @@ export function renderAppVdf({
 \t"AppID"\t\t\t${q(appId)}
 \t"Desc"\t\t\t${q(desc)}
 ${verboseLine}
-\t"preview"\t\t${q(preview ? '1' : '0')}
+\t// 空跑由界面上的「Preview 空跑」按钮决定（build.ps1 在临时副本里改成 1）。
+\t// 这一行永远是 0 —— 否则「正式上传」会静默地什么都不传。
+\t"preview"\t\t"0"
 
 ${contentRootBlock}
 \t// 构建缓存和日志。别删，删了下次要整包重算。

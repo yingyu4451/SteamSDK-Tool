@@ -14,6 +14,7 @@ import {
   setAppLocal,
   toast
 } from '../store.js'
+import PathLink from './PathLink.vue'
 
 /** 「各 Depot 按项目文件夹重排」的状态 */
 const syncingRoots = ref(false)
@@ -60,7 +61,7 @@ const depot = computed(() =>
 
 /* ---- 本地草稿 ---- */
 
-const appForm = ref({ appId: '', desc: '', contentRoot: '', buildOutput: '', preview: false, verbose: false, local: false, setLive: '' })
+const appForm = ref({ verbose: false, local: false })
 const depotForm = ref({ depotId: '', platform: 'win64', contentRoot: '', exclusions: [], userConfig: [] })
 const newRule = ref('')
 const newUserConfig = ref('')
@@ -79,16 +80,95 @@ function sync() {
     }
   } else {
     appForm.value = {
-      appId: detail.value.appId || '',
-      desc: detail.value.desc || '',
-      contentRoot: detail.value.contentRoot || '',
-      buildOutput: detail.value.buildOutput || '',
-      preview: detail.value.preview === '1',
       verbose: detail.value.verbose === '1',
-      local: !!detail.value.local,
-      setLive: detail.value.setLive || ''
+      local: !!detail.value.local
     }
     nameForm.value = detail.value.dirName || ''
+  }
+}
+
+/* ---- 一行一条：默认只读，点右边的按钮才进编辑态 ---- */
+
+const editing = ref(null)
+const editValue = ref('')
+
+/** App 的标量字段 */
+const appRows = computed(() => {
+  const d = detail.value
+  if (!d) return []
+  return [
+    { key: 'appId', label: 'AppID', value: d.appId || '', empty: '未设置', btn: '修改', mono: true, num: true },
+    { key: 'desc', label: '描述', value: d.desc || '', empty: '空', btn: '修改' },
+    {
+      key: 'contentRoot',
+      label: '项目文件夹',
+      value: d.contentRoot || '',
+      empty: '未设置',
+      btn: '修改',
+      mono: true,
+      pick: true
+    },
+    { key: 'buildOutput', label: 'BuildOutput', value: d.buildOutput || '', empty: '默认', btn: '修改', mono: true },
+    {
+      key: 'setLive',
+      label: 'SetLive',
+      value: d.setLive || '',
+      empty: '默认分支',
+      btn: '修改',
+      mono: true,
+      placeholder: 'qa / internal（留空 = 默认分支）'
+    }
+  ]
+})
+
+function startEdit(key, current) {
+  editing.value = key
+  editValue.value = current || ''
+  if (key === 'name') nameForm.value = current || ''
+}
+
+function cancelEdit() {
+  editing.value = null
+  editValue.value = ''
+  sync()
+}
+
+async function commitEdit(key) {
+  if (key === 'name') {
+    await doRename()
+    if (!nameDirty.value) editing.value = null
+    return
+  }
+  const v = editValue.value.trim()
+  if (key === 'appId' && !v) return toast('AppID 不能空', 'bad')
+  if (key === 'buildOutput' && !v) return toast('BuildOutput 不能空 —— 日志和构建缓存都放这儿', 'bad')
+  busy.value = true
+  try {
+    await saveApp({ [key]: v })
+    editing.value = null
+    sync()
+  } finally {
+    busy.value = false
+  }
+}
+
+async function toggleVerbose() {
+  busy.value = true
+  try {
+    await saveApp({ verbose: !appForm.value.verbose })
+    sync()
+  } finally {
+    busy.value = false
+  }
+}
+
+async function toggleLocal() {
+  busy.value = true
+  try {
+    await setAppLocal(!appForm.value.local)
+    sync()
+  } finally {
+    busy.value = false
   }
 }
 
@@ -108,11 +188,11 @@ watch(() => state.selectedDir, () => (state.drawer = null))
 /* ---- 操作 ---- */
 
 async function pickRoot() {
-  const current = isDepot.value ? depotForm.value.contentRoot : appForm.value.contentRoot
+  const current = isDepot.value ? depotForm.value.contentRoot : editValue.value
   const res = await window.api.settings.pickFolder(current)
   if (!res.ok) return
   if (isDepot.value) depotForm.value.contentRoot = res.path
-  else appForm.value.contentRoot = res.path
+  else editValue.value = res.path
 }
 
 /**
@@ -123,12 +203,10 @@ async function pickRoot() {
 async function syncDepotRoots() {
   const dir = detail.value?.dirName
   if (!dir) return
-  const base = appForm.value.contentRoot.trim()
+  const base = String(detail.value?.contentRoot || '').trim()
   if (!base) return toast('先把项目文件夹填上', 'bad')
   syncingRoots.value = true
   syncMsg.value = null
-  // 先把项目文件夹本身存下来，免得重排的是旧值
-  await saveApp({ contentRoot: base })
   const res = await window.api.app.syncDepotRoots(dir, base)
   syncingRoots.value = false
   if (!res?.ok) {
@@ -157,18 +235,8 @@ async function submit() {
         userConfig: depotForm.value.userConfig.map((s) => s.trim()).filter(Boolean)
       })
     } else {
-      const wasLocal = !!detail.value.local
-      await saveApp({
-        appId: appForm.value.appId.trim(),
-        desc: appForm.value.desc.trim(),
-        contentRoot: appForm.value.contentRoot.trim(),
-        buildOutput: appForm.value.buildOutput.trim(),
-        preview: appForm.value.preview,
-        verbose: appForm.value.verbose,
-        setLive: appForm.value.setLive.trim()
-      })
-      // Local 那一行要写内容服务器的地址，不是 true/false，所以单独走一次
-      if (appForm.value.local !== wasLocal) await setAppLocal(appForm.value.local)
+      // App 那边是一行一条、点了按钮就单独保存，这里只剩 verbose / Local 两个开关
+      await saveApp({ verbose: appForm.value.verbose })
     }
     sync()
   } finally {
@@ -267,117 +335,122 @@ onUnmounted(depotDisarm)
       <div class="flex-1 min-h-0 overflow-y-auto scroll-thin p-5 flex flex-col gap-4">
         <!-- ============ App ============ -->
         <template v-if="!isDepot">
-          <label class="flex flex-col gap-1.5">
-            <span class="text-[11.5px] text-muted">App 名字（scripts 下的文件夹名）</span>
-            <div class="flex gap-2">
-              <input
-                v-model="nameForm"
-                class="flex-1 h-9 px-3 rounded-[9px] bg-surface border text-[13px] outline-none focus:border-[rgba(46,230,197,.45)]"
-                :class="nameDirty ? 'border-[rgba(46,230,197,.4)]' : 'border-line'"
-                @keyup.enter="doRename"
-              />
-              <button class="btn no-drag" :disabled="!nameDirty || renaming" @click="doRename">
-                {{ renaming ? '改名中…' : '改名' }}
-              </button>
-            </div>
-            <span v-if="nameDirty" class="text-[11px] text-faint leading-relaxed">
-              会把 <span class="font-mono">scripts\{{ detail?.dirName }}</span> 整个文件夹改成
-              <span class="font-mono">scripts\{{ nameForm.trim() }}</span>，
-              脚本文件也会跟着重命名。内容目录<strong class="text-muted">不动</strong>（那里面是你的构建产物）。
-            </span>
-          </label>
-
-          <div class="grid grid-cols-2 gap-3">
-            <label class="flex flex-col gap-1.5">
-              <span class="text-[11.5px] text-muted">AppID</span>
-              <input
-                v-model="appForm.appId"
-                class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] num outline-none focus:border-[rgba(46,230,197,.45)]"
-              />
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="text-[11.5px] text-muted">SetLive 分支（留空 = 默认分支）</span>
-              <input
-                v-model="appForm.setLive"
-                placeholder="qa / internal / …"
-                class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
-              />
-            </label>
-          </div>
-
-          <label class="flex flex-col gap-1.5">
-            <span class="text-[11.5px] text-muted">描述（Desc）</span>
-            <input
-              v-model="appForm.desc"
-              class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(46,230,197,.45)]"
-            />
-          </label>
-
-          <label class="flex flex-col gap-1.5">
-            <span class="text-[11.5px] text-muted">项目文件夹</span>
-            <div class="flex gap-2">
-              <input
-                v-model="appForm.contentRoot"
-                class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(46,230,197,.45)]"
-              />
-              <button class="btn no-drag" @click="pickRoot">选择…</button>
-            </div>
-            <span class="text-[11px] text-faint">
-              这个 App 所有平台的构建都放在它下面。真正会上传的是各 Depot 的内容目录（下面这些）。
-            </span>
-            <div
-              v-if="detail?.depots?.length"
-              class="text-[11px] font-mono leading-relaxed text-faint pl-0.5"
-            >
-              <div
-                v-for="d in detail.depots"
-                :key="'pd' + d.id"
-                class="truncate"
-                :title="d.contentRoot || ''"
-              >
-                {{ d.platform || d.id }} → {{ d.contentRoot || '（未设置）' }}
+          <!-- 一行一条：平时只读，点右边的按钮才进编辑态 -->
+          <div class="card-flat divide-y divide-[#1a212b]">
+            <div class="px-3 py-2.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-[88px] shrink-0 text-[11.5px] text-faint">App 名字</span>
+                <template v-if="editing !== 'name'">
+                  <span class="min-w-0 flex-1 text-[12.5px] truncate">{{ detail?.dirName }}</span>
+                  <button
+                    class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0"
+                    @click="startEdit('name', detail?.dirName)"
+                  >
+                    改名
+                  </button>
+                </template>
+                <template v-else>
+                  <input
+                    v-model="nameForm"
+                    class="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(46,230,197,.45)]"
+                    @keyup.enter="doRename"
+                  />
+                  <button
+                    class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0"
+                    :disabled="!nameDirty || renaming"
+                    @click="doRename"
+                  >
+                    {{ renaming ? '改名中…' : '确定' }}
+                  </button>
+                  <button class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0" @click="cancelEdit">取消</button>
+                </template>
+              </div>
+              <div v-if="editing === 'name' && nameDirty" class="mt-1.5 pl-[96px] text-[11px] text-faint leading-relaxed">
+                会把 <span class="font-mono">scripts\{{ detail?.dirName }}</span> 整个文件夹改成
+                <span class="font-mono">scripts\{{ nameForm.trim() }}</span>，脚本文件跟着重命名。内容目录<strong class="text-muted">不动</strong>。
               </div>
             </div>
-            <button
-              v-if="detail?.depots?.length && appForm.contentRoot.trim()"
-              class="btn no-drag self-start mt-0.5"
-              :disabled="syncingRoots"
-              @click="syncDepotRoots"
-            >
-              {{ syncingRoots ? '重排中…' : '各 Depot 按项目文件夹重排' }}
-            </button>
-            <span v-if="syncMsg" class="text-[11px]" :class="syncMsg.ok ? 'text-accent/90' : 'text-danger'">
-              {{ syncMsg.text }}
-            </span>
-            <span class="text-[11px] text-faint">
-              重排 = 把每个 Depot 的内容目录写成 <span class="font-mono">项目文件夹\平台</span>（win64 / macos / linux …）。
-            </span>
-          </label>
 
-          <label class="flex flex-col gap-1.5">
-            <span class="text-[11.5px] text-muted">BuildOutput（日志与构建缓存）</span>
-            <input
-              v-model="appForm.buildOutput"
-              class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(46,230,197,.45)]"
-            />
-          </label>
+            <div v-for="row in appRows" :key="row.key" class="px-3 py-2.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-[88px] shrink-0 text-[11.5px] text-faint">{{ row.label }}</span>
+                <template v-if="editing !== row.key">
+                  <span
+                    class="min-w-0 flex-1 text-[12.5px] truncate"
+                    :class="[row.mono ? 'font-mono' : '', row.value ? 'text-ink' : 'text-faint']"
+                    :title="row.value || ''"
+                    >{{ row.value || row.empty }}</span
+                  >
+                  <button class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0" @click="startEdit(row.key, row.value)">
+                    {{ row.btn }}
+                  </button>
+                </template>
+                <template v-else>
+                  <input
+                    v-model="editValue"
+                    :placeholder="row.placeholder || ''"
+                    class="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(46,230,197,.45)] placeholder:text-faint"
+                    :class="[row.mono ? 'font-mono' : '', row.num ? 'num' : '']"
+                    @keyup.enter="commitEdit(row.key)"
+                  />
+                  <button v-if="row.pick" class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0" @click="pickRoot">
+                    选择…
+                  </button>
+                  <button
+                    class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0"
+                    :disabled="busy"
+                    @click="commitEdit(row.key)"
+                  >
+                    保存
+                  </button>
+                  <button class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0" @click="cancelEdit">取消</button>
+                </template>
+              </div>
 
-          <label class="flex items-center gap-2 text-[12px] text-muted cursor-pointer select-none">
-            <input type="checkbox" v-model="appForm.preview" class="accent-[#2ee6c5]" />
-            vdf 里 preview = 1（每次构建都只空跑，不会真上传）
-          </label>
+              <template v-if="row.key === 'contentRoot' && editing !== 'contentRoot'">
+                <div v-if="detail?.depots?.length" class="mt-2 pl-[96px] flex flex-col gap-1">
+                  <div v-for="d in detail.depots" :key="'pd' + d.id" class="flex items-center gap-2 min-w-0">
+                    <span class="w-[74px] shrink-0 text-[11px] text-faint">{{ d.platform || d.id }}</span>
+                    <PathLink :path="d.contentRoot" kind="folder" class="min-w-0 flex-1" />
+                  </div>
+                </div>
+                <button
+                  v-if="detail?.depots?.length && detail.contentRoot"
+                  class="btn h-7 px-2.5 text-[11.5px] no-drag mt-2 ml-[96px]"
+                  :disabled="syncingRoots"
+                  @click="syncDepotRoots"
+                >
+                  {{ syncingRoots ? '重排中…' : '各 Depot 按项目文件夹重排' }}
+                </button>
+                <div
+                  v-if="syncMsg"
+                  class="mt-1.5 pl-[96px] text-[11px]"
+                  :class="syncMsg.ok ? 'text-accent/90' : 'text-danger'"
+                >
+                  {{ syncMsg.text }}
+                </div>
+              </template>
+            </div>
 
-          <label class="flex items-center gap-2 text-[12px] text-muted cursor-pointer select-none">
-            <input type="checkbox" v-model="appForm.verbose" class="accent-[#2ee6c5]" />
-            vdf 里 verbose = 1（steamcmd 打印每个文件，日志会长很多）
-          </label>
+            <div class="px-3 py-2.5 flex items-center gap-2 min-w-0">
+              <span class="w-[88px] shrink-0 text-[11.5px] text-faint">verbose</span>
+              <span class="flex-1 min-w-0 text-[12.5px]" :class="appForm.verbose ? 'text-accent/90' : 'text-faint'">
+                {{ appForm.verbose ? '开 —— steamcmd 打印每个文件，日志会长很多' : '关' }}
+              </span>
+              <button class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0" :disabled="busy" @click="toggleVerbose">
+                {{ appForm.verbose ? '关掉' : '打开' }}
+              </button>
+            </div>
 
-          <label class="flex items-center gap-2 text-[12px] text-muted cursor-pointer select-none">
-            <input type="checkbox" v-model="appForm.local" class="accent-[#2ee6c5]" />
-            vdf 里 Local = 内容服务器（构建先传进本机，不上 Steam）
-          </label>
-          <div v-if="appForm.local" class="-mt-1 text-[11px] text-faint">
-            地址取「本地服务器」面板里那个；没跑就又开一次正式上传会失败。
+            <div class="px-3 py-2.5 flex items-center gap-2 min-w-0">
+              <span class="w-[88px] shrink-0 text-[11.5px] text-faint">Local</span>
+              <span class="flex-1 min-w-0 text-[12.5px]" :class="appForm.local ? 'text-accent/90' : 'text-faint'">
+                {{ appForm.local ? '开 —— 先传进本机内容服务器，不上 Steam' : '关' }}
+              </span>
+              <button class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0" :disabled="busy" @click="toggleLocal">
+                {{ appForm.local ? '关掉' : '打开' }}
+              </button>
+            </div>
           </div>
 
           <div class="pt-3 border-t border-line flex items-center gap-2 flex-wrap">
@@ -535,10 +608,13 @@ onUnmounted(depotDisarm)
 
       <footer class="px-5 py-4 border-t border-line flex items-center gap-2 shrink-0">
         <div class="flex-1" />
-        <button class="btn no-drag" @click="closeDrawer">取消</button>
-        <button class="btn btn-primary no-drag" :disabled="busy" @click="submit">
-          {{ busy ? '保存中…' : '保存' }}
-        </button>
+        <template v-if="isDepot">
+          <button class="btn no-drag" @click="closeDrawer">取消</button>
+          <button class="btn btn-primary no-drag" :disabled="busy" @click="submit">
+            {{ busy ? '保存中…' : '保存' }}
+          </button>
+        </template>
+        <button v-else class="btn no-drag" @click="closeDrawer">关闭</button>
       </footer>
     </aside>
   </div>

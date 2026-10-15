@@ -432,11 +432,6 @@ function goExisting() {
           />
         </label>
 
-        <label class="flex items-center gap-2 text-[12px] text-muted cursor-pointer select-none">
-          <input type="checkbox" v-model="w.preview" class="accent-[#2ee6c5]" />
-          先设成 preview（空跑）
-        </label>
-
         <!-- 预览：默认收起，勾几个平台都不会把弹窗撑长 -->
         <details class="card-flat px-3.5 py-2.5 group">
           <summary

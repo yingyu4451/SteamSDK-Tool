@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { state, openDrawer } from '../store.js'
+import PathLink from './PathLink.vue'
 
 const app = computed(() => state.detail)
 
@@ -17,11 +18,6 @@ const dup = computed(() => {
   if (!id) return null
   return state.duplicates?.find((d) => d.appId === id) || null
 })
-
-async function open(p) {
-  const r = await window.api.shell.openPath(p)
-  if (!r.ok) alert(r.error)
-}
 </script>
 
 <template>
@@ -43,37 +39,18 @@ async function open(p) {
           </span>
           <span class="text-line">|</span>
           <span class="num">{{ app.depots.length }} 个 Depot</span>
-          <span class="text-line">|</span>
-          <span class="num">
-            vdf preview =
-            <span :class="app.preview === '1' ? 'text-amber' : 'text-success'">
-              {{ app.preview === '1' ? '开（仅空跑）' : '关（会真上传）' }}
-            </span>
-          </span>
         </div>
 
-        <div class="mt-3 flex flex-col gap-1.5">
-          <button
-            class="group flex items-center gap-2 text-left text-[11.5px] text-faint hover:text-accent transition-colors bg-transparent border-0 p-0 cursor-pointer truncate"
-            :title="app.contentRoot"
-            @click="open(app.contentRoot)"
-          >
-            <span class="shrink-0 w-[52px] text-faint/70">内容根目录</span>
-            <span class="font-mono truncate">{{ app.contentRoot || '未设置' }}</span>
-            <svg viewBox="0 0 24 24" class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100" fill="none">
-              <path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
+        <div class="mt-3 flex flex-col gap-1.5 min-w-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="shrink-0 w-[52px] text-[11.5px] text-faint">内容根目录</span>
+            <PathLink :path="app.contentRoot" kind="folder" class="min-w-0" />
+          </div>
 
-          <button
-            class="group flex items-center gap-2 text-left text-[11.5px] text-faint hover:text-accent transition-colors bg-transparent border-0 p-0 cursor-pointer truncate"
-            :title="app.appPath"
-            @click="open(app.dir)"
-          >
-            <span class="shrink-0 w-[52px] text-faint/70">构建脚本</span>
-            <span class="font-mono truncate">{{ app.appFile }}</span>
-          </button>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="shrink-0 w-[52px] text-[11.5px] text-faint">构建脚本</span>
+            <PathLink :path="app.appPath" kind="file" class="min-w-0" />
+          </div>
         </div>
       </div>
     </div>
