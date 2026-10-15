@@ -1,0 +1,209 @@
+<script setup>
+import { ref, watch, nextTick, computed, onMounted } from 'vue'
+import gsap from 'gsap'
+import { state, clearLogs, cancelRun, answerPrompt } from '../store.js'
+import { fmtClock } from '../format.js'
+import { reducedMotion } from '../motion.js'
+
+const bodyEl = ref(null)
+const autoScroll = ref(true)
+const promptValue = ref('')
+const promptEl = ref(null)
+let animated = 0
+let startedAt = null
+let now = ref(Date.now())
+let ticker = null
+
+/* ---- 新行入场：只给「这次新增的」做动画，不重跑整屏 ---- */
+watch(
+  () => state.logs.length,
+  async () => {
+    await nextTick()
+    const el = bodyEl.value
+    if (!el) return
+    const kids = Array.from(el.children)
+    if (kids.length < animated) animated = 0 // 被清空过
+    const fresh = kids.slice(animated)
+    animated = kids.length
+    if (!fresh.length || reducedMotion()) return
+    gsap.fromTo(
+      fresh.slice(-30),
+      { opacity: 0, x: -8 },
+      { opacity: 1, x: 0, duration: 0.22, ease: 'power2.out', stagger: 0.012, clearProps: 'transform' }
+    )
+    if (autoScroll.value) el.scrollTop = el.scrollHeight
+  }
+)
+
+watch(
+  () => state.running,
+  (r) => {
+    if (r) {
+      startedAt = Date.now()
+      clearInterval(ticker)
+      ticker = setInterval(() => (now.value = Date.now()), 500)
+    } else {
+      clearInterval(ticker)
+      ticker = null
+    }
+  }
+)
+
+onMounted(() => {
+  const el = bodyEl.value
+  if (el) el.scrollTop = el.scrollHeight
+})
+
+function onScroll() {
+  const el = bodyEl.value
+  if (!el) return
+  autoScroll.value = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+}
+
+function clear() {
+  clearLogs()
+  animated = 0
+}
+
+async function copyAll() {
+  const text = state.logs.map((l) => `[${fmtClock(l.t)}] ${l.line}`).join('\n')
+  await navigator.clipboard.writeText(text)
+}
+
+async function submitPrompt() {
+  const v = promptValue.value
+  if (!v) return
+  promptValue.value = ''
+  await answerPrompt(v)
+}
+
+/** 上传成功后一键跳到 Steamworks 的构建页，省得自己找 */
+function openBuildsPage() {
+  const id = state.uploaded?.appId || state.detail?.appId
+  if (id) window.api.shell.openExternal(`https://partner.steamgames.com/apps/builds/${id}`)
+}
+
+watch(
+  () => state.prompt,
+  async (p) => {
+    if (p) {
+      await nextTick()
+      promptEl.value?.focus()
+    }
+  }
+)
+
+const elapsed = computed(() => {
+  if (!startedAt) return ''
+  const s = Math.floor(((state.running ? now.value : startedAt) - startedAt) / 1000)
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+})
+
+const exitTone = computed(() => {
+  if (!state.lastExit) return null
+  return state.lastExit.code === 0 ? 'ok' : 'bad'
+})
+</script>
+
+<template>
+  <section class="card overflow-hidden flex flex-col min-h-0 min-w-0" v-reveal="{ delay: 0.08 }">
+    <div v-if="state.running" class="scanline" />
+
+    <header class="px-5 py-3 flex items-center gap-2.5 border-b border-line shrink-0">
+      <h2 class="text-[13px] font-semibold tracking-tight m-0">构建输出</h2>
+
+      <span v-if="state.running" class="pill pill-warn">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber animate-pulse" />
+        {{ state.runKind === 'check' ? '自检中' : '上传中' }} · {{ elapsed }}
+      </span>
+      <span v-else-if="state.lastExit" class="pill" :class="exitTone === 'ok' ? 'pill-ok' : 'pill-bad'">
+        退出码 {{ state.lastExit.code }}
+      </span>
+      <span v-else class="text-[11.5px] text-faint">还没有运行过</span>
+
+      <span class="ml-auto num text-[11px] text-faint">{{ state.logs.length }} 行</span>
+
+      <label class="flex items-center gap-1.5 text-[11.5px] text-faint cursor-pointer select-none">
+        <input type="checkbox" v-model="autoScroll" class="accent-[#2ee6c5]" />
+        自动滚动
+      </label>
+
+      <button class="btn h-7 px-2.5 text-[11.5px] no-drag" :disabled="!state.logs.length" @click="copyAll">
+        复制
+      </button>
+      <button class="btn h-7 px-2.5 text-[11.5px] no-drag" :disabled="!state.logs.length" @click="clear">
+        清空
+      </button>
+      <button v-if="state.running" class="btn btn-danger h-7 px-2.5 text-[11.5px] no-drag" @click="cancelRun">
+        中止
+      </button>
+    </header>
+
+    <!-- 需要用户输入（密码 / Steam Guard） -->
+    <Transition
+      enter-active-class="transition duration-200"
+      enter-from-class="opacity-0 -translate-y-2"
+      leave-active-class="transition duration-150"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="state.prompt"
+        class="px-5 py-2.5 border-b border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)] flex items-center gap-3 shrink-0"
+      >
+        <svg viewBox="0 0 24 24" class="w-4 h-4 text-amber shrink-0" fill="none">
+          <path d="M12 9v4m0 4h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"
+            stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span class="text-[12.5px] text-amber">{{ state.prompt.hint }}</span>
+        <input
+          ref="promptEl"
+          v-model="promptValue"
+          :type="state.prompt.kind === 'password' ? 'password' : 'text'"
+          class="flex-1 max-w-[320px] h-8 px-3 rounded-lg bg-surface border border-line text-[13px] outline-none focus:border-[rgba(255,180,84,.5)]"
+          placeholder="输入后回车"
+          @keydown.enter="submitPrompt"
+        />
+        <button class="btn h-8 no-drag" @click="submitPrompt">提交</button>
+      </div>
+    </Transition>
+
+    <!-- 上传成功后：还差「设为 live」这一步 -->
+    <Transition
+      enter-active-class="transition duration-200"
+      enter-from-class="opacity-0 -translate-y-2"
+      leave-active-class="transition duration-150"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="state.uploaded"
+        class="px-5 py-2.5 border-b border-[rgba(74,222,128,.24)] bg-[rgba(74,222,128,.06)] flex items-center gap-3 shrink-0"
+      >
+        <svg viewBox="0 0 24 24" class="w-4 h-4 text-success shrink-0" fill="none">
+          <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span class="text-[12.5px] text-success">
+          上传成功。还差一步：去 Steamworks 把这次构建设为 live（分支由 SetLive 决定）。
+        </span>
+        <div class="flex-1" />
+        <button class="btn h-8 no-drag" @click="openBuildsPage">打开构建页</button>
+        <button class="btn h-8 no-drag" @click="state.uploaded = null">知道了</button>
+      </div>
+    </Transition>
+
+    <div
+      ref="bodyEl"
+      class="flex-1 min-h-[220px] max-h-[420px] overflow-y-auto scroll-thin px-5 py-3 bg-[#080b10]"
+      @scroll="onScroll"
+    >
+      <div v-for="(l, i) in state.logs" :key="i" class="log-line">
+        <span class="log-ts">{{ fmtClock(l.t) }}</span>
+        <span :class="`log-${l.stream}`">{{ l.line }}</span>
+      </div>
+
+      <div v-if="!state.logs.length" class="text-[12px] text-faint py-6 text-center leading-relaxed">
+        点「自检」验证 vdf 与排除规则，或点「Preview 空跑」走一遍完整构建流程。<br />
+        Preview 不会向 Steam 上传任何东西。
+      </div>
+    </div>
+  </section>
+</template>

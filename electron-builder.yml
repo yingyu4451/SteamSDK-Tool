@@ -1,0 +1,37 @@
+appId: com.yingyu.steamsdktool
+# 产品名用 ASCII：它会参与安装路径和 exe 文件名，中文容易在某些环境出问题。
+# 真正给用户看的名字走窗口标题和 nsis.shortcutName（中文）。
+productName: SteamSDK Tool
+copyright: Copyright © 2026 YingYu
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+
+# 不需要打进包里的调试脚本
+extraMetadata:
+  main: out/main/index.js
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: ${productName}-${version}-setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SteamSDK 上传工作台
+  uninstallDisplayName: SteamSDK 上传工作台
+  deleteAppDataOnUninstall: false

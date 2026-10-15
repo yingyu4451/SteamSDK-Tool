@@ -1,0 +1,14 @@
+node_modules/
+out/
+release/
+build/output/
+*.log
+dist-build.log
+*.local
+
+# 开发期的临时脚本与截图（docs-screenshot.png 例外，README 里用它）
+scripts/_*
+shot-*.png
+
+.DS_Store
+Thumbs.db

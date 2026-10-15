@@ -1,0 +1,280 @@
+@import 'tailwindcss';
+
+/* ==================================================================
+   主题：深石墨底 + 薄荷青信号色。刻意避开 Steam 官方蓝和常见的
+   紫蓝渐变，走「机房里的一块仪表盘」的调子。
+   ================================================================== */
+@theme {
+  --color-base: #0a0c10;
+  --color-surface: #12161d;
+  --color-surface-2: #181e27;
+  --color-surface-3: #1f2733;
+  --color-line: #232b36;
+  --color-line-soft: #1a212b;
+
+  --color-ink: #e8eef6;
+  --color-muted: #78889c;
+  --color-faint: #4d5b6e;
+
+  --color-accent: #2ee6c5;
+  --color-accent-dim: #1b9e88;
+  --color-amber: #ffb454;
+  --color-danger: #ff5c6c;
+  --color-success: #4ade80;
+
+  --font-mono:
+    'JetBrains Mono', 'Cascadia Mono', 'SF Mono', ui-monospace, 'Consolas', monospace;
+
+  --radius-card: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-base);
+  color: var(--color-ink);
+  font-family:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei',
+    sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* 背景：一层极淡的网格 + 顶部辉光，给纯黑底一点纵深 */
+#app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 500px at 12% -10%, rgba(46, 230, 197, 0.07), transparent 65%),
+    radial-gradient(700px 420px at 95% 0%, rgba(255, 180, 84, 0.045), transparent 60%),
+    linear-gradient(var(--color-line-soft) 1px, transparent 1px) 0 0 / 100% 44px,
+    linear-gradient(90deg, var(--color-line-soft) 1px, transparent 1px) 0 0 / 44px 100%;
+  opacity: 0.5;
+  z-index: 0;
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+/* ---------- 标题栏拖拽 ---------- */
+.drag {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  position: relative;
+  background: linear-gradient(180deg, var(--color-surface-2), var(--color-surface));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.card-flat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+}
+
+/* ---------- 按钮 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.08s ease;
+}
+.btn:hover:not(:disabled) {
+  background: var(--color-surface-3);
+  border-color: #2e3948;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #2ee6c5, #1fbfa4);
+  border-color: #24cdb0;
+  color: #04231e;
+  font-weight: 650;
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #45f0d2, #24cdb0);
+  border-color: #45f0d2;
+}
+
+.btn-danger {
+  border-color: #4a2229;
+  color: #ff8d97;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #2a161b;
+  border-color: #6d2f39;
+}
+
+/* 「上膛」状态：实心红，跟未上膛的空心红明确区分 */
+.btn-danger-solid {
+  background: linear-gradient(180deg, #ff5c6c, #e03a4c);
+  border-color: #ff5c6c;
+  color: #2a0006;
+  font-weight: 650;
+}
+.btn-danger-solid:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ff7180, #e8505f);
+  border-color: #ff7180;
+}
+
+.btn-lg {
+  height: 44px;
+  padding: 0 20px;
+  font-size: 14px;
+  border-radius: 11px;
+}
+
+/* ---------- 徽标 / 药丸 ---------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+.pill-ok {
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--color-success);
+  border-color: rgba(74, 222, 128, 0.24);
+}
+.pill-warn {
+  background: rgba(255, 180, 84, 0.1);
+  color: var(--color-amber);
+  border-color: rgba(255, 180, 84, 0.26);
+}
+.pill-bad {
+  background: rgba(255, 92, 108, 0.1);
+  color: var(--color-danger);
+  border-color: rgba(255, 92, 108, 0.26);
+}
+.pill-idle {
+  background: rgba(120, 136, 156, 0.1);
+  color: var(--color-muted);
+  border-color: rgba(120, 136, 156, 0.22);
+}
+
+/* ---------- 日志 ---------- */
+.log-line {
+  display: flex;
+  gap: 10px;
+  padding: 1px 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.log-ts {
+  color: var(--color-faint);
+  flex: 0 0 auto;
+}
+.log-stdout {
+  color: #b9c7d8;
+}
+.log-stderr {
+  color: #ff8d97;
+}
+.log-system {
+  color: var(--color-accent);
+}
+
+/* ---------- 滚动条 ---------- */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #2b3543 transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #2b3543;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: #3a4757;
+  background-clip: content-box;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- 数字 ---------- */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* 构建中：顶部一条流动的进度光带 */
+.scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  overflow: hidden;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+}
+.scanline::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  animation: sweep 1.5s linear infinite;
+}
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
