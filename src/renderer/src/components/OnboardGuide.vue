@@ -1,7 +1,7 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
+import { computed, onMounted, ref, nextTick } from 'vue'
 import gsap from 'gsap'
-import { Download, RefreshCw, Check, LoaderCircle } from '@lucide/vue'
+import { Download, RefreshCw, Check, LoaderCircle, TriangleAlert } from '@lucide/vue'
 import {
   state,
   onboardGo,
@@ -25,7 +25,9 @@ const mode = computed(() => onboardMode())
 
 const same = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase()
 
-/* ---- 登录检测：进第三步查一次，之后每 2.5 秒查一次，点「完成」再查一次 ---- */
+/* ---- 登录检测：只在点「完成」的时候查一次 ----
+ * 第三步刚开始不查、也不轮询。一进来就问，状态栏会先写成「还没检测到登录凭据」——
+ * 用户什么都还没做就先吃一个否定结论，而且那个结论还可能马上就过期。 */
 
 const lg = computed(() => state.login)
 
@@ -41,35 +43,8 @@ const loginText = computed(() => {
   return '还没检测到登录凭据'
 })
 
-/** 点了一次「完成」但还没登录 —— 再点一次就跳过 */
-const finishBlocked = ref(false)
-
-let poll = null
-function startPolling() {
-  stopPolling()
-  checkLogin()
-  poll = setInterval(checkLogin, 2500)
-}
-function stopPolling() {
-  if (poll) {
-    clearInterval(poll)
-    poll = null
-  }
-}
-
-watch(
-  () => [o.value.open, o.value.step],
-  ([open, step]) => (open && step === 2 ? startPolling() : stopPolling()),
-  { immediate: true }
-)
-// 一旦检测到登录成功，之前那次「再点一次」的拦截就作废
-watch(
-  () => lg.value?.ready,
-  (v) => {
-    if (v) finishBlocked.value = false
-  }
-)
-onUnmounted(stopPolling)
+/** 点过一次「完成」之后才显示状态行 —— 没查过就别替用户下结论 */
+const loginChecked = ref(false)
 
 /** 手动一改，选中的来源就从「自动」变成「手动」，界面上的标记要立刻跟着走 */
 function onManualInput(e) {
@@ -100,12 +75,10 @@ async function next() {
   }
   if (step === 2) {
     await onboardSaveAccount()
-    // 点「完成」时再确认一次 —— 用户可能刚在控制台里登录完
+    // 唯一一次登录检验：过了就关窗，没过就留在这儿，让用户去开登录窗口
     const l = await checkLogin()
-    if (!l?.ready && !finishBlocked.value) {
-      finishBlocked.value = true
-      return
-    }
+    loginChecked.value = true
+    if (!l?.ready) return
     await finishOnboard()
     return
   }
@@ -328,33 +301,35 @@ function skip() {
             不进命令行参数、不写进任何日志。不存也行，每次构建会问你要。
           </p>
 
-          <!-- 登录成功与否由主进程读 steamcmd 的 config.vdf 判断，
-               不用用户自己回来打勾 —— 状态变了这里自己就绿 -->
+          <!-- 状态行只在点过「完成」之后出现 —— 没查过就不替用户下结论。
+               登录与否由主进程读 steamcmd 的 config.vdf 判断，不用用户自己打勾 -->
           <div
+            v-if="loginChecked"
             class="mt-3.5 rounded-md border px-3 py-2.5 flex items-start gap-2"
             :class="
               lg?.ready
                 ? 'border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)]'
-                : 'border-line bg-[rgba(9,15,23,.5)]'
+                : 'border-[rgba(240,169,46,.28)] bg-[rgba(240,169,46,.06)]'
             "
           >
             <component
-              :is="lg?.ready ? Check : LoaderCircle"
+              :is="lg?.ready ? Check : TriangleAlert"
               :size="14"
               class="shrink-0 mt-0.5"
-              :class="lg?.ready ? 'text-success' : 'text-faint drop-spin-slow'"
+              :class="lg?.ready ? 'text-success' : 'text-warn'"
             />
-            <span class="text-[11.5px] leading-relaxed" :class="lg?.ready ? 'text-success' : 'text-muted'">
+            <span class="text-[11.5px] leading-relaxed" :class="lg?.ready ? 'text-success' : 'text-warn'">
               {{ loginText }}
             </span>
           </div>
 
           <div
-            v-if="finishBlocked"
+            v-if="loginChecked && !lg?.ready"
             class="mt-3 rounded-md border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3 py-2 text-[11.5px] text-warn leading-relaxed"
           >
-            还没检测到登录凭据。不填也能用 —— 只是每次构建会弹框问你要密码。
-            <strong class="text-ink">再点一次「完成」就跳过这一步。</strong>
+            这次没检测到登录凭据，所以先不关窗。
+            在控制台窗口里登录成功后<strong class="text-ink">再点一次「完成」</strong>；
+            不想现在登录就点<strong class="text-ink">「跳过」</strong> —— 不填也能用，只是每次构建会弹框问你要密码。
           </div>
         </template>
 
@@ -376,6 +351,7 @@ function skip() {
           我自己去设置里配
         </button>
         <div class="flex-1" />
+        <button v-if="o.step === 2" class="btn" @click="skip">跳过</button>
         <button class="btn btn-primary" :disabled="o.busy" @click="next">
           {{ o.step === 2 ? '完成' : '下一步' }}
         </button>
