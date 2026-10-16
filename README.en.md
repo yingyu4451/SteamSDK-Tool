@@ -156,7 +156,11 @@ The alternative — parse to objects and re-serialise — wipes them all out. Th
 
 ### There's a manual inside the app
 
-The sidebar's **使用手册** entry is built in and works offline: core concepts, the five steps of first-time setup, what each toolbar button actually checks, and where to look when something fails. It has a search box that filters sections. This README is more complete; the manual links here at the bottom.
+The sidebar's **使用手册** entry is built in and works offline: what each toolbar button actually checks, the three core concepts, what not to ship, and how branches work. It has a search box that filters sections.
+
+![Manual](docs/manual.png)
+
+For first-time setup, click **新手教程** in the manual header to walk through it again (find the SDK → enter your account).
 
 ### Spaces in app names
 

@@ -223,12 +223,10 @@ function createWindow() {
     // 能让开发模式（跑的是 electron.exe）也显示自己的图标，而不是 Electron 的默认原子。
     icon: appIconPath(),
     autoHideMenuBar: true,
+    // 不用 titleBarOverlay：那是系统画的按钮，样式跟着 Windows 走，
+    // 跟我们的顶栏对不齐，hover 也改不了。自己画三个按钮（见 TitleBar.vue）。
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#171a21',
-      symbolColor: '#8ea3bd',
-      height: 44
-    },
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -238,6 +236,14 @@ function createWindow() {
   })
 
   mainWindow.on('ready-to-show', () => mainWindow.show())
+
+  // 最大化状态变了要告诉界面，按钮图标得跟着换
+  const tellMaximized = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    mainWindow.webContents.send('win:maximized', mainWindow.isMaximized())
+  }
+  mainWindow.on('maximize', tellMaximized)
+  mainWindow.on('unmaximize', tellMaximized)
 
   const persistBounds = () => {
     if (!mainWindow || mainWindow.isDestroyed()) return
@@ -795,6 +801,23 @@ function registerIpc() {
   ipcMain.handle('run:cancel', (_e, runId) => killRun(runId))
   ipcMain.handle('run:input', (_e, { runId, text }) => sendInput(runId, text))
   ipcMain.handle('run:list', () => listRuns())
+
+  /* ---- 窗口按钮（自己画的，不是系统那三个） ---- */
+  ipcMain.handle('win:minimize', () => {
+    mainWindow?.minimize()
+    return { ok: true }
+  })
+  ipcMain.handle('win:maximize', () => {
+    if (!mainWindow) return { ok: false }
+    if (mainWindow.isMaximized()) mainWindow.unmaximize()
+    else mainWindow.maximize()
+    return { ok: true, maximized: mainWindow.isMaximized() }
+  })
+  ipcMain.handle('win:close', () => {
+    mainWindow?.close()
+    return { ok: true }
+  })
+  ipcMain.handle('win:state', () => ({ ok: true, maximized: !!mainWindow?.isMaximized() }))
 
   /* ---- 系统 ---- */
   ipcMain.handle('shell:openPath', async (_e, target) => {

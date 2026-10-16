@@ -11,7 +11,6 @@ import {
   openDeleteDialog,
   renameApp,
   rescan,
-  setAppLocal,
   toast
 } from '../store.js'
 import PathLink from './PathLink.vue'
@@ -62,7 +61,6 @@ const depot = computed(() =>
 
 /* ---- 本地草稿 ---- */
 
-const appForm = ref({ verbose: false, local: false })
 const depotForm = ref({ depotId: '', platform: 'win64', contentRoot: '', exclusions: [], userConfig: [] })
 const newRule = ref('')
 const newUserConfig = ref('')
@@ -80,10 +78,6 @@ function sync() {
       userConfig: [...(depot.value.userConfig || [])]
     }
   } else {
-    appForm.value = {
-      verbose: detail.value.verbose === '1',
-      local: !!detail.value.local
-    }
     nameForm.value = detail.value.dirName || ''
   }
 }
@@ -153,26 +147,6 @@ async function commitEdit(key) {
   }
 }
 
-async function toggleVerbose() {
-  busy.value = true
-  try {
-    await saveApp({ verbose: !appForm.value.verbose })
-    sync()
-  } finally {
-    busy.value = false
-  }
-}
-
-async function toggleLocal() {
-  busy.value = true
-  try {
-    await setAppLocal(!appForm.value.local)
-    sync()
-  } finally {
-    busy.value = false
-  }
-}
-
 onMounted(async () => {
   const d = await window.api.app.defaults({ platform: 'win64' })
   platforms.value = d.platforms
@@ -236,8 +210,7 @@ async function submit() {
         userConfig: depotForm.value.userConfig.map((s) => s.trim()).filter(Boolean)
       })
     } else {
-      // App 那边是一行一条、点了按钮就单独保存，这里只剩 verbose / Local 两个开关
-      await saveApp({ verbose: appForm.value.verbose })
+      // App 那边是一行一条、点了按钮就单独保存，这里没有需要一起提交的东西
     }
     sync()
   } finally {
@@ -429,26 +402,6 @@ onUnmounted(depotDisarm)
                   {{ syncMsg.text }}
                 </div>
               </template>
-            </div>
-
-            <div class="px-3 py-2.5 flex items-center gap-2 min-w-0">
-              <span class="w-[88px] shrink-0 text-[11.5px] text-faint">verbose</span>
-              <span class="flex-1 min-w-0 text-[12.5px]" :class="appForm.verbose ? 'text-accent/90' : 'text-faint'">
-                {{ appForm.verbose ? '开 —— steamcmd 打印每个文件，日志会长很多' : '关' }}
-              </span>
-              <button class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0" :disabled="busy" @click="toggleVerbose">
-                {{ appForm.verbose ? '关掉' : '打开' }}
-              </button>
-            </div>
-
-            <div class="px-3 py-2.5 flex items-center gap-2 min-w-0">
-              <span class="w-[88px] shrink-0 text-[11.5px] text-faint">Local</span>
-              <span class="flex-1 min-w-0 text-[12.5px]" :class="appForm.local ? 'text-accent/90' : 'text-faint'">
-                {{ appForm.local ? '开 —— 先传进本机内容服务器，不上 Steam' : '关' }}
-              </span>
-              <button class="btn h-7 px-2.5 text-[11.5px] no-drag shrink-0" :disabled="busy" @click="toggleLocal">
-                {{ appForm.local ? '关掉' : '打开' }}
-              </button>
             </div>
           </div>
 

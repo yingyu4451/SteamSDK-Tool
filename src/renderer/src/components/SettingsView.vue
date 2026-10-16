@@ -96,16 +96,22 @@ async function pick() {
 async function savePaths() {
   saving.value = true
   try {
-    const sdk = sdkDraft.value.trim()
-    const acct = accountDraft.value.trim()
-    // 账号留空时不要覆盖已有的值：半初始化的输入框一旦保存，
-    // 会把账号写坏，后面所有构建都会登录失败。
-    const patch = { sdkRoot: sdk }
-    if (acct) patch.account = acct
-    await window.api.settings.save(patch)
+    await window.api.settings.save({ sdkRoot: sdkDraft.value.trim() })
     await reloadSettings()
     await rescan()
-    flash(acct ? '已保存，路径检查已刷新' : '已保存路径（账号为空，保留原值）')
+    flash('路径已保存，检查已刷新')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function saveAccount() {
+  const acct = accountDraft.value.trim()
+  saving.value = true
+  try {
+    await window.api.settings.save({ account: acct })
+    await reloadSettings()
+    flash(acct ? '账号已保存' : '账号已清空')
   } finally {
     saving.value = false
   }
@@ -177,6 +183,7 @@ function openExternal(url) {
               placeholder="D:\SteamSDK"
             />
             <button class="btn no-drag" @click="pick">选择…</button>
+            <button class="btn btn-primary no-drag" :disabled="saving" @click="savePaths">保存</button>
           </div>
 
           <div class="mt-2 flex items-center gap-2 flex-wrap">
@@ -190,15 +197,6 @@ function openExternal(url) {
             <span v-if="!state.sdk?.sdkRootExists" class="text-[11px] text-amber">
               还没装 SDK —— 下完解压到任意目录，再把上面的路径指过去
             </span>
-          </div>
-
-          <div class="mt-3.5 flex gap-2">
-            <input
-              v-model="accountDraft"
-              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
-              placeholder="Steam 构建账号"
-            />
-            <button class="btn btn-primary no-drag" :disabled="saving" @click="savePaths">保存</button>
           </div>
 
           <div class="mt-4 grid grid-cols-1 gap-1.5">
@@ -221,6 +219,16 @@ function openExternal(url) {
           </div>
 
           <div class="mt-3.5 flex gap-2">
+            <input
+              v-model="accountDraft"
+              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+              placeholder="Steam 构建账号名"
+              @keydown.enter="saveAccount"
+            />
+            <button class="btn btn-primary no-drag" :disabled="saving" @click="saveAccount">保存</button>
+          </div>
+
+          <div class="mt-2.5 flex gap-2">
             <input
               v-model="passwordDraft"
               type="password"

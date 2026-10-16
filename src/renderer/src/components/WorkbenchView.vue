@@ -143,7 +143,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
 
       <!-- 左边 Depot（下面挂分支），右边构建输出。
            两列都 stretch：构建输出的底边就跟分支那块的底边齐平，不再各高各的。 -->
-      <div class="grid grid-cols-[1.2fr_1fr] gap-4 min-w-0">
+      <div class="grid grid-cols-2 gap-4 min-w-0">
         <div class="flex flex-col gap-4 min-w-0">
           <DepotMatrix :depots="detail.depots || []" />
           <BranchPanel />

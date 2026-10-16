@@ -171,9 +171,8 @@ function healthTitle(app) {
         </div>
       </button>
 
-      <div v-if="!state.apps.length && !state.scanning" class="text-[12px] text-faint px-1 py-3">
-        还没有 App。
-        <button class="btn h-7 px-2.5 text-[11.5px] mt-2.5 w-full" @click="openWizard">
+      <div v-if="!state.apps.length && !state.scanning" class="px-1 py-3">
+        <button class="btn h-7 px-2.5 text-[11.5px] w-full" @click="openWizard">
           ＋ 新建 App
         </button>
       </div>

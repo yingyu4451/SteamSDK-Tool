@@ -16,11 +16,12 @@ import {
   wizardLookup,
   wizardToggleSteamDepot,
   wizardApplyAllSteam,
+  wizardClearLookup,
   goSettings,
   selectedPicks,
   publicName
 } from '../store.js'
-import { ExternalLink, GripVertical, ListFilter, SlidersHorizontal, X } from '@lucide/vue'
+import { ExternalLink, GripVertical, ListFilter, X } from '@lucide/vue'
 
 const el = ref(null)
 const nameInput = ref(null)
@@ -185,12 +186,6 @@ const TABS = [
   { id: 'will', label: '会创建' }
 ]
 const descTab = ref('desc')
-
-/** 设置入口：AppID 和 Depot 读取都依赖设置里的账号/密钥 */
-function openSettings() {
-  closeWizard()
-  goSettings()
-}
 </script>
 
 <template>
@@ -255,16 +250,6 @@ function openSettings() {
                 {{ a.appId }} · {{ a.name }}
               </option>
             </select>
-            <button class="btn h-9 px-2.5 no-drag" title="在 Steamworks 后台打开" @click="openPartner">
-              <ExternalLink :size="14" :stroke-width="2" />
-            </button>
-            <button
-              class="btn h-9 px-2.5 no-drag"
-              title="设置（账号 / Web API 密钥）"
-              @click="openSettings"
-            >
-              <SlidersHorizontal :size="16" :stroke-width="1.8" />
-            </button>
           </div>
           <span v-if="resolvedName === '查询中…'" class="text-[11px] text-faint">查询中…</span>
           <span v-else-if="resolvedName" class="text-[11.5px] text-accent">{{ resolvedName }}</span>
@@ -287,6 +272,14 @@ function openSettings() {
             <button class="btn h-8 px-3 text-[11.5px]" :disabled="!appIdOk || lk?.busy" @click="doLookup">
               <ListFilter :size="14" :stroke-width="1.8" class="mr-1.5" />
               {{ lk?.busy ? '读取中…' : '读取后台 Depot' }}
+            </button>
+            <button
+              class="btn h-8 px-3 text-[11.5px]"
+              title="在 Steamworks 后台打开这个 App"
+              @click="openPartner"
+            >
+              <ExternalLink :size="14" :stroke-width="2" class="mr-1.5" />
+              {{ appIdOk ? '打开后台 App 页' : '打开后台 App 列表' }}
             </button>
             <button v-if="anyUnowned" class="btn h-8 px-3 text-[11.5px]" @click="wizardApplyAllSteam">
               全部勾上
@@ -323,6 +316,13 @@ function openSettings() {
               <span class="text-[11px] font-semibold tracking-wider text-faint uppercase">后台 Depot</span>
               <span v-if="lk.appName" class="text-[12px] text-ink">{{ lk.appName }}</span>
               <span v-if="!lk.appIdKnown" class="pill pill-warn">不在密钥权限内</span>
+              <button
+                class="ml-auto btn h-6 px-2 text-[11px] shrink-0"
+                title="收起这块结果"
+                @click="wizardClearLookup"
+              >
+                关闭
+              </button>
             </div>
 
             <div v-if="!lk.depots.length" class="text-[11.5px] text-faint">后台这个 App 下还没有任何 Depot。</div>

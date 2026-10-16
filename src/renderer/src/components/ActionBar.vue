@@ -22,13 +22,12 @@ import {
   startLocalServer,
   stopLocalServer,
   openLocalServer,
-  enableLocalDevCfg,
   setAppLocal,
   runLocalSetup,
   resetLocalFlow
 } from '../store.js'
 import { fmtSize } from '../format.js'
-import { Check, Eye, LoaderCircle, Lock, ShieldCheck, Upload, X } from '@lucide/vue'
+import { Check, Eye, FolderOpen, LoaderCircle, Lock, ShieldCheck, SquareArrowOutUpRight, Upload, X } from '@lucide/vue'
 
 const confirming = ref(false)
 const pwDraft = ref('')
@@ -216,13 +215,12 @@ const localHost = computed(() => {
     </Transition>
 
     <div class="flex-1" />
-
     <div class="flex items-center gap-1.5">
       <button class="btn no-drag" :disabled="!state.sdk?.contentBuilder" @click="openPath(state.sdk.contentBuilder)">
-        构建目录
+        <FolderOpen :size="14" class="mr-1.5" /> 构建目录
       </button>
       <button class="btn no-drag" :disabled="!appId" @click="openExternal(partner('builds'))">
-        Steamworks
+        <SquareArrowOutUpRight :size="14" class="mr-1.5" /> Steamworks
       </button>
       <button
         class="btn no-drag"
@@ -303,7 +301,8 @@ const localHost = computed(() => {
         <template v-if="state.verify.error">
           <div class="flex items-center gap-2 text-[12px] text-amber flex-wrap">
             <span class="font-semibold">同步失败</span>
-            <span class="text-muted">{{ state.verify.error }}</span>
+            <span class="text-muted min-w-0 flex-1">{{ state.verify.error }}</span>
+            <button class="ml-auto btn h-6 px-2 text-[11px] no-drag shrink-0" @click="clearVerify">关闭</button>
           </div>
           <div v-if="state.verify.needsKey" class="mt-2 flex items-center gap-2 flex-wrap">
             <button class="btn btn-primary no-drag" @click="verifyAgainstSteam(null, 'steamcmd')">
@@ -541,7 +540,7 @@ const localHost = computed(() => {
               重来
             </button>
             <span v-if="state.local.flow.done" class="text-[11.5px] text-success">
-              内容已经在服务器里了 —— 重启 Steam 就能下到
+              内容已经在服务器里了 —— 重启一次 Steam 就能下到
             </span>
             <span v-else-if="state.local.flow.error" class="text-[11.5px] text-danger">
               {{ state.local.flow.error }}
@@ -600,19 +599,13 @@ const localHost = computed(() => {
           <span class="font-mono text-muted">@localcontentserver {{ localHost }}</span>
           <template v-if="state.local.devcfg?.ok">
             <span v-if="state.local.devcfg.has" class="text-success">已配好</span>
-            <span v-else class="text-faint">没配</span>
+            <span v-else class="text-faint">没配 —— 点上面的「一键配好」会写</span>
           </template>
           <span v-else-if="state.local.devcfg" class="text-amber">{{ state.local.devcfg.error }}</span>
         </div>
 
-        <div class="mt-2 flex items-center gap-2 flex-wrap">
-          <button
-            class="btn h-7 px-2.5 text-[11px] no-drag"
-            :disabled="!state.local.devcfg?.ok || state.local.busy"
-            @click="enableLocalDevCfg"
-          >
-            写入 steam_dev.cfg
-          </button>
+        <div class="mt-1.5 text-[11px] text-faint leading-relaxed">
+          Steam 只在启动时读这个文件 —— <span class="text-muted">写完记得自己重启一次 Steam</span>。
         </div>
       </div>
     </Transition>

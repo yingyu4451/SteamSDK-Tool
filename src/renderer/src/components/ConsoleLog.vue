@@ -1,10 +1,23 @@
 <script setup>
 import { ref, watch, nextTick, computed, onMounted } from 'vue'
 import gsap from 'gsap'
-import { state, clearLogs, cancelRun, answerPrompt } from '../store.js'
+import { state, clearLogs, cancelRun, answerPrompt, saveApp } from '../store.js'
 import { fmtClock } from '../format.js'
 import { reducedMotion } from '../motion.js'
 import { Check, TriangleAlert } from '@lucide/vue'
+
+const verbose = computed(() => state.detail?.verbose === '1')
+const verboseBusy = ref(false)
+
+/** verbose 是写进 app vdf 的一个开关：打开后 steamcmd 会打印每个文件，日志会长很多 */
+async function toggleVerbose() {
+  verboseBusy.value = true
+  try {
+    await saveApp({ verbose: !verbose.value })
+  } finally {
+    verboseBusy.value = false
+  }
+}
 
 const bodyEl = ref(null)
 const autoScroll = ref(true)
@@ -123,6 +136,20 @@ const exitTone = computed(() => {
       <span v-else class="text-[11.5px] text-faint">还没有运行过</span>
 
       <span class="ml-auto num text-[11px] text-faint">{{ state.logs.length }} 行</span>
+
+      <label
+        class="flex items-center gap-1.5 text-[11.5px] text-faint cursor-pointer select-none"
+        title="打开后 steamcmd 会逐个文件打印，日志会长很多 —— 排查「到底传了哪些文件」时才需要"
+      >
+        <input
+          type="checkbox"
+          :checked="verbose"
+          :disabled="verboseBusy || !state.detail"
+          class="accent-[#66c0f4]"
+          @change="toggleVerbose"
+        />
+        详细日志
+      </label>
 
       <label class="flex items-center gap-1.5 text-[11.5px] text-faint cursor-pointer select-none">
         <input type="checkbox" v-model="autoScroll" class="accent-[#66c0f4]" />

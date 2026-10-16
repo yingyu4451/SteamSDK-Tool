@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { state, goSettings } from '../store.js'
-import { ExternalLink, BookOpen } from '@lucide/vue'
+import { state, goSettings, startOnboard } from '../store.js'
+import { ExternalLink, BookOpen, GraduationCap } from '@lucide/vue'
 
 /* 手册纯静态内容。
    写成数据而不是一大坨模板：改文案不用碰结构，加一节只是多一个数组元素。
@@ -28,8 +28,7 @@ const SECTIONS = [
           ['空跑', 'Preview 走一遍完整构建，但一个字节都不传到 Steam，看 manifest 确认到底传了什么。'],
           ['本机试玩', '本地内容服务器把内容指到本机，Steam 客户端直接读，不用先上传就能试。'],
           ['日志留在窗口里', 'steamcmd 和 PowerShell 的输出逐行流回来，随时中止，整棵进程树一起杀。'],
-          ['构建历史', 'output 目录下所有日志，按 App 筛、按名字搜。'],
-          ['自动更新', '从 GitHub Releases 检查新版本。安装版点一下「重启并安装」就换好了；便携版会打开新版所在的位置，关掉工具、替换掉你那个 exe 就行。']
+          ['构建历史', 'output 目录下所有日志，按 App 筛、按名字搜。']
         ]
       }
     ]
@@ -49,22 +48,6 @@ const SECTIONS = [
       {
         t: 'note',
         v: '这三个 ID 只在 Steamworks 后台看得见。工具能读回来，但写不回去 —— 后台的 App 和 Depot 得你自己先建。'
-      }
-    ]
-  },
-  {
-    id: 'first',
-    title: '第一次用',
-    blocks: [
-      {
-        t: 'ol',
-        v: [
-          '设置里填 Steam 账号密码（平时用 steamcmd 上传的那个账号）。密码用 Windows 的 DPAPI 加密后存本地。',
-          '侧栏 ＋ 新建 App：填本地名字和后台 AppID。后台建过 Depot 就点「读取后台 Depot」，把真实 DepotID 拉回来。',
-          '内容目录填 Unity 打包的输出目录，工具会立刻把它建出来。',
-          'Unity 打包面板的输出目录设成同一个路径（模式选 DirectFolder），以后打完包不用再复制。',
-          '点「检查配置」→「Preview 空跑」→「正式上传」。'
-        ]
       }
     ]
   },
@@ -123,22 +106,6 @@ const SECTIONS = [
       },
       { t: 'note', v: 'SetLive 不能写 default —— default 分支要在后台网页上手动设 live。' }
     ]
-  },
-  {
-    id: 'trouble',
-    title: '出问题往哪看',
-    blocks: [
-      {
-        t: 'dl',
-        v: [
-          ['界面里没反应', '看右边「构建输出」，每行都是原样流回来的。失败原因通常就在最后几行。'],
-          ['想知道历史上传了什么', '侧栏「构建历史」，按 App 筛，或按名字搜。'],
-          ['上传失败看不出为什么', '去 output 目录找那次的 .log，「构建目录」按钮能直接打开。'],
-          ['提示密码不对', '设置里重新存一次。Steam Guard 要的是当时那个验证码，不是固定密码。'],
-          ['怀疑 vdf 有问题', '抽屉里「用系统编辑器打开」直接看文件本身。']
-        ]
-      }
-    ]
   }
 ]
 
@@ -164,50 +131,54 @@ function openRepo() {
       <BookOpen :size="20" :stroke-width="1.8" class="text-accent shrink-0" />
       <div class="min-w-0">
         <h1 class="text-[15px] font-semibold m-0">使用手册</h1>
-        <p class="mt-1 mb-0 text-[11.5px] text-faint">能做什么、怎么开始、出错往哪看。</p>
+        <p class="mt-1 mb-0 text-[11.5px] text-faint">每个按钮是干什么的、怎么开始。</p>
       </div>
       <input
         v-model="q"
         placeholder="搜…"
         class="ml-auto w-[180px] h-8 px-3 rounded-[9px] bg-surface border border-line text-[12px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
       />
+      <button class="btn no-drag shrink-0" title="从头走一遍设置流程" @click="startOnboard">
+        <GraduationCap :size="14" :stroke-width="1.9" />
+        新手教程
+      </button>
     </div>
 
     <div
       v-for="(sec, i) in shown"
       :key="sec.id"
-      class="card p-4"
+      class="card px-5 py-4"
       v-reveal="{ delay: Math.min(i * 0.03, 0.18) }"
     >
-      <h2 class="text-[13.5px] font-semibold m-0 mb-2.5">{{ sec.title }}</h2>
+      <h2 class="text-[14px] font-semibold m-0 mb-3.5">{{ sec.title }}</h2>
 
       <template v-for="(b, j) in sec.blocks" :key="j">
-        <p v-if="b.t === 'p'" class="m-0 mb-2 text-[12.5px] text-muted leading-relaxed">
+        <p v-if="b.t === 'p'" class="m-0 mb-3 text-[13px] text-muted leading-[1.75]">
           {{ b.v }}
         </p>
 
-        <ul v-else-if="b.t === 'ul'" class="m-0 mb-2 pl-4 flex flex-col gap-1.5">
-          <li v-for="(x, k) in b.v" :key="k" class="text-[12.5px] text-muted leading-relaxed">
+        <ul v-else-if="b.t === 'ul'" class="m-0 mb-3 pl-5 flex flex-col gap-2.5">
+          <li v-for="(x, k) in b.v" :key="k" class="text-[13px] text-muted leading-[1.75]">
             {{ x }}
           </li>
         </ul>
 
-        <ol v-else-if="b.t === 'ol'" class="m-0 mb-2 pl-5 flex flex-col gap-2 list-decimal">
-          <li v-for="(x, k) in b.v" :key="k" class="text-[12.5px] text-muted leading-relaxed">
+        <ol v-else-if="b.t === 'ol'" class="m-0 mb-3 pl-5 flex flex-col gap-3 list-decimal">
+          <li v-for="(x, k) in b.v" :key="k" class="text-[13px] text-muted leading-[1.75] pl-1">
             {{ x }}
           </li>
         </ol>
 
-        <div v-else-if="b.t === 'dl'" class="m-0 mb-2 flex flex-col gap-2">
-          <div v-for="(pair, k) in b.v" :key="k" class="grid grid-cols-[92px_1fr] gap-3 items-baseline">
-            <span class="text-[12px] text-ink font-medium">{{ pair[0] }}</span>
-            <span class="text-[12.5px] text-muted leading-relaxed">{{ pair[1] }}</span>
+        <div v-else-if="b.t === 'dl'" class="m-0 mb-3 flex flex-col gap-3.5">
+          <div v-for="(pair, k) in b.v" :key="k" class="grid grid-cols-[110px_1fr] gap-x-5 items-baseline">
+            <span class="text-[12.5px] text-ink font-medium">{{ pair[0] }}</span>
+            <span class="text-[13px] text-muted leading-[1.75]">{{ pair[1] }}</span>
           </div>
         </div>
 
         <div
           v-else-if="b.t === 'note'"
-          class="mt-1 mb-1 rounded-[9px] border border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)] px-3 py-2 text-[12px] text-accent/90 leading-relaxed"
+          class="mt-1.5 mb-2 rounded-[9px] border border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)] px-3.5 py-2.5 text-[12.5px] text-accent/90 leading-[1.7]"
         >
           {{ b.v }}
         </div>

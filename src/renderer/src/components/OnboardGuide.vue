@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, nextTick } from 'vue'
 import gsap from 'gsap'
-import { Download } from '@lucide/vue'
+import { Download, RefreshCw, Check } from '@lucide/vue'
 import {
   state,
   onboardGo,
@@ -10,6 +10,7 @@ import {
   onboardApplySdk,
   onboardSaveAccount,
   finishOnboard,
+  onboardMode,
   openWizard,
   goSettings
 } from '../store.js'
@@ -19,6 +20,15 @@ const o = computed(() => state.onboard)
 const STEPS = ['欢迎', 'SDK 路径', 'Steam 账号']
 
 const sdkOk = computed(() => !!state.sdk?.contentBuilderExists)
+/** 'auto' = 选的是自动找到的那个；'manual' = 手动填的 */
+const mode = computed(() => onboardMode())
+
+const same = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase()
+
+/** 手动一改，选中的来源就从「自动」变成「手动」，界面上的标记要立刻跟着走 */
+function onManualInput(e) {
+  o.value.manual = e.target.value
+}
 
 /** Steamworks SDK 只能从后台下（要登录），没有匿名直链 */
 const openSdkDownload = () =>
@@ -156,28 +166,36 @@ function goCreateApp() {
 
         <!-- ── 1 SDK 路径 ── -->
         <template v-else-if="o.step === 1">
-          <h2 class="text-[16px] font-semibold m-0">SteamSDK 在哪</h2>
-          <p class="text-[12px] text-muted mt-1.5 mb-0">
-            就是含 <code class="font-mono text-accent">tools\ContentBuilder</code> 的那个文件夹。
-          </p>
-
-          <div v-if="o.busy && !o.candidates.length" class="text-[12px] text-faint mt-4">
-            正在找…
+          <div class="flex items-center gap-3">
+            <h2 class="text-[16px] font-semibold m-0">SteamSDK 文件夹</h2>
+            <button
+              class="ml-auto btn h-8 px-3 text-[11.5px]"
+              :disabled="o.busy"
+              title="重新扫一遍常见位置"
+              @click="onboardDetect"
+            >
+              <RefreshCw :size="13" class="mr-1.5" :class="o.busy ? 'animate-spin' : ''" />
+              {{ o.busy ? '正在找…' : '重新识别' }}
+            </button>
           </div>
 
           <div v-if="o.candidates.length" class="mt-3.5 flex flex-col gap-1.5">
-            <div class="text-[11px] tracking-wider text-faint uppercase">找到这些</div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] tracking-wider text-faint uppercase">自动找到的</span>
+              <span v-if="mode === 'auto'" class="pill pill-ok">已选</span>
+            </div>
             <button
               v-for="c in o.candidates"
               :key="c.root"
               class="flex items-center gap-2.5 px-3 h-11 rounded-md border text-left transition-colors cursor-pointer"
               :class="
-                o.manual.toLowerCase() === c.root.toLowerCase()
+                same(o.manual, c.root)
                   ? 'border-[rgba(102,192,244,.5)] bg-[rgba(102,192,244,.08)]'
                   : 'border-line bg-surface hover:border-[#4a7ba6]'
               "
               @click="useCandidate(c)"
             >
+              <Check v-if="same(o.manual, c.root)" :size="14" class="shrink-0 text-accent" />
               <span class="font-mono text-[12px] text-ink truncate">{{ c.root }}</span>
               <span v-if="c.hasSteamcmd" class="pill pill-ok ml-auto shrink-0">有 steamcmd</span>
               <span v-else class="pill pill-warn ml-auto shrink-0">缺 steamcmd</span>
@@ -185,37 +203,31 @@ function goCreateApp() {
           </div>
 
           <div class="mt-4 flex flex-col gap-2">
-            <div class="text-[11px] tracking-wider text-faint uppercase">或者手动指定</div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] tracking-wider text-faint uppercase">手动指定</span>
+              <span v-if="mode === 'manual'" class="pill pill-ok">已选</span>
+            </div>
             <div class="flex gap-2">
               <input
                 :value="o.manual"
                 placeholder="D:\SteamSDK"
-                class="flex-1 h-9 px-3 rounded-md bg-surface border border-line text-[12.5px] font-mono outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
-                @input="o.manual = $event.target.value"
+                class="flex-1 h-9 px-3 rounded-md bg-surface border text-[12.5px] font-mono outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                :class="mode === 'manual' ? 'border-[rgba(102,192,244,.5)]' : 'border-line'"
+                @input="onManualInput"
               />
               <button class="btn" @click="pickAndApply">选择…</button>
             </div>
           </div>
 
           <!-- 还没有 SDK 的人大概率就卡在这一步，给个直达入口 -->
-          <div class="mt-3 flex items-center gap-2 flex-wrap">
+          <div class="mt-3">
             <button
               class="btn h-8 px-3 text-[11.5px]"
               title="打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链"
               @click="openSdkDownload"
             >
-              <Download :size="13" class="mr-1.5" /> 还没装？去下载 Steamworks SDK
+              <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
             </button>
-            <span v-if="!o.candidates.length && !sdkOk" class="text-[11px] text-amber">
-              解压到任意目录，再把路径填到上面
-            </span>
-          </div>
-
-          <div
-            v-if="sdkOk"
-            class="mt-3 rounded-md border border-[rgba(139,197,63,.28)] bg-[rgba(139,197,63,.07)] px-3 py-2 text-[11.5px] text-success"
-          >
-            认到了：{{ state.sdk.contentBuilder }}
           </div>
         </template>
 
@@ -238,12 +250,12 @@ function goCreateApp() {
               />
             </label>
             <label class="flex flex-col gap-1.5">
-              <span class="text-[11.5px] text-muted">密码（可选）</span>
+              <span class="text-[11.5px] text-muted">密码</span>
               <input
                 :value="o.password"
                 type="password"
                 placeholder="留空就先不存"
-                class="h-9 px-3 rounded-md bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,196,244,.5)] placeholder:text-faint"
+                class="h-9 px-3 rounded-md bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
                 @input="o.password = $event.target.value"
               />
             </label>

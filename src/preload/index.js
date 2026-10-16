@@ -119,6 +119,19 @@ const api = {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
   },
 
+  /** 自己画的窗口按钮（顶栏那三个，不用系统 titleBarOverlay） */
+  win: {
+    minimize: () => ipcRenderer.invoke('win:minimize'),
+    maximize: () => ipcRenderer.invoke('win:maximize'),
+    close: () => ipcRenderer.invoke('win:close'),
+    state: () => ipcRenderer.invoke('win:state'),
+    onMaximized: (cb) => {
+      const fn = (_e, v) => cb(!!v)
+      ipcRenderer.on('win:maximized', fn)
+      return () => ipcRenderer.removeListener('win:maximized', fn)
+    }
+  },
+
   // 工具自身的更新（GitHub Releases）
   update: {
     info: () => ipcRenderer.invoke('update:info'),

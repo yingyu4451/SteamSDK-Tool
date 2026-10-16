@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { state, loadHistory } from '../store.js'
 import { fmtSize, fmtTime } from '../format.js'
+import { FolderOpen } from '@lucide/vue'
 
 const selected = ref(null)
 const content = ref('')
@@ -49,6 +50,17 @@ async function refresh() {
   await loadHistory()
   if (selected.value) open(selected.value)
 }
+
+/** 选中那条日志所在的文件夹；没选就用最新那条 */
+const logDir = computed(() => {
+  const f = selected.value?.file || state.history[0]?.file || ''
+  return f ? f.replace(/[\\/][^\\/]*$/, '') : ''
+})
+
+function openLogDir() {
+  if (logDir.value) window.api.shell.openPath(logDir.value)
+}
+
 </script>
 
 <template>
@@ -64,6 +76,10 @@ async function refresh() {
         placeholder="筛选文件名"
         class="h-8 w-[200px] px-3 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
       />
+      <button class="btn h-8 no-drag" :disabled="!logDir" title="在资源管理器里打开日志所在文件夹" @click="openLogDir">
+        <FolderOpen :size="14" :stroke-width="1.9" />
+        打开文件夹
+      </button>
       <button class="btn h-8 no-drag" @click="refresh">刷新</button>
     </div>
 

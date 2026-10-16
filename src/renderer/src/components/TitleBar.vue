@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+import { Minus, Square, Copy, X } from '@lucide/vue'
 import { state, goSettings } from '../store.js'
 
 const sdkOk = computed(
@@ -7,11 +8,29 @@ const sdkOk = computed(
 )
 
 const upd = computed(() => state.update?.data || null)
+
+/* ---- 自己画的窗口按钮 ----
+ * 用 frame:false + 这套按钮，而不是系统的 titleBarOverlay：
+ * 系统那三个的高度/配色/hover 都不归我们管，跟 44px 的顶栏对不齐。 */
+const maximized = ref(false)
+let off = null
+
+onMounted(async () => {
+  const r = await window.api.win.state().catch(() => null)
+  if (r?.ok) maximized.value = !!r.maximized
+  off = window.api.win.onMaximized((v) => (maximized.value = v))
+})
+
+onBeforeUnmount(() => {
+  if (typeof off === 'function') off()
+})
+
+const WBTN = 'w-11 h-11 grid place-items-center bg-transparent border-0 cursor-pointer text-muted transition-colors'
 </script>
 
 <template>
   <header
-    class="drag h-11 shrink-0 flex items-center gap-3 pl-4 pr-[150px] border-b border-line bg-[#0a0d13]/85 backdrop-blur"
+    class="drag h-11 shrink-0 flex items-center gap-3 pl-4 border-b border-line bg-[#0a0d13]/85 backdrop-blur"
   >
     <!-- 标记：和 scripts/make-icon.mjs 画的是同一个图形，几何常量一一对应
          （背景 #2f516e→#121a24、立方体顶 #8fd4fa / 左 #3f92c9 / 右 #245c8c、箭头 #eaf6ff；
@@ -79,6 +98,30 @@ const upd = computed(() => state.update?.data || null)
       >
         <span class="w-1.5 h-1.5 rounded-full bg-amber" />
         v{{ upd.latest }} 可更新
+      </button>
+    </div>
+
+    <!-- 窗口按钮：和顶栏同高（h-11 = 44px），hover 自己控 -->
+    <div class="self-stretch flex items-stretch no-drag">
+      <button :class="WBTN" class="hover:bg-[#21344a] hover:text-ink" title="最小化" @click="window.api.win.minimize()">
+        <Minus :size="15" />
+      </button>
+      <button
+        :class="WBTN"
+        class="hover:bg-[#21344a] hover:text-ink"
+        :title="maximized ? '向下还原' : '最大化'"
+        @click="window.api.win.maximize()"
+      >
+        <Copy v-if="maximized" :size="13" />
+        <Square v-else :size="12" />
+      </button>
+      <button
+        :class="WBTN"
+        class="hover:bg-[#c33a3a] hover:text-white"
+        title="关闭"
+        @click="window.api.win.close()"
+      >
+        <X :size="16" />
       </button>
     </div>
   </header>

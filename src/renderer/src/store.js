@@ -123,8 +123,7 @@ export const state = reactive({
         { id: 'server', label: '启动内容服务器', state: 'idle', detail: '' },
         { id: 'flag', label: '这个 App 标记成「先送本地」', state: 'idle', detail: '' },
         { id: 'build', label: '跑一次构建，把内容写进服务器', state: 'idle', detail: '' },
-        { id: 'devcfg', label: '写 steam_dev.cfg', state: 'idle', detail: '' },
-        { id: 'steam', label: '重启 Steam', state: 'idle', detail: '客户端只在启动时读这个文件' }
+        { id: 'devcfg', label: '写 steam_dev.cfg', state: 'idle', detail: '' }
       ]
     },
     error: null
@@ -198,19 +197,35 @@ export async function boot() {
 export function onboardGo(step) {
   state.onboard.step = Math.max(0, Math.min(2, step))
   state.onboard.error = null
+  // 进第二步时如果还没找到过，现找一次 —— 这样「没找到」的提示只会出现在它该出现的这一步
+  if (state.onboard.step === 1 && !state.onboard.candidates.length && !state.onboard.busy) {
+    onboardDetect()
+  }
 }
 
 export async function onboardDetect() {
   const o = state.onboard
   o.busy = true
+  o.error = null
   try {
     o.candidates = (await api.sdk.detect()) || []
-    if (!o.candidates.length) o.error = '常见位置没找到 SteamSDK —— 手动选一下它所在的文件夹'
+    // 「没找到」是第二步的问题，别在欢迎页就吓人
+    if (!o.candidates.length && o.step === 1) {
+      o.error = '常见位置没找到 SteamSDK —— 手动选一下它所在的文件夹'
+    }
   } catch (e) {
     o.error = e.message
   } finally {
     o.busy = false
   }
+}
+
+/** 当前选中的是「自动找到的」还是「手动指定的」—— 用来在界面上标出来 */
+export function onboardMode() {
+  const o = state.onboard
+  const m = String(o.manual || '').trim().toLowerCase()
+  if (!m) return 'none'
+  return (o.candidates || []).some((c) => String(c.root).toLowerCase() === m) ? 'auto' : 'manual'
 }
 
 export async function onboardPickFolder() {
@@ -276,6 +291,18 @@ export async function onboardSaveAccount() {
   } finally {
     o.busy = false
   }
+}
+
+/** 从别处（使用手册）再打开一次引导。已经 onboarded 也照样打开，看完关掉不影响那个标记 */
+export async function startOnboard() {
+  state.view = 'workbench'
+  state.onboard.step = 0
+  state.onboard.error = ''
+  state.onboard.done = false
+  state.onboard.saved = false
+  state.onboard.manual = state.settings?.sdkRoot || ''
+  state.onboard.open = true
+  await onboardDetect()
 }
 
 /** 引导的最后一步：无论走完还是「跳过教程」，都记下来不再弹 */
@@ -1487,7 +1514,6 @@ export function wireEvents() {
           .then(() => {
             const n = state.local.status?.contentFiles || 0
             setStep('build', n > 0 ? 'done' : 'fail', n > 0 ? `${n} 个文件已在服务器里` : '构建成功但服务器里还是空的')
-            setStep('steam', 'doing')
             f.done = n > 0
             toast(n > 0 ? '内容已经进本地服务器了 —— 重启 Steam 就能下到' : '构建成功，但 htdocs 里还是空的')
           })
@@ -1796,7 +1822,6 @@ export function resetLocalFlow() {
   f.done = false
   f.error = null
   for (const s of f.steps) {
-    if (s.id === 'steam') continue
     s.state = 'idle'
     s.detail = ''
   }
@@ -1822,7 +1847,6 @@ export async function runLocalSetup() {
   f.error = null
   state.local.error = null
   for (const s of f.steps) {
-    if (s.id === 'steam') continue
     s.state = 'idle'
     s.detail = ''
   }
@@ -1874,7 +1898,6 @@ export async function runLocalSetup() {
 
   /* 4. 跑构建 —— 这一步是异步的，退出码在 onExit 里回收 */
   setStep('build', 'doing', '构建进行中，看下面的输出')
-  setStep('steam', 'idle')
   f.building = true
   await runBuild({ preview: false, local: true })
 
