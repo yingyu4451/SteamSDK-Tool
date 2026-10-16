@@ -463,8 +463,8 @@ function registerIpc() {
    * 拿用户刚填的账号密码真登一次，用来回答「我填的到底对不对」。
    * 跟 login:state 不是一回事：那个只读 config.vdf，只说明「这台机器以前登录过」。
    */
-  ipcMain.handle('login:test', async (_e, { account, password } = {}) => {
-    const r = await loginTest(account, password, loadSettings())
+  ipcMain.handle('login:test', async (_e, { account, password, guardCode } = {}) => {
+    const r = await loginTest(account, password, guardCode, loadSettings())
     return { ok: true, ...r }
   })
 
@@ -809,7 +809,7 @@ function registerIpc() {
     return handle ? { ok: true, ...handle } : { ok: false, error: 'check.ps1 未找到' }
   })
 
-  ipcMain.handle('run:build', (_e, { dirName, preview = true, password, local = false } = {}) => {
+  ipcMain.handle('run:build', (_e, { dirName, preview = true, password, local = false, guardCode } = {}) => {
     const s = loadSettings()
     const p = getPaths(s)
     const pw = currentPassword(password)
@@ -834,7 +834,7 @@ function registerIpc() {
       cwd: p.contentBuilder,
       label: `${local ? '本地服务器' : preview ? 'Preview' : '正式上传'} ${dirName}`,
       password: pw,
-      env: { STEAMSDK_BUILD_PASSWORD: pw },
+      env: { STEAMSDK_BUILD_PASSWORD: pw, STEAMSDK_GUARD_CODE: String(guardCode || '').trim() },
       onData: (d) => send('run:data', { kind: 'build', ...d }),
       onPrompt: (d) => send('run:prompt', { kind: 'build', ...d }),
       onExit: (d) => {

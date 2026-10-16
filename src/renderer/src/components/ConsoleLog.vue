@@ -1,10 +1,10 @@
 <script setup>
 import { ref, watch, nextTick, computed, onMounted } from 'vue'
 import gsap from 'gsap'
-import { state, clearLogs, cancelRun, answerPrompt, saveApp } from '../store.js'
+import { state, clearLogs, cancelRun, answerPrompt, saveApp, submitGuardCode, cancelGuardPrompt } from '../store.js'
 import { fmtClock } from '../format.js'
 import { reducedMotion } from '../motion.js'
-import { Check, TriangleAlert } from '@lucide/vue'
+import { Check, TriangleAlert, ShieldAlert } from '@lucide/vue'
 
 const verbose = computed(() => state.detail?.verbose === '1')
 const verboseBusy = ref(false)
@@ -90,6 +90,27 @@ async function submitPrompt() {
   promptValue.value = ''
   await answerPrompt(v)
 }
+
+/* ---- 构建失败在「要 Steam Guard 验证码」上时补一个码 ---- */
+const guardValue = ref('')
+const guardEl = ref(null)
+
+async function submitGuard() {
+  const v = guardValue.value.trim()
+  if (!v) return
+  guardValue.value = ''
+  await submitGuardCode(v)
+}
+
+watch(
+  () => state.askGuard,
+  async (g) => {
+    if (g && !state.running) {
+      await nextTick()
+      guardEl.value?.focus()
+    }
+  }
+)
 
 /** 上传成功后一键跳到 Steamworks 的构建页，省得自己找 */
 function openBuildsPage() {
@@ -189,6 +210,34 @@ const exitTone = computed(() => {
           @keydown.enter="submitPrompt"
         />
         <button class="btn h-8 no-drag" @click="submitPrompt">提交</button>
+      </div>
+    </Transition>
+
+    <!-- 构建因为缺 Steam Guard 验证码失败：补一个码就能接着跑，不用重敲密码 -->
+    <Transition
+      enter-active-class="transition duration-200"
+      enter-from-class="opacity-0 -translate-y-2"
+      leave-active-class="transition duration-150"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="state.askGuard && !state.running"
+        class="px-5 py-2.5 border-b border-[rgba(240,169,46,.24)] bg-[rgba(240,169,46,.06)] flex items-center gap-3 shrink-0 flex-wrap"
+      >
+        <ShieldAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
+        <span class="text-[12.5px] text-amber">
+          Steam 要 Steam Guard 验证码 —— 手机 Steam App 的「Steam 令牌」页或邮件里的那串码
+        </span>
+        <input
+          ref="guardEl"
+          v-model="guardValue"
+          class="w-[150px] h-8 px-3 rounded-lg bg-surface border border-line text-[13px] tracking-[0.18em] num outline-none focus:border-[rgba(240,169,46,.5)]"
+          placeholder="验证码"
+          autocomplete="one-time-code"
+          @keydown.enter="submitGuard"
+        />
+        <button class="btn h-8 no-drag" @click="submitGuard">带验证码重试</button>
+        <button class="btn h-8 no-drag" @click="cancelGuardPrompt">取消</button>
       </div>
     </Transition>
 

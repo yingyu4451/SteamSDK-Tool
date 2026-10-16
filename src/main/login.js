@@ -45,9 +45,15 @@ export function classifyLogin(lines = [], exitCode = null) {
   // steamcmd 是先看缓存：有令牌就直接用，压根不会走到 password: 那一步。
   // 这种情况即使返回成功，也**不能**说密码是对的 —— 它根本没验。
   const askedForPassword = /^\s*password:\s*$/im.test(text) && /Cached credentials not found/i.test(text)
+  // 机器没被授权过 → steamcmd 会要一个 Steam Guard 码。
+  // 它那句提示写的是「check your email」，但绑了手机令牌的账号同样会走到这儿。
+  const askedForGuard = /has not been authenticated for your account|Steam Guard code|Two-factor code/i.test(text)
 
-  const base = { usedAccount, passwordChecked: askedForPassword, exitCode }
+  const base = { usedAccount, passwordChecked: askedForPassword, guardAsked: askedForGuard, exitCode }
 
+  if (/Account Logon Denied|Invalid Login Auth Code/i.test(text)) {
+    return { ...base, ok: false, reason: 'steam-guard' }
+  }
   if (/Invalid Password/i.test(text)) return { ...base, ok: false, reason: 'bad-password' }
   if (/Steam Guard|Two-factor/i.test(text)) return { ...base, ok: false, reason: 'steam-guard' }
   if (/Rate Limit|too many/i.test(text)) return { ...base, ok: false, reason: 'rate-limit' }
@@ -56,8 +62,14 @@ export function classifyLogin(lines = [], exitCode = null) {
   return { ...base, ok: false, reason: 'unknown' }
 }
 
-/** 异步跑一次 steamcmd 登录，返回 { ok, reason, usedAccount, passwordChecked, exitCode } */
-export function loginTest(account, password, settings) {
+/**
+ * 异步跑一次 steamcmd 登录，返回 { ok, reason, usedAccount, passwordChecked, exitCode }
+ *
+ * guardCode 非空时会作为第二行喂给 stdin。steamcmd 是先读 password:、
+ * 再读 Steam Guard code:，所以两行按顺序写进去就行 —— 比去解析它被块缓冲
+ * 卡住的提示靠谱得多（接管道时那个提示常常刷不出来）。
+ */
+export function loginTest(account, password, guardCode = '', settings) {
   const user = String(account || '').trim()
   if (!user) return Promise.resolve({ ok: false, reason: 'no-account', usedAccount: '', passwordChecked: false })
   const p = getPaths(settings || {})
@@ -92,10 +104,10 @@ export function loginTest(account, password, settings) {
       finish({ timedOut: true, exitCode: null })
     }, TIMEOUT_MS)
 
-    // 密码走 stdin —— build.ps1 里也是这么做的，原因一样
-    if (password) {
-      child.stdin.write(String(password) + '\n')
-    }
+    // 密码（和可选的验证码）走 stdin —— build.ps1 里也是这么做的，原因一样
+    const input = [String(password || '')]
+    if (guardCode) input.push(String(guardCode).trim())
+    child.stdin.write(input.join('\n') + '\n')
     child.stdin.end()
     child.on('error', () => finish({ spawnError: true, exitCode: null }))
     child.on('close', (code) => finish({ exitCode: code }))

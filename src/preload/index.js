@@ -32,7 +32,7 @@ const api = {
 
   login: {
     state: () => ipcRenderer.invoke('login:state'),
-    test: (account, password) => ipcRenderer.invoke('login:test', { account, password }),
+    test: (account, password, guardCode) => ipcRenderer.invoke('login:test', { account, password, guardCode }),
     describe: () => ipcRenderer.invoke('login:describe'),
     forget: () => ipcRenderer.invoke('login:forget')
   },
@@ -115,8 +115,8 @@ const api = {
 
   run: {
     check: (dirName) => ipcRenderer.invoke('run:check', { dirName }),
-    build: (dirName, preview, password, local) =>
-      ipcRenderer.invoke('run:build', { dirName, preview, password, local }),
+    build: (dirName, preview, password, local, guardCode) =>
+      ipcRenderer.invoke('run:build', { dirName, preview, password, local, guardCode }),
     cancel: (runId) => ipcRenderer.invoke('run:cancel', runId),
     input: (runId, text) => ipcRenderer.invoke('run:input', { runId, text }),
     login: () => ipcRenderer.invoke('run:login'),

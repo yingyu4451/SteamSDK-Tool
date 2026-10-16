@@ -65,6 +65,9 @@ export const state = reactive({
   // 构建需要密码但本地没有时，界面弹出输入行：{ preview: boolean }
   askPassword: null,
   askPasswordError: null,
+  /** 构建因为缺 Steam Guard 验证码失败时，在这里放 {preview, local}，界面据此弹输码框 */
+  askGuard: null,
+  runGuardCode: '',
 
   // 新建 App 向导
   wizard: null,
@@ -283,9 +286,13 @@ export async function onboardApplySdk(root) {
 }
 
 /** 拿刚填的账号密码真去 steamcmd 登一次 —— 回答「我填的对不对」 */
-export async function testTypedLogin(account, password) {
+export async function testTypedLogin(account, password, guardCode) {
   try {
-    const r = await api.login.test(String(account || '').trim(), String(password || ''))
+    const r = await api.login.test(
+      String(account || '').trim(),
+      String(password || ''),
+      String(guardCode || '').trim()
+    )
     return r || { ok: false, reason: 'unknown' }
   } catch (e) {
     return { ok: false, reason: 'error', error: String(e?.message || e) }
@@ -1491,19 +1498,21 @@ export async function runCheck() {
   }
 }
 
-export async function runBuild({ preview, password, local }) {
+export async function runBuild({ preview, password, local, guardCode }) {
   if (state.running || !state.selectedDir) return
   clearLogs()
   state.askPasswordError = null
+  state.askGuard = null
   state.running = true
   state.runKind = 'build'
   state.runPreview = !!preview
   state.runLocal = !!local
+  state.runGuardCode = String(guardCode || '').trim()
   pushLog(
     'system',
     `> build.ps1 -App ${state.selectedDir}${preview ? ' -Preview' : ''}${local ? ' -Local' : ''}`
   )
-  const res = await api.run.build(state.selectedDir, !!preview, password, !!local)
+  const res = await api.run.build(state.selectedDir, !!preview, password, !!local, guardCode)
 
   if (res.ok) {
     state.runId = res.id
@@ -1537,6 +1546,22 @@ export async function submitPassword(pw, { remember = false } = {}) {
   state.askPassword = null
   state.askPasswordError = null
   await runBuild({ preview: req.preview, password: pw, local: req.local })
+}
+
+/**
+ * 带上 Steam Guard 验证码再来一次。
+ * 密码不用重敲 —— 主进程还留着上一次那 30 秒的缓存。
+ */
+export async function submitGuardCode(code) {
+  const req = state.askGuard
+  if (!req || !code) return
+  state.askGuard = null
+  await runBuild({ preview: req.preview, local: req.local, guardCode: code })
+}
+
+export function cancelGuardPrompt() {
+  state.askGuard = null
+  state.prompt = null
 }
 
 export function cancelPasswordPrompt() {
@@ -1605,6 +1630,20 @@ export function wireEvents() {
     pushLog(code === 0 ? 'system' : 'stderr', `— 进程结束，退出码 ${code} —`)
     state.runKind = null
     state.runLocal = false
+
+    /* 构建卡在「要 Steam Guard 验证码」上时给个补码入口。
+     * steamcmd 那句提示走 stdout，接管道时是块缓冲的、未必刷得出来，
+     * 所以 runner 的 onPrompt 不一定抓得到 —— 退出后扫一遍日志兜底。 */
+    if (code !== 0) {
+      const text = (state.logs || []).map((l) => l.line).join('\n')
+      if (
+        /Account Logon Denied|Invalid Login Auth Code|Steam Guard code|Two-factor code|has not been authenticated for your account/i.test(
+          text
+        )
+      ) {
+        state.askGuard = { preview: wasPreview, local: wasLocal }
+      }
+    }
 
     // 「一次配好」里那次构建结束了 —— 收尾并检查内容真进去了没
     if (wasLocal && state.local.flow?.building) {

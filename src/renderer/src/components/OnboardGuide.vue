@@ -76,6 +76,18 @@ const testResult = ref(null)
 /** 这一次走的到底是「真登录」还是「只看机器状态」 */
 const rowUsesRealLogin = ref(false)
 
+/**
+ * Steam Guard 验证码。
+ * 账号绑了手机令牌/邮箱令牌、而本机又没被授权过时，steamcmd 光有密码登不进去 ——
+ * 它会再要一个码。我们不去解析它那句提示（接管道时是块缓冲的，经常刷不出来），
+ * 而是把码作为 stdin 的第二行直接喂进去。
+ */
+const guardCode = ref('')
+/** 只有「确实是因为缺验证码失败」时才把输码框摆出来 */
+const needGuard = computed(
+  () => checkPhase.value === 'fail' && testResult.value?.reason === 'steam-guard'
+)
+
 /* 这个组件在 App.vue 里是一直挂着的，只有里面那层 div 跟着 open 开关 ——
  * 所以 checkPhase 会活到下一次打开。上一次「验证通过」留下的 ok 会把
  * 主按钮永久禁用，从手册重新进来就卡在第一步动不了。每次打开都清一次。 */
@@ -87,6 +99,7 @@ watch(
       loginChecked.value = false
       testResult.value = null
       rowUsesRealLogin.value = false
+      guardCode.value = ''
     }
   }
 )
@@ -116,7 +129,7 @@ const rowText = computed(() => {
       case 'bad-password':
         return 'Steam 说密码不对（Invalid Password）。检查一下大小写，账号名不是邮箱'
       case 'steam-guard':
-        return '这个账号开了 Steam Guard，光有密码不够 —— 点「跳过」，构建时会开一个控制台窗口让你输验证码'
+        return '这个账号开了 Steam Guard，光有密码不够。手机令牌 App 里会显示一串 5 位码（没绑手机的话 Steam 会发到邮箱）—— 填到下面再点一次「完成」'
       case 'rate-limit':
         return 'Steam 暂时限制了登录尝试（Rate Limit）。等几分钟再点一次'
       case 'no-steamcmd':
@@ -157,10 +170,12 @@ async function next() {
         /* 填了账号密码 —— 就真的登一次。
          * 以前这里只读 config.vdf（「这台机器以前登录过没有」），跟你刚敲进去的
          * 那两行字毫无关系，所以乱填也能过。 */
-        const t = await testTypedLogin(acct, pw)
+        const t = await testTypedLogin(acct, pw, guardCode.value)
         testResult.value = t
         loginChecked.value = true
         if (!t.ok) {
+          // 验证码是一次性的，失败后清掉 —— 留着会让人以为「明明填了还是不过」
+          guardCode.value = ''
           checkPhase.value = 'fail'
           return
         }
@@ -439,6 +454,24 @@ function skip() {
             >
               {{ rowText }}
             </span>
+          </div>
+
+          <!-- 缺验证码时才出现。steamcmd 一次登录只要一个码，
+               所以失败后清空，逼用户去拿新的那个 -->
+          <div v-if="needGuard" class="mt-2.5">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-[11.5px] text-muted">Steam Guard 验证码</span>
+              <input
+                v-model="guardCode"
+                placeholder="例如 K4F2B"
+                autocomplete="one-time-code"
+                class="h-9 px-3 rounded-md bg-surface border border-line text-[13px] tracking-[0.18em] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint placeholder:tracking-normal"
+                @keyup.enter="next"
+              />
+            </label>
+            <p class="mt-1.5 mb-0 text-[11px] text-faint leading-relaxed">
+              在手机 Steam App 的「Steam 令牌」页，或者 Steam 发来的邮件里。填好点下面的「完成」。
+            </p>
           </div>
         </template>
 
