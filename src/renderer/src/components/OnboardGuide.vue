@@ -9,6 +9,7 @@ import {
   onboardPickFolder,
   onboardApplySdk,
   onboardSaveAccount,
+  testTypedLogin,
   finishOnboard,
   onboardMode,
   goSettings,
@@ -70,6 +71,11 @@ onMounted(async () => {
 /** 点「完成」之后的验证过程：idle → checking → ok / fail */
 const checkPhase = ref('idle')
 
+/** 填了账号密码时那次真登录的结果（没填就是 null，只查机器状态） */
+const testResult = ref(null)
+/** 这一次走的到底是「真登录」还是「只看机器状态」 */
+const rowUsesRealLogin = ref(false)
+
 /* 这个组件在 App.vue 里是一直挂着的，只有里面那层 div 跟着 open 开关 ——
  * 所以 checkPhase 会活到下一次打开。上一次「验证通过」留下的 ok 会把
  * 主按钮永久禁用，从手册重新进来就卡在第一步动不了。每次打开都清一次。 */
@@ -79,6 +85,8 @@ watch(
     if (open) {
       checkPhase.value = 'idle'
       loginChecked.value = false
+      testResult.value = null
+      rowUsesRealLogin.value = false
     }
   }
 )
@@ -87,9 +95,40 @@ watch(
 const rowShow = computed(() => checkPhase.value === 'checking' || loginChecked.value)
 const rowTone = computed(() => {
   if (checkPhase.value === 'checking') return 'busy'
+  const t = testResult.value
+  if (t) return t.ok ? 'ok' : 'bad'
   return lg.value?.ready ? 'ok' : 'bad'
 })
-const rowText = computed(() => (checkPhase.value === 'checking' ? '正在验证登录状态…' : loginText.value))
+const rowText = computed(() => {
+  if (checkPhase.value === 'checking') {
+    return testResult.value === null && rowUsesRealLogin.value
+      ? '正在用你填的账号登录 steamcmd，第一次要十几秒…'
+      : '正在验证登录状态…'
+  }
+  const t = testResult.value
+  if (t) {
+    if (t.timedOut) return '两分半没等到 Steam 回话 —— 网络慢或被拦了。可以点「跳过」，构建时再试'
+    switch (t.reason) {
+      case 'ok':
+        return t.passwordChecked
+          ? `账号密码没问题 —— steamcmd 已经登录并记住了（${t.usedAccount}）`
+          : `steamcmd 用它以前缓存的令牌登录成功了（${t.usedAccount}）。你这次填的密码没被校验 —— 想真的验一次，先去设置里「忘记账号」`
+      case 'bad-password':
+        return 'Steam 说密码不对（Invalid Password）。检查一下大小写，账号名不是邮箱'
+      case 'steam-guard':
+        return '这个账号开了 Steam Guard，光有密码不够 —— 点「跳过」，构建时会开一个控制台窗口让你输验证码'
+      case 'rate-limit':
+        return 'Steam 暂时限制了登录尝试（Rate Limit）。等几分钟再点一次'
+      case 'no-steamcmd':
+        return '找不到 steamcmd.exe —— 回上一步把 SDK 路径配对'
+      case 'no-account':
+        return '账号名是空的'
+      default:
+        return '登录没成功，也没认出具体原因。点「跳过」先继续，构建时能看到 steamcmd 的原始输出'
+    }
+  }
+  return loginText.value
+})
 const btnText = computed(() => {
   if (o.value.step !== 2) return '下一步'
   if (checkPhase.value === 'checking') return '正在验证…'
@@ -107,24 +146,47 @@ async function next() {
     if (checkPhase.value === 'checking') return
     checkPhase.value = 'checking'
     loginChecked.value = false
+    testResult.value = null
+
+    const acct = String(o.value.account || '').trim()
+    const pw = String(o.value.password || '')
+    rowUsesRealLogin.value = !!(acct && pw)
+
     try {
-      await onboardSaveAccount()
-      const t0 = Date.now()
-      // 唯一一次登录检验：过了就关窗，没过就留在这儿，让用户去开登录窗口
-      const l = await checkLogin()
-      // 读一个几百字节的 vdf，实际只要 ~0.1 秒。快到看不见就等于没发生 ——
-      // 留一个 480ms 的下限，让「正在验证」和「结果」这两拍都真的出现在屏幕上。
-      const wait = 480 - (Date.now() - t0)
-      if (wait > 0) await new Promise((r) => setTimeout(r, wait))
-      loginChecked.value = true
-      if (!l?.ready) {
-        checkPhase.value = 'fail'
-        return
+      if (rowUsesRealLogin.value) {
+        /* 填了账号密码 —— 就真的登一次。
+         * 以前这里只读 config.vdf（「这台机器以前登录过没有」），跟你刚敲进去的
+         * 那两行字毫无关系，所以乱填也能过。 */
+        const t = await testTypedLogin(acct, pw)
+        testResult.value = t
+        loginChecked.value = true
+        if (!t.ok) {
+          checkPhase.value = 'fail'
+          return
+        }
+        // 确认能登进去才存，免得把一个错的密码写进 DPAPI
+        await onboardSaveAccount()
+        checkPhase.value = 'ok'
+        await new Promise((r) => setTimeout(r, 700))
+        await finishOnboard()
+      } else {
+        // 没填 —— 那就只能报告这台机器上有没有现成的登录
+        await onboardSaveAccount()
+        const t0 = Date.now()
+        const l = await checkLogin()
+        // 读一个几百字节的 vdf，实际只要 ~0.1 秒。快到看不见就等于没发生 ——
+        // 留一个 480ms 的下限，让「正在验证」和「结果」这两拍都真的出现在屏幕上。
+        const wait = 480 - (Date.now() - t0)
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+        loginChecked.value = true
+        if (!l?.ready) {
+          checkPhase.value = 'fail'
+          return
+        }
+        checkPhase.value = 'ok'
+        await new Promise((r) => setTimeout(r, 700))
+        await finishOnboard()
       }
-      checkPhase.value = 'ok'
-      // 通过也别立刻关 —— 让人看一眼「验证通过」，知道刚才那一下真做了什么
-      await new Promise((r) => setTimeout(r, 700))
-      await finishOnboard()
     } finally {
       if (checkPhase.value === 'checking') checkPhase.value = 'idle'
     }
@@ -377,15 +439,6 @@ function skip() {
             >
               {{ rowText }}
             </span>
-          </div>
-
-          <div
-            v-if="loginChecked && !lg?.ready"
-            class="mt-3 rounded-md border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3 py-2 text-[11.5px] text-warn leading-relaxed"
-          >
-            这次没检测到登录凭据，所以先不关窗。
-            在控制台窗口里登录成功后<strong class="text-ink">再点一次「完成」</strong>；
-            不想现在登录就点<strong class="text-ink">「跳过」</strong> —— 不填也能用，只是每次构建会弹框问你要密码。
           </div>
         </template>
 

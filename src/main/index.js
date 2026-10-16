@@ -47,6 +47,7 @@ import {
   getPaths,
   readSteamLogin
 } from './sdk.js'
+import { loginTest } from './login.js'
 import { preflightApp } from './preflight.js'
 import { describeLogin, forgetLogin } from './forget.js'
 import {
@@ -458,6 +459,15 @@ function registerIpc() {
    *   steamcmd 自己缓存的令牌（在控制台里登录过一次），或者我们存着的密码。
    * 只要有一条能免密构建就算 ready。
    */
+  /**
+   * 拿用户刚填的账号密码真登一次，用来回答「我填的到底对不对」。
+   * 跟 login:state 不是一回事：那个只读 config.vdf，只说明「这台机器以前登录过」。
+   */
+  ipcMain.handle('login:test', async (_e, { account, password } = {}) => {
+    const r = await loginTest(account, password, loadSettings())
+    return { ok: true, ...r }
+  })
+
   ipcMain.handle('login:state', () => {
     const s = loadSettings()
     const sc = readSteamLogin(s)

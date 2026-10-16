@@ -32,6 +32,7 @@ const api = {
 
   login: {
     state: () => ipcRenderer.invoke('login:state'),
+    test: (account, password) => ipcRenderer.invoke('login:test', { account, password }),
     describe: () => ipcRenderer.invoke('login:describe'),
     forget: () => ipcRenderer.invoke('login:forget')
   },

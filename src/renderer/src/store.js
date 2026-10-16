@@ -282,6 +282,16 @@ export async function onboardApplySdk(root) {
   }
 }
 
+/** 拿刚填的账号密码真去 steamcmd 登一次 —— 回答「我填的对不对」 */
+export async function testTypedLogin(account, password) {
+  try {
+    const r = await api.login.test(String(account || '').trim(), String(password || ''))
+    return r || { ok: false, reason: 'unknown' }
+  } catch (e) {
+    return { ok: false, reason: 'error', error: String(e?.message || e) }
+  }
+}
+
 export async function onboardSaveAccount() {
   const o = state.onboard
   o.busy = true
