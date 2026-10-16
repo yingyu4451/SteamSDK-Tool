@@ -63,11 +63,7 @@ const canApply = computed(() => {
 const willDo = computed(() => {
   if (!d.value?.ok) return ''
   const src = d.value.kind === 'archive' ? `先解压到 ${state.settings?.buildsRoot || ''}，再把` : '把这个文件夹'
-  if (effPick.value) {
-    const r = effPick.value
-    const root = `${String(state.detail?.contentRoot || '').replace(/[\\/]+$/, '')}\\${r.platform}`
-    return `先把后台的 Depot ${r.depotId} 补成本地脚本，再把它的内容目录指到 ${root}`
-  }
+  if (effPick.value) return ''
   if (!target.value) {
     return `${src}当作新 Depot ${newDepotId.value.trim()} 的内容目录`
   }
@@ -76,6 +72,13 @@ const willDo = computed(() => {
     return `把里面的内容复制进 ${dep?.contentRoot || '（没内容目录）'}`
   }
   return `把 ${dep?.platformId ? PLATFORM_LABEL[dep.platformId] : ''} Depot ${dep?.id || ''} 的内容目录改成 ${d.value.dir}`
+})
+
+/** 会新写出来的脚本文件名 */
+const scriptLine = computed(() => {
+  const r = effPick.value
+  if (r) return `depot_${r.depotId}_${r.platform}.vdf`
+  return target.value ? '' : newDepotFile.value
 })
 
 // 分析结果出来之后，默认选同平台那个 depot；没有就默认新建
@@ -173,7 +176,7 @@ async function doApply() {
     <div ref="el" class="relative card w-full max-w-[680px] max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
         <div class="min-w-0">
-          <h2 class="text-[15px] font-semibold m-0">放进去</h2>
+          <h2 class="text-[15px] font-semibold m-0">文件识别</h2>
           <p class="mt-1 mb-0 text-[11.5px] text-faint font-mono truncate" :title="d.target">
             {{ d.target }}
           </p>
@@ -235,15 +238,6 @@ async function doApply() {
               </div>
             </div>
 
-            <!-- 该排除的垃圾 -->
-            <div v-if="d.junk?.length" class="mt-3 pt-2.5 border-t border-line-soft">
-              <div class="text-[11.5px] text-amber mb-1">里面有这些，建议别传上去：</div>
-              <div v-for="(j, i) in d.junk" :key="i" class="text-[11px] text-faint font-mono truncate">
-                {{ j.label }} — {{ j.sample }}
-                <span v-if="j.rule" class="text-muted">（FileExclusion 写 {{ j.rule }}）</span>
-              </div>
-            </div>
-
             <!-- .app bundle -->
             <div v-if="d.hasAppBundle" class="mt-2 text-[11.5px] text-amber">
               macOS 的 .app bundle 传上去容易坏签名 —— 跑「检查文件」能看到详情，Valve 的 tools\ContentPrep 是专门处理这个的。
@@ -272,7 +266,7 @@ async function doApply() {
                   v-if="dep.platformId === suggested"
                   class="pill pill-ok"
                 >
-                  和你拖的对得上
+                  平台一致
                 </span>
                 <span class="ml-auto font-mono text-[11px] text-faint truncate max-w-[240px]" :title="dep.contentRoot">
                   {{ dep.contentRoot || '（没有内容目录）' }}
@@ -298,8 +292,8 @@ async function doApply() {
                 />
                 <span class="text-[12.5px] text-ink">{{ row.platformLabel || PLATFORM_LABEL[row.platform] }}</span>
                 <span class="font-mono num text-[11.5px] text-faint">{{ row.depotId }}</span>
-                <span class="pill pill-idle">后台有，本地没配</span>
-                <span v-if="row.platform === suggested" class="pill pill-ok">和你拖的对得上</span>
+                <span class="pill pill-idle">未在本地配置</span>
+                <span v-if="row.platform === suggested" class="pill pill-ok">平台一致</span>
                 <span class="ml-auto text-[11px] text-faint num shrink-0">{{ fmtSize(row.size) }}</span>
               </label>
 
@@ -323,15 +317,6 @@ async function doApply() {
             </div>
             <div v-else-if="bk.done && !bk.depots.length" class="text-[11px] text-faint">
               后台的 Depot 本地都配齐了{{ bk.appName ? `（${bk.appName}）` : '' }}。
-            </div>
-
-            <!-- 会撞 ID 的提醒 -->
-            <div
-              v-if="clashWarning"
-              class="rounded-[10px] border border-[rgba(240,169,46,.26)] bg-[rgba(240,169,46,.06)] px-3 py-2 text-[11.5px] text-amber"
-            >
-              后台已经有 {{ PLATFORM_LABEL[suggested] }} 的 Depot（{{ backendSamePlatform.map((x) => x.depotId).join('、') }}），
-              本地没配。新建一个会跟它撞 ID —— 选上面那条「后台有，本地没配」更稳妥。
             </div>
 
             <!-- 新建的字段 -->
@@ -368,10 +353,10 @@ async function doApply() {
           </div>
 
           <!-- 会做什么 -->
-          <div class="card-flat px-3.5 py-2.5 text-[11.5px] text-muted">
-            {{ willDo }}
-            <div v-if="!target && newDepotFile" class="mt-1 font-mono text-[11px] text-faint">
-              ＋ 脚本 {{ newDepotFile }}
+          <div v-if="willDo || scriptLine" class="card-flat px-3.5 py-2.5 text-[11.5px] text-muted">
+            <div v-if="willDo">{{ willDo }}</div>
+            <div v-if="scriptLine" class="font-mono text-[11px] text-faint" :class="willDo ? 'mt-1' : ''">
+              ＋ 脚本 {{ scriptLine }}
             </div>
           </div>
         </template>
