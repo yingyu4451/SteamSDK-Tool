@@ -68,6 +68,8 @@ export const state = reactive({
   /** 构建因为缺 Steam Guard 验证码失败时，在这里放 {preview, local}，界面据此弹输码框 */
   askGuard: null,
   runGuardCode: '',
+  /** 登录测试期间主进程推过来的进度：{kind:'mobile'} = 等用户在手机上点确认 */
+  loginWait: null,
 
   // 新建 App 向导
   wizard: null,
@@ -287,6 +289,11 @@ export async function onboardApplySdk(root) {
 
 /** 拿刚填的账号密码真去 steamcmd 登一次 —— 回答「我填的对不对」 */
 export async function testTypedLogin(account, password, guardCode) {
+  state.loginWait = null
+  // 手机确认期间主进程会推一条进度过来，界面据此切成「去手机上点确认」
+  const off = api.login.onProgress((m) => {
+    if (m?.kind === 'mobile') state.loginWait = { kind: 'mobile', at: Date.now() }
+  })
   try {
     const r = await api.login.test(
       String(account || '').trim(),
@@ -296,6 +303,9 @@ export async function testTypedLogin(account, password, guardCode) {
     return r || { ok: false, reason: 'unknown' }
   } catch (e) {
     return { ok: false, reason: 'error', error: String(e?.message || e) }
+  } finally {
+    off?.()
+    state.loginWait = null
   }
 }
 

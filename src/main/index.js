@@ -463,8 +463,11 @@ function registerIpc() {
    * 拿用户刚填的账号密码真登一次，用来回答「我填的到底对不对」。
    * 跟 login:state 不是一回事：那个只读 config.vdf，只说明「这台机器以前登录过」。
    */
-  ipcMain.handle('login:test', async (_e, { account, password, guardCode } = {}) => {
-    const r = await loginTest(account, password, guardCode, loadSettings())
+  ipcMain.handle('login:test', async (e, { account, password, guardCode } = {}) => {
+    const wc = e.sender
+    const r = await loginTest(account, password, guardCode, loadSettings(), (msg) => {
+      if (!wc.isDestroyed()) wc.send('login:progress', msg)
+    })
     return { ok: true, ...r }
   })
 

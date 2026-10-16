@@ -13,7 +13,9 @@ import { getPaths } from './sdk.js'
  * 密码只从 stdin 喂进去，绝不进命令行：argv 是能被别的进程读到的。
  */
 
-const TIMEOUT_MS = 150000
+/* 手机确认那条路要留够时间：用户得先看到提示、掏手机、解锁、点确认。
+ * 150 秒对「盯着屏幕点一下」够，对「手机在另一个房间」就不够了。 */
+const TIMEOUT_MS = 240000
 
 function logFile(settings) {
   const p = getPaths(settings || {})
@@ -37,6 +39,16 @@ function newLines(file, from) {
   }
 }
 
+/**
+ * 手机令牌那条路：steamcmd 会打
+ *   This account is protected by a Steam Guard mobile authenticator.
+ *   Please confirm the login in the Steam Mobile app on your phone.
+ * 然后**停在那儿等你在手机上点确认** —— 不需要输任何码。
+ * 所以这不是失败，是「等你」。
+ */
+const MOBILE_RE =
+  /Steam Guard mobile authenticator|confirm the login in the Steam Mobile app|Open the Steam Mobile app/i
+
 /** 把一次登录的日志翻成人话 */
 export function classifyLogin(lines = [], exitCode = null) {
   const text = lines.join('\n')
@@ -46,19 +58,27 @@ export function classifyLogin(lines = [], exitCode = null) {
   // 这种情况即使返回成功，也**不能**说密码是对的 —— 它根本没验。
   const askedForPassword = /^\s*password:\s*$/im.test(text) && /Cached credentials not found/i.test(text)
   // 机器没被授权过 → steamcmd 会要一个 Steam Guard 码。
-  // 它那句提示写的是「check your email」，但绑了手机令牌的账号同样会走到这儿。
+  // 它那句提示写的是「check your email」，但绑了手机令牌的账号会走上面那条手机确认。
   const askedForGuard = /has not been authenticated for your account|Steam Guard code|Two-factor code/i.test(text)
+  const askedMobile = MOBILE_RE.test(text)
 
-  const base = { usedAccount, passwordChecked: askedForPassword, guardAsked: askedForGuard, exitCode }
+  const base = {
+    usedAccount,
+    passwordChecked: askedForPassword,
+    guardAsked: askedForGuard,
+    mobileAsked: askedMobile,
+    exitCode
+  }
 
   if (/Account Logon Denied|Invalid Login Auth Code/i.test(text)) {
     return { ...base, ok: false, reason: 'steam-guard' }
   }
   if (/Invalid Password/i.test(text)) return { ...base, ok: false, reason: 'bad-password' }
-  if (/Steam Guard|Two-factor/i.test(text)) return { ...base, ok: false, reason: 'steam-guard' }
   if (/Rate Limit|too many/i.test(text)) return { ...base, ok: false, reason: 'rate-limit' }
-  if (/FAILED|Login Failure/i.test(text)) return { ...base, ok: false, reason: 'failed' }
   if (exitCode === 0) return { ...base, ok: true, reason: 'ok' }
+  // 手机确认这条路：等超时了也不能说人家密码错 —— 就是没人去点
+  if (askedMobile) return { ...base, ok: false, reason: 'mobile-timeout' }
+  if (/FAILED|Login Failure/i.test(text)) return { ...base, ok: false, reason: 'failed' }
   return { ...base, ok: false, reason: 'unknown' }
 }
 
@@ -68,8 +88,11 @@ export function classifyLogin(lines = [], exitCode = null) {
  * guardCode 非空时会作为第二行喂给 stdin。steamcmd 是先读 password:、
  * 再读 Steam Guard code:，所以两行按顺序写进去就行 —— 比去解析它被块缓冲
  * 卡住的提示靠谱得多（接管道时那个提示常常刷不出来）。
+ *
+ * onWait({kind:'mobile'}) 会在日志里出现「去手机上确认」时回调一次 ——
+ * 这时候进程还在跑、还在等你，界面应该切成「打开手机 Steam App 点确认」。
  */
-export function loginTest(account, password, guardCode = '', settings) {
+export function loginTest(account, password, guardCode = '', settings, onWait) {
   const user = String(account || '').trim()
   if (!user) return Promise.resolve({ ok: false, reason: 'no-account', usedAccount: '', passwordChecked: false })
   const p = getPaths(settings || {})
@@ -87,10 +110,28 @@ export function loginTest(account, password, guardCode = '', settings) {
     })
 
     let done = false
+    let toldMobile = false
+    let ticker = null
+
+    // 手机确认期间进程会一直挂着，得一边跑一边看日志，
+    // 否则界面只能干等到超时才说话
+    const watch = () => {
+      if (done || toldMobile) return
+      try {
+        if (!MOBILE_RE.test(newLines(file, from).join('\n'))) return
+      } catch {
+        return
+      }
+      toldMobile = true
+      onWait?.({ kind: 'mobile' })
+    }
+    ticker = setInterval(watch, 1200)
+
     const finish = (extra) => {
       if (done) return
       done = true
       clearTimeout(timer)
+      clearInterval(ticker)
       const lines = newLines(file, from)
       resolve({ ...classifyLogin(lines, extra.exitCode ?? null), ...extra })
     }

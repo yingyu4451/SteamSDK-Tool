@@ -4,7 +4,7 @@ import gsap from 'gsap'
 import { state, clearLogs, cancelRun, answerPrompt, saveApp, submitGuardCode, cancelGuardPrompt } from '../store.js'
 import { fmtClock } from '../format.js'
 import { reducedMotion } from '../motion.js'
-import { Check, TriangleAlert, ShieldAlert } from '@lucide/vue'
+import { Check, TriangleAlert, ShieldAlert, LoaderCircle } from '@lucide/vue'
 
 const verbose = computed(() => state.detail?.verbose === '1')
 const verboseBusy = ref(false)
@@ -121,7 +121,7 @@ function openBuildsPage() {
 watch(
   () => state.prompt,
   async (p) => {
-    if (p) {
+    if (p && p.kind !== 'mobile-confirm') {
       await nextTick()
       promptEl.value?.focus()
     }
@@ -201,15 +201,22 @@ const exitTone = computed(() => {
       >
         <TriangleAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
         <span class="text-[12.5px] text-amber">{{ state.prompt.hint }}</span>
-        <input
-          ref="promptEl"
-          v-model="promptValue"
-          :type="state.prompt.kind === 'password' ? 'password' : 'text'"
-          class="flex-1 max-w-[320px] h-8 px-3 rounded-lg bg-surface border border-line text-[13px] outline-none focus:border-[rgba(255,180,84,.5)]"
-          placeholder="输入后回车"
-          @keydown.enter="submitPrompt"
-        />
-        <button class="btn h-8 no-drag" @click="submitPrompt">提交</button>
+        <!-- 手机确认那条不用输任何东西，去手机上点就行 —— 别摆一个让人以为要打字的框 -->
+        <template v-if="state.prompt.kind === 'mobile-confirm'">
+          <LoaderCircle :size="15" class="text-amber shrink-0 drop-spin" />
+          <span class="text-[11.5px] text-faint">等你在手机上点确认…（盾牌图标 → 确认登录）</span>
+        </template>
+        <template v-else>
+          <input
+            ref="promptEl"
+            v-model="promptValue"
+            :type="state.prompt.kind === 'password' ? 'password' : 'text'"
+            class="flex-1 max-w-[320px] h-8 px-3 rounded-lg bg-surface border border-line text-[13px] outline-none focus:border-[rgba(255,180,84,.5)]"
+            placeholder="输入后回车"
+            @keydown.enter="submitPrompt"
+          />
+          <button class="btn h-8 no-drag" @click="submitPrompt">提交</button>
+        </template>
       </div>
     </Transition>
 

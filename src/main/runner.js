@@ -143,6 +143,20 @@ export function runScript({
       onData?.({ stream, line, raw: line })
     }
 
+    // 手机令牌：steamcmd 会停在「Please confirm the login in the Steam Mobile app」
+    // 上等你 —— 不用输任何码，去手机上点一下就行。这条要抢在下面「验证码」那条前面判，
+    // 因为那句话里也含 "Steam Guard"。stdout 被块缓冲时看不到，属于尽力而为。
+    if (
+      !record.askedMobile &&
+      /Steam Guard mobile authenticator|confirm the login in the Steam Mobile app/i.test(text)
+    ) {
+      record.askedMobile = true
+      onPrompt?.({
+        kind: 'mobile-confirm',
+        hint: 'Steam 要你在手机上确认 —— 打开 Steam App，点「确认登录」。这边会自己继续'
+      })
+    }
+
     // Steam Guard / 两步验证：stdout 被块缓冲时看不到提示，属于尽力而为
     if (!record.askedGuard && /two-?factor|guard code|verification code|验证码/i.test(text)) {
       record.askedGuard = true

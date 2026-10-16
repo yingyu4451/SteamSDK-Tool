@@ -88,6 +88,12 @@ const needGuard = computed(
   () => checkPhase.value === 'fail' && testResult.value?.reason === 'steam-guard'
 )
 
+/**
+ * 手机令牌那条路：steamcmd 会说「Please confirm the login in the Steam Mobile app」，
+ * 然后停在那儿等你在手机上点确认 —— 不用输任何码。这不是失败，是「等你」。
+ */
+const mobileWaiting = computed(() => checkPhase.value === 'checking' && state.loginWait?.kind === 'mobile')
+
 /* 这个组件在 App.vue 里是一直挂着的，只有里面那层 div 跟着 open 开关 ——
  * 所以 checkPhase 会活到下一次打开。上一次「验证通过」留下的 ok 会把
  * 主按钮永久禁用，从手册重新进来就卡在第一步动不了。每次打开都清一次。 */
@@ -114,13 +120,14 @@ const rowTone = computed(() => {
 })
 const rowText = computed(() => {
   if (checkPhase.value === 'checking') {
+    if (mobileWaiting.value) return '等你手机上点确认 —— 在 Steam App 里点「确认登录」'
     return testResult.value === null && rowUsesRealLogin.value
       ? '正在用你填的账号登录 steamcmd，第一次要十几秒…'
       : '正在验证登录状态…'
   }
   const t = testResult.value
   if (t) {
-    if (t.timedOut) return '两分半没等到 Steam 回话 —— 网络慢或被拦了。可以点「跳过」，构建时再试'
+    if (t.timedOut) return '等太久了 —— 网络慢，或者手机那边一直没确认。可以点「跳过」，构建时再试'
     switch (t.reason) {
       case 'ok':
         return t.passwordChecked
@@ -128,8 +135,10 @@ const rowText = computed(() => {
           : `steamcmd 用它以前缓存的令牌登录成功了（${t.usedAccount}）。你这次填的密码没被校验 —— 想真的验一次，先去设置里「忘记账号」`
       case 'bad-password':
         return 'Steam 说密码不对（Invalid Password）。检查一下大小写，账号名不是邮箱'
+      case 'mobile-timeout':
+        return '一直在等你手机上确认，没等到。手机上打开 Steam App → 右下角盾牌图标里那条「确认登录」，点了它这就能过'
       case 'steam-guard':
-        return '这个账号开了 Steam Guard，光有密码不够。手机令牌 App 里会显示一串 5 位码（没绑手机的话 Steam 会发到邮箱）—— 填到下面再点一次「完成」'
+        return 'Steam 要一个 Steam Guard 验证码（不是手机确认那种）—— 填到下面再点一次「完成」'
       case 'rate-limit':
         return 'Steam 暂时限制了登录尝试（Rate Limit）。等几分钟再点一次'
       case 'no-steamcmd':
@@ -454,6 +463,21 @@ function skip() {
             >
               {{ rowText }}
             </span>
+          </div>
+
+          <!-- 手机令牌：steamcmd 停在那儿等你点确认，什么都别输，去手机上点 -->
+          <div
+            v-if="mobileWaiting"
+            class="mt-2.5 rounded-md border border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)] px-3 py-2.5"
+          >
+            <div class="text-[12px] text-accent font-semibold mb-1.5">
+              打开手机上的 Steam App，点「确认登录」
+            </div>
+            <ol class="m-0 pl-4 text-[11.5px] text-muted leading-relaxed">
+              <li>打开 Steam 手机 App（就是看令牌那个）</li>
+              <li>右下角盾牌图标 → 里面有一条「确认登录」</li>
+              <li>点它。这边会自己继续，不用在这个窗口做任何操作</li>
+            </ol>
           </div>
 
           <!-- 缺验证码时才出现。steamcmd 一次登录只要一个码，
