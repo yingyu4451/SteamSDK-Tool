@@ -1,12 +1,16 @@
-# pnpm 11 起，onlyBuiltDependencies 从 package.json 的 "pnpm" 字段搬到了这里。
-# electron 需要跑 postinstall 下载二进制，否则 node_modules\electron\dist 是空的。
-onlyBuiltDependencies:
-  - electron
-
-# 这两个的构建脚本我们明确不要，列出来免得 pnpm 每次 install 都报
-# ERR_PNPM_IGNORED_BUILDS 并以退出码 1 结束（CI 上会直接把构建判失败）。
-#   - esbuild：平台二进制走 @esbuild/<plat> 的 optionalDependencies，postinstall 只是校验
-#   - electron-winstaller：Squirrel/Windows 安装器的辅助包，我们只用 NSIS，用不上
-ignoredBuiltDependencies:
-  - esbuild
-  - electron-winstaller
+# pnpm 11 的依赖构建脚本白名单。
+#
+# 11.28 起用的是 `allowBuilds`（包名 → true/false 的映射），不再是 10.x 的
+# `onlyBuiltDependencies` 列表 —— 用旧名字 pnpm 会当作没配，把脚本全跳过，
+# 然后以 ERR_PNPM_IGNORED_BUILDS + 退出码 1 结束（CI 上直接判构建失败）。
+#
+# 这个映射由 `pnpm approve-builds` 维护，也可以手改。
+allowBuilds:
+  # Electron 44 的 package.json 里没有 scripts 字段，二进制靠
+  # node_modules/electron/index.js 首次调用时惰性下载；CI 里我们显式跑
+  # `node node_modules/electron/install.js`，本地也跑一次。
+  electron: true
+  # 平台二进制走 @esbuild/<plat> 的 optionalDependencies，postinstall 只是校验
+  esbuild: true
+  # electron-builder 的 Squirrel 辅助包。我们只用 NSIS，但它的脚本无害
+  electron-winstaller: true
