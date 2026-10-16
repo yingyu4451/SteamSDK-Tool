@@ -533,3 +533,8 @@ textarea {
 .drop-spin-slow {
   animation: drop-spin 1.6s linear infinite;
 }
+
+/* 按钮里、状态行里的小转圈（lucide 的 LoaderCircle 配这个） */
+.drop-spin {
+  animation: drop-spin 0.75s linear infinite;
+}

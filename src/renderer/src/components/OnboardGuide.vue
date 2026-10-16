@@ -67,6 +67,23 @@ onMounted(async () => {
   if (!o.value.candidates.length) onboardDetect()
 })
 
+/** 点「完成」之后的验证过程：idle → checking → ok / fail */
+const checkPhase = ref('idle')
+
+/** 状态行只在「正在验证」或「验证过」的时候出现 —— 没查过就不替用户下结论 */
+const rowShow = computed(() => checkPhase.value === 'checking' || loginChecked.value)
+const rowTone = computed(() => {
+  if (checkPhase.value === 'checking') return 'busy'
+  return lg.value?.ready ? 'ok' : 'bad'
+})
+const rowText = computed(() => (checkPhase.value === 'checking' ? '正在验证登录状态…' : loginText.value))
+const btnText = computed(() => {
+  if (o.value.step !== 2) return '下一步'
+  if (checkPhase.value === 'checking') return '正在验证…'
+  if (checkPhase.value === 'ok') return '验证通过'
+  return '完成'
+})
+
 async function next() {
   const step = o.value.step
   if (step === 1 && !sdkOk.value) {
@@ -74,12 +91,30 @@ async function next() {
     if (!ok) return
   }
   if (step === 2) {
-    await onboardSaveAccount()
-    // 唯一一次登录检验：过了就关窗，没过就留在这儿，让用户去开登录窗口
-    const l = await checkLogin()
-    loginChecked.value = true
-    if (!l?.ready) return
-    await finishOnboard()
+    if (checkPhase.value === 'checking') return
+    checkPhase.value = 'checking'
+    loginChecked.value = false
+    try {
+      await onboardSaveAccount()
+      const t0 = Date.now()
+      // 唯一一次登录检验：过了就关窗，没过就留在这儿，让用户去开登录窗口
+      const l = await checkLogin()
+      // 读一个几百字节的 vdf，实际只要 ~0.1 秒。快到看不见就等于没发生 ——
+      // 留一个 480ms 的下限，让「正在验证」和「结果」这两拍都真的出现在屏幕上。
+      const wait = 480 - (Date.now() - t0)
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+      loginChecked.value = true
+      if (!l?.ready) {
+        checkPhase.value = 'fail'
+        return
+      }
+      checkPhase.value = 'ok'
+      // 通过也别立刻关 —— 让人看一眼「验证通过」，知道刚才那一下真做了什么
+      await new Promise((r) => setTimeout(r, 700))
+      await finishOnboard()
+    } finally {
+      if (checkPhase.value === 'checking') checkPhase.value = 'idle'
+    }
     return
   }
   onboardGo(step + 1)
@@ -301,25 +336,33 @@ function skip() {
             不进命令行参数、不写进任何日志。不存也行，每次构建会问你要。
           </p>
 
-          <!-- 状态行只在点过「完成」之后出现 —— 没查过就不替用户下结论。
+          <!-- 点「完成」之后才出现 —— 没查过就不替用户下结论。
                登录与否由主进程读 steamcmd 的 config.vdf 判断，不用用户自己打勾 -->
           <div
-            v-if="loginChecked"
+            v-if="rowShow"
             class="mt-3.5 rounded-md border px-3 py-2.5 flex items-start gap-2"
-            :class="
-              lg?.ready
-                ? 'border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)]'
-                : 'border-[rgba(240,169,46,.28)] bg-[rgba(240,169,46,.06)]'
-            "
+            :class="{
+              'border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)]': rowTone === 'busy',
+              'border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)]': rowTone === 'ok',
+              'border-[rgba(240,169,46,.28)] bg-[rgba(240,169,46,.06)]': rowTone === 'bad'
+            }"
           >
-            <component
-              :is="lg?.ready ? Check : TriangleAlert"
+            <LoaderCircle
+              v-if="rowTone === 'busy'"
               :size="14"
-              class="shrink-0 mt-0.5"
-              :class="lg?.ready ? 'text-success' : 'text-warn'"
+              class="shrink-0 mt-0.5 text-accent drop-spin"
             />
-            <span class="text-[11.5px] leading-relaxed" :class="lg?.ready ? 'text-success' : 'text-warn'">
-              {{ loginText }}
+            <Check v-else-if="rowTone === 'ok'" :size="14" class="shrink-0 mt-0.5 text-success" />
+            <TriangleAlert v-else :size="14" class="shrink-0 mt-0.5 text-warn" />
+            <span
+              class="text-[11.5px] leading-relaxed"
+              :class="{
+                'text-accent': rowTone === 'busy',
+                'text-success': rowTone === 'ok',
+                'text-warn': rowTone === 'bad'
+              }"
+            >
+              {{ rowText }}
             </span>
           </div>
 
@@ -342,7 +385,14 @@ function skip() {
       </div>
 
       <footer class="px-6 py-4 border-t border-line flex items-center gap-2">
-        <button v-if="o.step > 0" class="btn" @click="onboardGo(o.step - 1)">上一步</button>
+        <button
+          v-if="o.step > 0"
+          class="btn"
+          :disabled="checkPhase === 'checking'"
+          @click="onboardGo(o.step - 1)"
+        >
+          上一步
+        </button>
         <button
           v-else
           class="text-[11.5px] text-faint hover:text-muted bg-transparent border-0 p-0 cursor-pointer underline decoration-dotted"
@@ -351,9 +401,17 @@ function skip() {
           我自己去设置里配
         </button>
         <div class="flex-1" />
-        <button v-if="o.step === 2" class="btn" @click="skip">跳过</button>
-        <button class="btn btn-primary" :disabled="o.busy" @click="next">
-          {{ o.step === 2 ? '完成' : '下一步' }}
+        <button v-if="o.step === 2" class="btn" :disabled="checkPhase === 'checking'" @click="skip">
+          跳过
+        </button>
+        <button
+          class="btn btn-primary"
+          :disabled="o.busy || checkPhase === 'checking' || checkPhase === 'ok'"
+          @click="next"
+        >
+          <LoaderCircle v-if="checkPhase === 'checking'" :size="13" class="mr-1.5 drop-spin" />
+          <Check v-else-if="checkPhase === 'ok'" :size="13" class="mr-1.5" />
+          {{ btnText }}
         </button>
       </footer>
     </div>
