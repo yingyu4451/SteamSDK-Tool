@@ -112,20 +112,60 @@ export function loginTest(account, password, guardCode = '', settings, onWait) {
     let done = false
     let toldMobile = false
     let ticker = null
+    /** steamcmd 打在控制台上的原文。有些提示只走 stdout，不写日志文件 */
+    let streamed = ''
 
-    // 手机确认期间进程会一直挂着，得一边跑一边看日志，
-    // 否则界面只能干等到超时才说话
+    /* 为什么不能只盯日志文件：
+     * 实测过 —— 用户屏幕上明明出现了
+     *   ...to Steam Public...This account is protected by a Steam Guard mobile authenticator.
+     *   Please confirm the login in the Steam Mobile app on your phone.
+     * 但 console_log.txt 里 `mobile authenticator` 出现 0 次：那句只打在控制台上，
+     * 日志文件只记到 "...to Steam Public..." 就断了。
+     * 所以两条路一起看：stdout 抓到最好，抓不到就靠「卡住了」这个行为兜底。 */
     const watch = () => {
       if (done || toldMobile) return
+
+      // ① stdout / stderr 里直接看到那句
+      if (MOBILE_RE.test(streamed)) {
+        toldMobile = true
+        onWait?.({ kind: 'mobile' })
+        return
+      }
+
+      let text = ''
       try {
-        if (!MOBILE_RE.test(newLines(file, from).join('\n'))) return
+        text = newLines(file, from).join('\n')
       } catch {
         return
       }
-      toldMobile = true
-      onWait?.({ kind: 'mobile' })
+      if (MOBILE_RE.test(text)) {
+        toldMobile = true
+        onWait?.({ kind: 'mobile' })
+        return
+      }
+
+      // ② 兜底：已经 Logging in 了，十几秒既不出错也不 OK —— 那多半就是在等人。
+      //    绑了手机令牌的账号，Steam 会一直挂到你在 App 里点确认为止。
+      if (!/Logging in user/i.test(text)) return
+      if (/ERROR|Retrying|Logged in OK/i.test(text)) return
+      const m = /\[([\d-]+ [\d:]+)\] Logging in user/.exec(text)
+      const since = m ? Date.parse(m[1].replace(' ', 'T') + '+08:00') : NaN
+      const waited = Number.isFinite(since) ? Date.now() - since : 0
+      if (waited > 15000) {
+        toldMobile = true
+        onWait?.({ kind: 'mobile' })
+      }
     }
     ticker = setInterval(watch, 1200)
+
+    child.stdout?.on('data', (d) => {
+      streamed += d.toString('utf8')
+      watch()
+    })
+    child.stderr?.on('data', (d) => {
+      streamed += d.toString('utf8')
+      watch()
+    })
 
     const finish = (extra) => {
       if (done) return

@@ -471,13 +471,16 @@ function skip() {
             class="mt-2.5 rounded-md border border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)] px-3 py-2.5"
           >
             <div class="text-[12px] text-accent font-semibold mb-1.5">
-              打开手机上的 Steam App，点「确认登录」
+              Steam 十几秒没回话 —— 绑了手机令牌的账号，就是它在等你确认
             </div>
             <ol class="m-0 pl-4 text-[11.5px] text-muted leading-relaxed">
               <li>打开 Steam 手机 App（就是看令牌那个）</li>
               <li>右下角盾牌图标 → 里面有一条「确认登录」</li>
               <li>点它。这边会自己继续，不用在这个窗口做任何操作</li>
             </ol>
+            <div class="mt-1.5 text-[11px] text-faint">
+              没绑手机令牌的话这就是网络慢，等它自己出结果即可。
+            </div>
           </div>
 
           <!-- 缺验证码时才出现。steamcmd 一次登录只要一个码，
