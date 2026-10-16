@@ -44,7 +44,8 @@ import {
   suggestDepotId,
   defaultContentRoot,
   detectSdkRoots,
-  getPaths
+  getPaths,
+  readSteamLogin
 } from './sdk.js'
 import { preflightApp } from './preflight.js'
 import {
@@ -450,6 +451,24 @@ function registerIpc() {
 
   /* ---- SDK ---- */
   ipcMain.handle('sdk:detect', () => detectSdkRoots())
+
+  /**
+   * 「登录好了没」——两处都算数：
+   *   steamcmd 自己缓存的令牌（便捷登录留下的），或者我们存着的密码。
+   * 只要有一条能免密构建就算 ready。
+   */
+  ipcMain.handle('login:state', () => {
+    const s = loadSettings()
+    const sc = readSteamLogin(s)
+    const savedPassword = hasPassword()
+    return {
+      ok: true,
+      steamcmd: sc,
+      saved: { hasPassword: savedPassword, account: s.account || '' },
+      ready: sc.cached || savedPassword,
+      checkedAt: Date.now()
+    }
+  })
   ipcMain.handle('sdk:status', () => sdkStatus(loadSettings()))
   ipcMain.handle('sdk:scan', () => scanApps(loadSettings()))
   ipcMain.handle('sdk:app', (_e, dirName) => readApp(dirName, loadSettings()))

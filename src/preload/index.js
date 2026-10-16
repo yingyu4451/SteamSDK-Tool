@@ -30,6 +30,10 @@ const api = {
     log: (file) => ipcRenderer.invoke('sdk:log', file)
   },
 
+  login: {
+    state: () => ipcRenderer.invoke('login:state')
+  },
+
   vdf: {
     setBranch: (dirName, branch) => ipcRenderer.invoke('vdf:setBranch', { dirName, branch })
   },

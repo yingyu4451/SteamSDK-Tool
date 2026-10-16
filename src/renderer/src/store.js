@@ -39,6 +39,7 @@ export const state = reactive({
 
   // 首次运行引导
   onboard: { open: false, step: 0, busy: false, error: null, candidates: [], manual: '', account: '', password: '', saved: '' },
+  login: { ok: false, ready: false, error: null, steamcmd: null, saved: null, checkedAt: 0 },
 
   running: false,
   runKind: null, // check | build
@@ -212,6 +213,8 @@ export function onboardGo(step) {
   if (state.onboard.step === 1 && !state.onboard.candidates.length && !state.onboard.busy) {
     onboardDetect()
   }
+  // 进第三步时先问一次登录状态；之后由界面上的轮询接着问
+  if (state.onboard.step === 2) checkLogin()
 }
 
 export async function onboardDetect() {
@@ -314,6 +317,27 @@ export async function startOnboard() {
   state.onboard.manual = state.settings?.sdkRoot || ''
   state.onboard.open = true
   await onboardDetect()
+}
+
+/* ------------------------------------------------------------------ *
+ *  「登录好了没」——引导第三步要反复问这个
+ * ------------------------------------------------------------------ */
+
+/**
+ * 问主进程要一次登录状态。
+ * 两个来源都算数：steamcmd 自己缓存的令牌（便捷登录留下的），或者我们存着的密码。
+ * 这个查询很便宜（读一个几百字节的 vdf），所以引导第三步可以隔几秒问一次 ——
+ * 用户在控制台里登录成功后，界面自己就绿了。
+ */
+export async function checkLogin() {
+  try {
+    const r = await api.login.state()
+    if (r?.ok) state.login = { ...r, error: null }
+    return state.login
+  } catch (e) {
+    state.login = { ...state.login, ok: false, error: String(e?.message || e) }
+    return state.login
+  }
 }
 
 /** 引导的最后一步：无论走完还是「跳过教程」，都记下来不再弹 */

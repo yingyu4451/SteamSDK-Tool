@@ -42,6 +42,42 @@ export function getPaths(settings) {
   }
 }
 
+/**
+ * steamcmd 自己缓存的登录态 —— 也就是「便捷登录」留下的东西。
+ * 只读 `builder\config\config.vdf`：ConnectCache 里有非空令牌 = 它下次能免密登录；
+ * Accounts 块里记着的是上次登录的账号。
+ * 注意：这个文件 steamcmd 会在运行时整个重写，所以每次都得重新读，不能缓存。
+ */
+export function readSteamLogin(settings) {
+  const p = getPaths(settings || {})
+  const configPath = path.join(p.builderDir, 'config', 'config.vdf')
+  const out = { cached: false, account: '', steamId: '', configPath, exists: false }
+  let text = ''
+  try {
+    text = fs.readFileSync(configPath, 'utf8')
+  } catch {
+    return out
+  }
+  out.exists = true
+
+  // ConnectCache 的每一项是「短 key -> 一长串 hex 令牌」，空块就是没登录
+  const cc = /"ConnectCache"\s*\{([^}]*)\}/i.exec(text)
+  if (cc && /"[0-9a-f]{4,}"\s+"[0-9a-f]{32,}"/i.test(cc[1])) out.cached = true
+
+  // Accounts 里是「账号名 { SteamID "..." }」。
+  // 不能先按 [^}]* 切块 —— 那会在内层 } 处截断，SteamID 就取不到了。
+  const at = /"Accounts"\s*\{/i.exec(text)
+  if (at) {
+    const rest = text.slice(at.index + at[0].length)
+    const m = /"([^"\r\n{}]+)"\s*\{\s*"SteamID"\s+"(\d+)"/i.exec(rest)
+    if (m) {
+      out.account = m[1].trim()
+      out.steamId = m[2]
+    }
+  }
+  return out
+}
+
 export function sdkStatus(settings) {
   const p = getPaths(settings)
   return {
