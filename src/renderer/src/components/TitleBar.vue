@@ -25,7 +25,10 @@ onBeforeUnmount(() => {
   if (typeof off === 'function') off()
 })
 
-const WBTN = 'w-11 h-11 grid place-items-center bg-transparent border-0 cursor-pointer text-muted transition-colors'
+/* 窗口按钮：顶栏是 h-11 + 1px 下边框，内容盒只有 43px。
+ * 按钮必须跟着容器走（h-full），不能用 h-11 —— 否则 44px 的按钮塞进 43px 的盒子里，
+ * 图标会比右边的状态胶囊高出 1px。 */
+const WBTN = 'h-full w-11 grid place-items-center bg-transparent border-0 cursor-pointer text-muted transition-colors'
 </script>
 
 <template>

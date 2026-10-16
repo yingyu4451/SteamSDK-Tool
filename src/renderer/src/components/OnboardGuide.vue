@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, nextTick } from 'vue'
 import gsap from 'gsap'
-import { Download, RefreshCw, Check } from '@lucide/vue'
+import { Download, RefreshCw, Check, LogIn, Sparkles } from '@lucide/vue'
 import {
   state,
   onboardGo,
@@ -12,6 +12,7 @@ import {
   finishOnboard,
   onboardMode,
   openWizard,
+  openLogin,
   goSettings
 } from '../store.js'
 
@@ -167,7 +168,7 @@ function goCreateApp() {
         <!-- ── 1 SDK 路径 ── -->
         <template v-else-if="o.step === 1">
           <div class="flex items-center gap-3">
-            <h2 class="text-[16px] font-semibold m-0">SteamSDK 文件夹</h2>
+            <h2 class="text-[16px] font-semibold m-0">SteamSDK 路径</h2>
             <button
               class="ml-auto btn h-8 px-3 text-[11.5px]"
               :disabled="o.busy"
@@ -179,10 +180,18 @@ function goCreateApp() {
             </button>
           </div>
 
-          <div v-if="o.candidates.length" class="mt-3.5 flex flex-col gap-1.5">
+          <div
+            v-if="o.candidates.length"
+            class="mt-3.5 flex flex-col gap-1.5 rounded-lg border p-3 transition-colors"
+            :class="
+              mode === 'auto'
+                ? 'border-[rgba(102,192,244,.45)] bg-[rgba(102,192,244,.05)]'
+                : 'border-line bg-transparent'
+            "
+          >
             <div class="flex items-center gap-2">
               <span class="text-[11px] tracking-wider text-faint uppercase">自动找到的</span>
-              <span v-if="mode === 'auto'" class="pill pill-ok">已选</span>
+              <span v-if="mode === 'auto'" class="pill pill-ok">✓ 用的是这个</span>
             </div>
             <button
               v-for="c in o.candidates"
@@ -202,10 +211,17 @@ function goCreateApp() {
             </button>
           </div>
 
-          <div class="mt-4 flex flex-col gap-2">
+          <div
+            class="mt-4 flex flex-col gap-2 rounded-lg border p-3 transition-colors"
+            :class="
+              mode === 'manual'
+                ? 'border-[rgba(102,192,244,.45)] bg-[rgba(102,192,244,.05)]'
+                : 'border-line bg-transparent'
+            "
+          >
             <div class="flex items-center gap-2">
               <span class="text-[11px] tracking-wider text-faint uppercase">手动指定</span>
-              <span v-if="mode === 'manual'" class="pill pill-ok">已选</span>
+              <span v-if="mode === 'manual'" class="pill pill-ok">✓ 用的是这个</span>
             </div>
             <div class="flex gap-2">
               <input
@@ -265,6 +281,23 @@ function goCreateApp() {
             密码用 Windows DPAPI 加密后存在本机，只有当前 Windows 用户能解 ——
             不进命令行参数、不写进任何日志。不存也行，每次构建会问你要。
           </p>
+
+          <!-- 更省事的一条路：让 steamcmd 自己在控制台里登录一次，
+               它会把凭据缓存下来，之后构建就不用再输密码了 -->
+          <div class="mt-3.5 rounded-lg border border-line p-3">
+            <div class="flex items-center gap-2">
+              <Sparkles :size="14" class="text-accent shrink-0" />
+              <span class="text-[12px] text-ink font-medium">便捷登录（推荐）</span>
+            </div>
+            <p class="text-[11.5px] text-muted mt-1.5 mb-0 leading-relaxed">
+              开一个 steamcmd 控制台窗口，在里面输一次账号密码 + Steam Guard。
+              登录成功后 steamcmd 自己会记住，以后构建都不用再输密码，上面两个框也可以空着。
+            </p>
+            <button class="btn mt-2.5 no-drag" @click="openLogin">
+              <LogIn :size="14" />
+              打开登录窗口
+            </button>
+          </div>
         </template>
 
         <div
