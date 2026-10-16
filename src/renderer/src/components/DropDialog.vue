@@ -89,8 +89,10 @@ watch(d, (v) => {
   const same = (state.detail?.depots || []).filter((x) => x.platformId === v.platform)
   target.value = same.length === 1 ? same[0].file : ''
   if (!target.value) newDepotId.value = suggestDepotId()
-  // 顺带读一次后台：本地缺同平台 Depot 时，默认那个「新建」会撞上后台已有的 ID
-  dropLookupBackend()
+  // 本地已经有同平台 Depot 时不查后台 —— 那正是最常见的情形（同一个平台传新包），
+  // 而查一次要跑十几秒 steamcmd。只有「本地没有同平台 Depot」时才值得查：
+  // 那种情况下默认的「新建」会拿 AppID+1 去撞后台已经存在的 ID。
+  if (!target.value) dropLookupBackend()
 })
 
 /** 新建 Depot 的默认 ID：AppID + 1 起，跳过已经用掉的 */
