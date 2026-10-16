@@ -8,6 +8,7 @@ import {
   restoreProblemThisRun
 } from '../store.js'
 import PathLink from './PathLink.vue'
+import { Pencil } from '@lucide/vue'
 
 const app = computed(() => state.detail)
 /** 默认只看见「还该当回事」的；忽略过的点一下表头才展开 */
@@ -57,7 +58,10 @@ const dup = computed(() => {
           <h1 class="text-[19px] font-semibold tracking-tight m-0 truncate min-w-0 max-w-[420px]">{{ app.dirName }}</h1>
           <span class="pill" :class="status.tone">{{ status.text }}</span>
           <span v-if="app.setLive" class="pill pill-warn">SetLive · {{ app.setLive }}</span>
-          <button class="btn h-7 px-2.5 text-[11.5px] no-drag" @click="openDrawer('app')">编辑</button>
+          <button class="pill-btn no-drag" title="改 AppID / 描述 / 项目文件夹 / 构建缓存目录" @click="openDrawer('app')">
+            <Pencil :size="12" :stroke-width="2.2" />
+            编辑
+          </button>
         </div>
 
         <div v-if="app.desc" class="mt-2 text-[12.5px] text-muted truncate">{{ app.desc }}</div>

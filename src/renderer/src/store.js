@@ -420,6 +420,9 @@ export async function selectApp(dirName) {
   // 从「构建历史 / 设置」点左侧的 App，应该跳回工作台 —— 只换 selectedDir
   // 的话页面还停在原处，看起来像「点了没反应」
   state.view = 'workbench'
+  // 「同步 Depot」「检查文件」这些面板的内容是上一个 App 的，跟着切过来会张冠李戴
+  clearVerify()
+  clearPreflight()
   state.detailLoading = true
   try {
     state.detail = await api.sdk.app(dirName)

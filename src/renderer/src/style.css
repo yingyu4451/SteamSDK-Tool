@@ -283,6 +283,40 @@ textarea {
   border-color: rgba(143, 152, 160, 0.22);
 }
 
+/* ---------- 跟在徽标后面的小动作按钮 ----------
+ * App 名字旁边那一排是状态徽标（实线边、填色），里面的「编辑」如果也用 .btn
+ * 就会跟它们混成一片。这个形状跟着徽标走（同高、同圆角），但用虚线边 + 图标，
+ * 悬停时虚线变实线、底色浮起来 —— 不靠颜色也能看出「这个能点」。
+ */
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px dashed rgba(102, 192, 244, 0.4);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
+}
+.pill-btn:hover {
+  background: rgba(102, 192, 244, 0.13);
+  border-color: rgba(102, 192, 244, 0.75);
+  border-style: solid;
+  color: #d3ecfa;
+}
+.pill-btn:active {
+  background: rgba(102, 192, 244, 0.2);
+}
+
 /* ---------- 筛选胶囊（构建历史：全部 / 每个 App） ---------- */
 .chip {
   display: inline-flex;

@@ -16,18 +16,10 @@ import {
   goSettings,
   openDepotSlide,
   runPreflight,
-  clearPreflight,
-  loadLocalStatus,
-  loadLocalDevCfg,
-  startLocalServer,
-  stopLocalServer,
-  openLocalServer,
-  setAppLocal,
-  runLocalSetup,
-  resetLocalFlow
+  clearPreflight
 } from '../store.js'
 import { fmtSize } from '../format.js'
-import { Check, Eye, FolderOpen, LoaderCircle, Lock, ShieldCheck, SquareArrowOutUpRight, Upload, X } from '@lucide/vue'
+import { Check, Eye, FolderOpen, LoaderCircle, Lock, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Upload, X } from '@lucide/vue'
 
 const confirming = ref(false)
 const pwDraft = ref('')
@@ -110,16 +102,12 @@ const pfTone = computed(() => {
   return 'text-accent'
 })
 
-/* ---- 本地内容服务器 ---- */
-
-const localOpen = ref(false)
-
 /* ---- 浮层锚点 ----
  * 浮层挂在工具条这一层（绝对定位，不占布局），所以默认只能贴工具条的左右边。
  * 想让面板正对着点它的那个按钮，就得自己算一下按钮相对工具条的横向位置。
  */
 const barEl = ref(null)
-const anchors = reactive({ pf: {}, verify: {}, local: {}, pwd: {} })
+const anchors = reactive({ pf: {}, verify: {}, pwd: {} })
 const POP_W = 620
 
 function anchorTo(key, el) {
@@ -142,7 +130,6 @@ function reanchor() {
   if (state.askPassword) anchorTo('pwd')
   if (state.verify.busy || state.verify.error || state.verify.data) anchorTo('verify')
   if (state.preflight.busy || state.preflight.error || state.preflight.data) anchorTo('pf')
-  if (localOpen.value) anchorTo('local')
 }
 onMounted(() => window.addEventListener('resize', reanchor))
 watch(
@@ -152,18 +139,15 @@ watch(
   }
 )
 
-async function toggleLocalPanel() {
-  localOpen.value = !localOpen.value
-  if (!localOpen.value) return
-  await loadLocalStatus()
-  if (!state.local.devcfg) await loadLocalDevCfg()
-}
-
-const localEnabled = computed(() => !!state.detail?.local)
-const localHost = computed(() => {
-  // steam_dev.cfg 里写的是主机名；本机填 127.0.0.1 就行
-  return '127.0.0.1'
-})
+/* 切 App 时把「同步 Depot」「检查文件」两个面板一起收掉 ——
+ * 它们的内容是上一个 App 的，留在屏幕上就是张冠李戴。
+ * 面板的开合是由 state.verify / state.preflight 是否有数据决定的，
+ * selectApp() 里已经调 clearVerify() / clearPreflight()，这里只需要在
+ * 它们被清空后重算锚点。 */
+watch(
+  () => [state.verify.data, state.preflight.data, state.verify.busy, state.preflight.busy],
+  () => nextTick(reanchor)
+)
 </script>
 
 <template>
@@ -214,6 +198,18 @@ const localHost = computed(() => {
       </button>
     </Transition>
 
+    <div class="w-px h-6 bg-line mx-1" />
+
+    <button
+      class="btn no-drag"
+      :disabled="!appId || state.verify.busy"
+      data-pop="verify"
+      @click="(e) => { anchorTo('verify', e.currentTarget); verifyAgainstSteam() }"
+    >
+      <RefreshCw :size="15" :stroke-width="1.9" :class="state.verify.busy ? 'animate-spin' : ''" />
+      {{ state.verify.busy ? '读取中…' : '同步 Depot' }}
+    </button>
+
     <div class="flex-1" />
     <div class="flex items-center gap-1.5">
       <button class="btn no-drag" :disabled="!state.sdk?.contentBuilder" @click="openPath(state.sdk.contentBuilder)">
@@ -221,26 +217,6 @@ const localHost = computed(() => {
       </button>
       <button class="btn no-drag" :disabled="!appId" @click="openExternal(partner('builds'))">
         <SquareArrowOutUpRight :size="14" class="mr-1.5" /> Steamworks
-      </button>
-      <button
-        class="btn no-drag"
-        :disabled="!appId || state.verify.busy"
-        data-pop="verify"
-        @click="(e) => { anchorTo('verify', e.currentTarget); verifyAgainstSteam() }"
-      >
-        {{ state.verify.busy ? '读取中…' : '同步 Depot' }}
-      </button>
-      <button
-        class="btn no-drag"
-        :class="localEnabled ? 'border-[rgba(102,192,244,.35)] text-accent' : ''"
-        data-pop="local"
-        @click="(e) => { anchorTo('local', e.currentTarget); toggleLocalPanel() }"
-      >
-        <span
-          v-if="state.local.running"
-          class="w-1.5 h-1.5 rounded-full bg-accent mr-1.5"
-        />
-        本地服务器
       </button>
     </div>
 
@@ -459,155 +435,5 @@ const localHost = computed(() => {
       </div>
     </Transition>
 
-    <!-- 本地内容服务器 -->
-    <Transition
-      enter-active-class="transition duration-200"
-      enter-from-class="opacity-0 -translate-y-1"
-      leave-active-class="transition duration-150"
-      leave-to-class="opacity-0"
-    >
-      <div
-        v-if="localOpen"
-        class="bar-pop bar-pop-wide bar-pop-right rounded-[10px] border border-line px-3 py-2.5"
-        :style="anchors.local"
-      >
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="font-semibold text-[12px]">本地内容服务器</span>
-          <span
-            class="pill"
-            :class="
-              state.local.running && state.local.serving
-                ? 'pill-ok'
-                : state.local.running
-                  ? 'pill-warn'
-                  : 'pill-idle'
-            "
-          >
-            <template v-if="state.local.running && state.local.serving">
-              运行中 · {{ state.local.url }}
-            </template>
-            <template v-else-if="state.local.running">在跑，但访问不了</template>
-            <template v-else>没在跑</template>
-          </span>
-          <button class="ml-auto btn h-7 px-2.5 text-[11px] no-drag" @click="localOpen = false">收起</button>
-        </div>
-
-        <!-- 一次配好：把这条路上的 5 件事串起来，哪步没成一眼能看出来 -->
-        <div class="mt-2.5 rounded-[10px] border border-line-soft bg-[rgba(9,15,23,.45)] p-3">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-[11.5px] font-semibold text-ink">一次配好</span>
-          </div>
-
-          <div class="flex flex-col gap-1 mb-2.5">
-            <div v-for="(s, i) in state.local.flow.steps" :key="s.id" class="flex items-start gap-2">
-              <span class="w-3.5 shrink-0 grid place-items-center pt-[2px]">
-                <Check v-if="s.state === 'done'" class="w-3.5 h-3.5 text-success" />
-                <LoaderCircle v-else-if="s.state === 'doing'" class="w-3.5 h-3.5 text-accent animate-spin" />
-                <X v-else-if="s.state === 'fail'" class="w-3.5 h-3.5 text-danger" />
-                <span v-else class="w-2 h-2 rounded-full border border-[#3d5a7a]"></span>
-              </span>
-              <span
-                class="text-[11.5px] leading-relaxed min-w-0 flex-1"
-                :class="
-                  s.state === 'fail'
-                    ? 'text-danger'
-                    : s.state === 'done'
-                      ? 'text-muted'
-                      : s.state === 'doing'
-                        ? 'text-ink'
-                        : 'text-faint'
-                "
-              >
-                {{ i + 1 }}. {{ s.label }}
-                <span v-if="s.detail" class="text-faint"> · {{ s.detail }}</span>
-              </span>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 flex-wrap">
-            <button
-              class="btn btn-primary h-8 px-3 text-[11.5px] no-drag"
-              :disabled="state.local.flow.running || state.running"
-              @click="runLocalSetup"
-            >
-              {{ state.local.flow.running ? '正在配…' : state.local.flow.done ? '再送一份进去' : '一键配好并送进去' }}
-            </button>
-            <button
-              v-if="state.local.flow.done || state.local.flow.error"
-              class="btn h-8 px-2.5 text-[11px] no-drag"
-              @click="resetLocalFlow"
-            >
-              重来
-            </button>
-            <span v-if="state.local.flow.done" class="text-[11.5px] text-success">
-              内容已经在服务器里了 —— 重启一次 Steam 就能下到
-            </span>
-            <span v-else-if="state.local.flow.error" class="text-[11.5px] text-danger">
-              {{ state.local.flow.error }}
-            </span>
-          </div>
-        </div>
-
-        <div class="mt-2.5 flex items-center gap-2 flex-wrap">
-          <button
-            class="btn h-7 px-2.5 text-[11px] no-drag"
-            :disabled="state.local.busy || state.local.running"
-            @click="startLocalServer"
-          >
-            启动
-          </button>
-          <button
-            class="btn h-7 px-2.5 text-[11px] no-drag"
-            :disabled="state.local.busy || !state.local.running"
-            @click="stopLocalServer"
-          >
-            停止
-          </button>
-          <button
-            class="btn h-7 px-2.5 text-[11px] no-drag"
-            :disabled="!state.local.running"
-            @click="openLocalServer"
-          >
-            打开
-          </button>
-          <label class="flex items-center gap-1.5 text-[11.5px] text-muted cursor-pointer select-none ml-1">
-            <input
-              type="checkbox"
-              :checked="localEnabled"
-              class="accent-[#66c0f4]"
-              @change="setAppLocal($event.target.checked)"
-            />
-            这个 App 的构建先传进本地服务器
-          </label>
-        </div>
-
-        <div v-if="state.local.error" class="mt-2 text-[11.5px] text-amber whitespace-pre-wrap">
-          {{ state.local.error }}
-        </div>
-
-        <!-- 服务器里有没有东西。光勾复选框不跑构建，Steam 那边下到的就是空 depot -->
-        <div v-if="state.local.status" class="mt-1.5 text-[11.5px]">
-          <span v-if="state.local.status.contentFiles > 0" class="text-success">
-            服务器里已有 {{ state.local.status.contentFiles }} 个文件 ·
-            {{ fmtSize(state.local.status.contentBytes) }}
-          </span>
-          <span v-else class="text-amber">服务器里还没有内容</span>
-        </div>
-
-        <div class="mt-2 flex items-center gap-2 flex-wrap text-[11px]">
-          <span class="font-mono text-ink">steam_dev.cfg</span>
-          <span class="font-mono text-muted">@localcontentserver {{ localHost }}</span>
-          <template v-if="state.local.devcfg?.ok">
-            <span v-if="state.local.devcfg.has" class="text-success">已配好</span>
-            <span v-else class="text-faint">没配 —— 点上面的「一键配好」会写</span>
-          </template>
-          <span v-else-if="state.local.devcfg" class="text-amber">{{ state.local.devcfg.error }}</span>
-        </div>
-
-        <div class="mt-1.5 text-[11px] text-faint leading-relaxed">
-          Steam 只在启动时读这个文件 —— <span class="text-muted">写完记得自己重启一次 Steam</span>。
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>
