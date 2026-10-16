@@ -527,17 +527,47 @@ function registerIpc() {
    * 不是 Steam 上的产品名 —— 列在「已知的 App」里只会让人以为后台真有这么一个 App。
    * 本地有对应脚本的，只挂一个 local 标记当装饰。
    */
-  ipcMain.handle('app:knownApps', () => {
+  ipcMain.handle('app:knownApps', async () => {
     const s = loadSettings()
     const localIds = new Set((scanApps(s).apps || []).map((a) => String(a.appId)))
-    return (s.appIdHistory || [])
-      .map((h) => ({
-        appId: String((h && h.appId) || '').trim(),
-        name: String((h && h.name) || '').trim(),
-        at: (h && h.at) || ''
-      }))
-      .filter((h) => /^\d+$/.test(h.appId) && h.name)
-      .map((h) => ({ ...h, local: localIds.has(h.appId) }))
+
+    // 用过的（读到过真实产品名的）—— 没密钥时这是唯一能拿到的列表
+    const map = new Map()
+    for (const h of s.appIdHistory || []) {
+      const appId = String((h && h.appId) || '').trim()
+      const name = String((h && h.name) || '').trim()
+      if (/^\d+$/.test(appId) && name) map.set(appId, { appId, name, from: 'used' })
+    }
+
+    // 有发布商密钥时补上密钥权限范围内的**全部** App ——
+    // 这是唯一能完整枚举的办法，普通账号拿不到这种密钥。
+    let partnerCount = 0
+    const key = readApiKey()
+    if (key) {
+      try {
+        const list = await getPartnerApps(key)
+        partnerCount = list.length
+        for (const a of list) {
+          const appId = String(a.appid || '').trim()
+          if (!/^\d+$/.test(appId)) continue
+          const prev = map.get(appId)
+          map.set(appId, {
+            appId,
+            name: String(a.name || '').trim() || prev?.name || `App ${appId}`,
+            from: prev ? 'both' : 'partner'
+          })
+        }
+      } catch {
+        /* 密钥失效/限流时静默降级，只用「用过的」那份 */
+      }
+    }
+
+    return {
+      apps: [...map.values()]
+        .sort((a, b) => Number(b.appId) - Number(a.appId))
+        .map((a) => ({ ...a, local: localIds.has(a.appId) })),
+      partnerCount
+    }
   })
 
   ipcMain.handle('app:create', (_e, spec) => createApp(spec || {}, loadSettings()))

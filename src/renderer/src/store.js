@@ -90,6 +90,7 @@ export const state = reactive({
   activeDepot: null,
   // 新建 App 向导的 AppID 下拉框数据
   knownApps: [],
+  partnerAppCount: 0,
   // Steamworks 新建 Depot 的选项（系统 / 架构 / 语言）
   depotOptions: { os: [], arch: [], archByOs: {}, languages: [] },
   // scripts 根目录下游离的 vdf（不属于任何 App 文件夹）
@@ -519,11 +520,12 @@ export async function openWizard() {
   const [d, ks, ka] = await Promise.all([
     api.app.defaults({ platform: 'win64' }),
     api.steam.keyState().catch(() => ({ has: false })),
-    api.app.knownApps().catch(() => [])
+    api.app.knownApps().catch(() => null)
   ])
   state.hasApiKey = !!ks.has
-  // 本地已有 App + 用过的 AppID 历史，给 AppID 下拉框用
-  state.knownApps = ka || []
+  // AppID 下拉框用的候选：用过的 AppID +（有发布商密钥时）密钥权限内的全部 App
+  state.knownApps = Array.isArray(ka) ? ka : ka?.apps || []
+  state.partnerAppCount = ka?.partnerCount || 0
   const picks = {}
   for (const p of d.platforms) {
     picks[p.id] = { on: p.id === 'win64', depotId: '', contentRoot: '', autoDepot: true, autoRoot: true, fromSteam: false }
@@ -1168,9 +1170,12 @@ export async function pickDepotRoot() {
 
 export async function loadKnownApps() {
   try {
-    state.knownApps = (await api.app.knownApps()) || []
+    const r = await api.app.knownApps()
+    state.knownApps = Array.isArray(r) ? r : r?.apps || []
+    state.partnerAppCount = r?.partnerCount || 0
   } catch {
     state.knownApps = []
+    state.partnerAppCount = 0
   }
   return state.knownApps
 }

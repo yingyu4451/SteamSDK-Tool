@@ -239,13 +239,17 @@ const descTab = ref('desc')
               class="h-9 px-2 rounded-[9px] bg-surface border border-line text-[11.5px] outline-none max-w-[190px] disabled:opacity-45"
               :disabled="!knownApps.length"
               :title="
-                knownApps.length
-                  ? '填过的 AppID 里，能从 Steam 查到产品名的那些'
-                  : '还没有记录 —— 填一个 AppID，读到名字之后就会记在这里'
+                state.partnerAppCount
+                  ? `Web API 密钥权限内的 ${state.partnerAppCount} 个 App，外加你用过的`
+                  : knownApps.length
+                    ? '你用过的 App 里，能从 Steam 查到产品名的那些。要列出账号能发布的全部 App，需要 Publisher 级别的 Web API 密钥'
+                    : '还没有记录 —— 填一个 AppID，读到名字之后就会记在这里'
               "
               @change="pickKnown($event); $event.target.value = ''"
             >
-              <option value="">{{ knownApps.length ? '已知的 App…' : '还没有记录' }}</option>
+              <option value="">
+                {{ knownApps.length ? (state.partnerAppCount ? '密钥权限内的 App…' : '用过的 App…') : '还没有记录' }}
+              </option>
               <option v-for="a in knownApps" :key="'s' + a.appId" :value="a.appId">
                 {{ a.appId }} · {{ a.name }}
               </option>
