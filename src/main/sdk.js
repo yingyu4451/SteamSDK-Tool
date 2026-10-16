@@ -43,7 +43,7 @@ export function getPaths(settings) {
 }
 
 /**
- * steamcmd 自己缓存的登录态 —— 也就是「便捷登录」留下的东西。
+ * steamcmd 自己缓存的登录态 —— 用户在控制台窗口里登录一次留下的东西。
  * 只读 `builder\config\config.vdf`：ConnectCache 里有非空令牌 = 它下次能免密登录；
  * Accounts 块里记着的是上次登录的账号。
  * 注意：这个文件 steamcmd 会在运行时整个重写，所以每次都得重新读，不能缓存。

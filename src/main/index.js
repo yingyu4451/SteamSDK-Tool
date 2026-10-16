@@ -455,7 +455,7 @@ function registerIpc() {
 
   /**
    * 「登录好了没」——两处都算数：
-   *   steamcmd 自己缓存的令牌（便捷登录留下的），或者我们存着的密码。
+   *   steamcmd 自己缓存的令牌（在控制台里登录过一次），或者我们存着的密码。
    * 只要有一条能免密构建就算 ready。
    */
   ipcMain.handle('login:state', () => {
