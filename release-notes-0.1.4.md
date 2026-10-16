@@ -1,0 +1,4 @@
+- 修：窗口右上那三个按钮（最小化 / 最大化 / 关闭）点了没反应。1.3 起这三个按钮是自画的，代码里在模板中直接写 `window.api...`，Vue 会把它编译成 `_ctx.window` —— 那个东西是 undefined，点下去抛错还被 Vue 吞进 console，所以看着就像「按钮坏了」。现在改成先在 script 里取出 `win` 再用
+- 修：CI 构建在 `pnpm install` 就失败。pnpm 11 的构建脚本白名单现在叫 `allowBuilds`，旧名字会被当成没配，脚本静默跳过并以退出码 1 结束
+- 打包不再尝试自动发布（改由工作流里的 `gh release upload` 负责），避免 CI 因缺 token 中断
+- 顺手把模板里所有裸 `window.` 扫了一遍，没有第二处

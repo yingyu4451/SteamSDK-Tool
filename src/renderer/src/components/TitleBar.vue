@@ -29,6 +29,12 @@ onBeforeUnmount(() => {
  * 按钮必须跟着容器走（h-full），不能用 h-11 —— 否则 44px 的按钮塞进 43px 的盒子里，
  * 图标会比右边的状态胶囊高出 1px。 */
 const WBTN = 'h-full w-11 grid place-items-center bg-transparent border-0 cursor-pointer text-muted transition-colors'
+
+/* 一定要在这里先把 window.api.win 取出来再用。
+ * 模板里的 `window` 不是全局那个：Vue 编译 <script setup> 的模板时会把
+ * window.api.win.maximize() 编成 _ctx.window.api.win.maximize()，而 _ctx 上没有
+ * window，点下去就是 TypeError，还被 Vue 吞进 console —— 表现就是「按钮点了没反应」。 */
+const win = window.api.win
 </script>
 
 <template>
@@ -106,14 +112,14 @@ const WBTN = 'h-full w-11 grid place-items-center bg-transparent border-0 cursor
 
     <!-- 窗口按钮：和顶栏同高（h-11 = 44px），hover 自己控 -->
     <div class="self-stretch flex items-stretch no-drag">
-      <button :class="WBTN" class="hover:bg-[#21344a] hover:text-ink" title="最小化" @click="window.api.win.minimize()">
+      <button :class="WBTN" class="hover:bg-[#21344a] hover:text-ink" title="最小化" @click="win.minimize()">
         <Minus :size="15" />
       </button>
       <button
         :class="WBTN"
         class="hover:bg-[#21344a] hover:text-ink"
         :title="maximized ? '向下还原' : '最大化'"
-        @click="window.api.win.maximize()"
+        @click="win.maximize()"
       >
         <Copy v-if="maximized" :size="13" />
         <Square v-else :size="12" />
@@ -122,7 +128,7 @@ const WBTN = 'h-full w-11 grid place-items-center bg-transparent border-0 cursor
         :class="WBTN"
         class="hover:bg-[#c33a3a] hover:text-white"
         title="关闭"
-        @click="window.api.win.close()"
+        @click="win.close()"
       >
         <X :size="16" />
       </button>

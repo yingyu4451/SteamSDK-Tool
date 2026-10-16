@@ -1,6 +1,6 @@
 {
   "name": "steamsdk-tool",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "SteamSDK 上传工作台 — App 列表 / 内容体检 / 一键检查 / Preview 与正式上传 / 实时日志 / 分支管理",
   "author": "YingYu",
@@ -14,8 +14,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "icon": "node scripts/make-icon.mjs",
-    "dist": "electron-vite build && electron-builder --win",
-    "dist:portable": "electron-vite build && electron-builder --win portable"
+    "dist": "electron-vite build && electron-builder --win --publish never",
+    "dist:portable": "electron-vite build && electron-builder --win portable --publish never"
   },
   "devDependencies": {
     "@lucide/vue": "^1.57.0",
