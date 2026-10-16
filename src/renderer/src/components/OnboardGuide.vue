@@ -191,7 +191,7 @@ async function next() {
         // 确认能登进去才存，免得把一个错的密码写进 DPAPI
         await onboardSaveAccount()
         checkPhase.value = 'ok'
-        await new Promise((r) => setTimeout(r, 700))
+        await new Promise((r) => setTimeout(r, 1700))
         await finishOnboard()
       } else {
         // 没填 —— 那就只能报告这台机器上有没有现成的登录
@@ -208,7 +208,7 @@ async function next() {
           return
         }
         checkPhase.value = 'ok'
-        await new Promise((r) => setTimeout(r, 700))
+        await new Promise((r) => setTimeout(r, 1700))
         await finishOnboard()
       }
     } finally {

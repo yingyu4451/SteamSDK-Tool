@@ -42,7 +42,7 @@ await run('A: -Command + 全部加引号（当前实现，预期失败）', 'pws
   '-ExecutionPolicy',
   'Bypass',
   '-Command',
-  `& ${psQuote(SCRIPT)} ${psQuote('-App')} ${psQuote('AbyaPlayerTest')}`
+  `& ${psQuote(SCRIPT)} ${psQuote('-App')} ${psQuote('MyGameTest')}`
 ])
 
 // B：-File 传参
@@ -53,7 +53,7 @@ await run('B: -File 传参', 'pwsh', [
   '-File',
   SCRIPT,
   '-App',
-  'AbyaPlayerTest'
+  'MyGameTest'
 ])
 
 // C：-Command 但只给值加引号
@@ -62,5 +62,5 @@ await run('C: -Command + 只给值加引号', 'pwsh', [
   '-ExecutionPolicy',
   'Bypass',
   '-Command',
-  `& ${psQuote(SCRIPT)} -App ${psQuote('AbyaPlayerTest')}`
+  `& ${psQuote(SCRIPT)} -App ${psQuote('MyGameTest')}`
 ])

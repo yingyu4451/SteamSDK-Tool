@@ -49,7 +49,7 @@
 |---|---|
 | **App** | Steam 上的一个「产品」，有唯一的 AppID。Demo、正式版、Playtest 是**不同的 App**，各有各的 AppID |
 | **Depot** | App 下面按平台（或按 DLC、语言）拆分的上传单元。**一个平台一个 Depot**，各有各的 DepotID |
-| **项目文件夹** | 这个 App 所有平台构建产物的父目录，比如 `D:\SteamBuilds\AbyaDemo`；下面 `win64\`、`macos\`、`linux\` 各绑一个 Depot |
+| **项目文件夹** | 这个 App 所有平台构建产物的父目录，比如 `D:\SteamBuilds\MyGame`；下面 `win64\`、`macos\`、`linux\` 各绑一个 Depot |
 | **分支 / SetLive** | SteamPipe 的 beta 分支。`SetLive` 决定构建发布到哪个分支，**默认分支不能设**，要先去 Steamworks 后台建分支 |
 | **空跑（Preview）** | 完整走一遍构建流程，但不上传任何东西。用来验证配置和排除规则 |
 
@@ -61,15 +61,15 @@ D:\SteamSDK\tools\ContentBuilder\
 ├─ builder\                     ← steamcmd
 ├─ output\                      ← 构建日志
 └─ scripts\
-   ├─ AbyaDemo\                 ← 一个 App 一个文件夹
-   │  ├─ app_3036850.vdf
-   │  ├─ depot_3036851_win64.vdf
-   │  └─ depot_3036853_macos.vdf
-   └─ 阿比亚正式版\
+   ├─ MyGame\                 ← 一个 App 一个文件夹
+   │  ├─ app_1234560.vdf
+   │  ├─ depot_1234561_win64.vdf
+   │  └─ depot_1234563_macos.vdf
+   └─ MyGame 正式版\
       └─ ...
 ```
 
-> 命令行和界面走的是**同一套脚本**，不会出现「界面上能跑、命令行跑不了」的分叉。想脱离界面用 `D:\SteamSDK\tools\ContentBuilder\build.ps1 -App AbyaDemo` 也行。
+> 命令行和界面走的是**同一套脚本**，不会出现「界面上能跑、命令行跑不了」的分叉。想脱离界面用 `D:\SteamSDK\tools\ContentBuilder\build.ps1 -App MyGame` 也行。
 
 ---
 
@@ -88,9 +88,9 @@ D:\SteamSDK\tools\ContentBuilder\
 
 | DepotID | 平台 | 构建 | 体积 |
 |---|---|---|---|
-| 3036851 | Windows 64 | 8650706403037703068 · public | 1.3 GB |
-| 3036852 | Linux | 7141745897605008214 · public | 270.6 MB |
-| 3036853 | macOS | 2851455297450281867 · public | 996.3 MB |
+| 1234561 | Windows 64 | 8650706403037703068 · public | 1.3 GB |
+| 1234562 | Linux | 7141745897605008214 · public | 270.6 MB |
+| 1234563 | macOS | 2851455297450281867 · public | 996.3 MB |
 
 如果你有 Publisher 级别的 Web API 密钥，在设置里填上会优先走官方接口（能多拿到权限范围内的 App 列表和构建历史）。没有也完全不影响使用。
 
@@ -162,7 +162,7 @@ zip 会被解到临时目录，解完如果只套了一层同名文件夹会自�
 
 ### 关于名字里的空格
 
-App 名字就是 `scripts/` 下的文件夹名，**可以有空格和括号** —— Valve 自己的例子（`ABYA-PB Steam(Body-2670430) B0.7.9`）就带空格。不能用的只有 `\ / : * ? " < > |`、控制字符，以及开头的下划线（`_` 开头的目录会被扫描跳过）。
+App 名字就是 `scripts/` 下的文件夹名，**可以有空格和括号** —— Valve 自己的例子（`MyGame Steam(Body-1234570) B0.7.9`）就带空格。不能用的只有 `\ / : * ? " < > |`、控制字符，以及开头的下划线（`_` 开头的目录会被扫描跳过）。
 
 ---
 

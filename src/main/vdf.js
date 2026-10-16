@@ -145,7 +145,7 @@ export function getBlock(node, key) {
 
 /**
  * 把某个块里的 "key" "value" 对拍平成数组。
- * 用于读 Depots 块 —— 形如 "3036851" "depot_3036851_win64.vdf"。
+ * 用于读 Depots 块 —— 形如 "1234561" "depot_1234561_win64.vdf"。
  */
 export function pairs(block) {
   if (!block || block.type !== 'object') return []

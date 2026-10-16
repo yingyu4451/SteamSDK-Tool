@@ -42,7 +42,7 @@ const SECTIONS = [
         v: [
           ['App', 'Steam 上的一个「产品」，用 AppID 标识。Demo、正式版、Playtest 是三个不同的 App。'],
           ['Depot', '一个 App 下面的一个内容包，用 DepotID 标识。一个平台一个 Depot。'],
-          ['项目文件夹', '你电脑上放构建产物的目录，比如 D:\\SteamBuilds\\AbyaDemo。下面按平台分子目录（win64、macos），每个子目录绑一个 Depot。']
+          ['项目文件夹', '你电脑上放构建产物的目录，比如 D:\\SteamBuilds\\MyGame。下面按平台分子目录（win64、macos），每个子目录绑一个 Depot。']
         ]
       },
       {

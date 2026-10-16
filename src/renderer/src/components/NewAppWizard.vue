@@ -210,7 +210,7 @@ const descTab = ref('desc')
           <input
             ref="nameInput"
             :value="w.name"
-            placeholder="例如 Dashoot"
+            placeholder="例如 MyGame"
             class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
             @input="wizardNameChanged($event.target.value)"
           />
@@ -223,7 +223,7 @@ const descTab = ref('desc')
             <input
               :value="w.appId"
               list="known-apps"
-              placeholder="例如 2670430"
+              placeholder="例如 1234560"
               class="flex-1 min-w-0 h-9 px-3 rounded-[9px] bg-surface border text-[13px] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
               :class="w.appId && !appIdOk ? 'border-[#6d3030]' : 'border-line'"
               @input="wizardAppIdChanged($event.target.value)"
@@ -465,7 +465,7 @@ const descTab = ref('desc')
             <input
               v-if="descTab === 'desc'"
               :value="w.desc"
-              placeholder="例如 阿比亚：弹射之旅 正式版"
+              placeholder="例如 MyGame 正式版"
               class="w-full h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
               @input="w.desc = $event.target.value"
             />

@@ -110,7 +110,7 @@ const willCreate = computed(() => {
             <span class="text-[11.5px] text-muted">Depot 名称</span>
             <input
               :value="s.name"
-              placeholder="例如 Dashoot Content"
+              placeholder="例如 MyGame Content"
               class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
               @input="s.name = $event.target.value"
             />
@@ -121,7 +121,7 @@ const willCreate = computed(() => {
             <input
               ref="idInput"
               :value="s.depotId"
-              placeholder="例如 3036851"
+              placeholder="例如 1234561"
               class="h-9 px-3 rounded-[9px] bg-surface border text-[13px] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
               :class="s.depotId && !/^\d+$/.test(String(s.depotId).trim()) ? 'border-[#6d3030]' : 'border-line'"
               @input="s.depotId = $event.target.value"

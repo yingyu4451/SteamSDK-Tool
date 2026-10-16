@@ -51,7 +51,7 @@ This tool folds all of that into one window: **one App = one project folder, wit
 |---|---|
 | **App** | A "product" on Steam with a unique AppID. A Demo, the full game and a playtest are **separate Apps**, each with its own AppID |
 | **Depot** | The upload unit inside an App, split by platform (or DLC, or language). **One Depot per platform**, each with its own DepotID |
-| **Project folder** | The parent directory holding every platform's build output for one App, e.g. `D:\SteamBuilds\AbyaDemo`, with `win64\`, `macos\`, `linux\` each bound to a Depot |
+| **Project folder** | The parent directory holding every platform's build output for one App, e.g. `D:\SteamBuilds\MyGame`, with `win64\`, `macos\`, `linux\` each bound to a Depot |
 | **Branch / SetLive** | SteamPipe beta branches. `SetLive` picks which branch a build publishes to; **it cannot target `default`** — create branches in the Steamworks backend first |
 | **Preview (dry run)** | Runs the entire build flow without uploading anything. Used to validate config and exclusion rules |
 
@@ -63,15 +63,15 @@ D:\SteamSDK\tools\ContentBuilder\
 ├─ builder\                     ← steamcmd
 ├─ output\                      ← build logs
 └─ scripts\
-   ├─ AbyaDemo\                 ← one folder per App
-   │  ├─ app_3036850.vdf
-   │  ├─ depot_3036851_win64.vdf
-   │  └─ depot_3036853_macos.vdf
+   ├─ MyGame\                 ← one folder per App
+   │  ├─ app_1234560.vdf
+   │  ├─ depot_1234561_win64.vdf
+   │  └─ depot_1234563_macos.vdf
    └─ MyGame\
       └─ ...
 ```
 
-> The GUI and the command line drive **the same scripts**, so there is no "works in the UI, not from the shell" split. You can bypass the GUI entirely with `D:\SteamSDK\tools\ContentBuilder\build.ps1 -App AbyaDemo`.
+> The GUI and the command line drive **the same scripts**, so there is no "works in the UI, not from the shell" split. You can bypass the GUI entirely with `D:\SteamSDK\tools\ContentBuilder\build.ps1 -App MyGame`.
 
 ---
 
@@ -90,9 +90,9 @@ No Steamworks admin rights and no Web API key needed — it drives the same `ste
 
 | DepotID | Platform | Build | Size |
 |---|---|---|---|
-| 3036851 | Windows 64 | 8650706403037703068 · public | 1.3 GB |
-| 3036852 | Linux | 7141745897605008214 · public | 270.6 MB |
-| 3036853 | macOS | 2851455297450281867 · public | 996.3 MB |
+| 1234561 | Windows 64 | 8650706403037703068 · public | 1.3 GB |
+| 1234562 | Linux | 7141745897605008214 · public | 270.6 MB |
+| 1234563 | macOS | 2851455297450281867 · public | 996.3 MB |
 
 If you do hold a Publisher-level Web API key, entering it in Settings makes the tool prefer the official API (which additionally returns the App list within the key's scope, and build history). Not having one changes nothing else.
 
@@ -164,7 +164,7 @@ For first-time setup, click **新手教程** in the manual header to walk throug
 
 ### Spaces in app names
 
-The app name is the folder name under `scripts/`, and it **may contain spaces and parentheses** — Valve's own examples (`ABYA-PB Steam(Body-2670430) B0.7.9`) do. The only things rejected are `\ / : * ? " < > |`, control characters, and a leading underscore (directories starting with `_` are skipped by the scanner).
+The app name is the folder name under `scripts/`, and it **may contain spaces and parentheses** — Valve's own examples (`MyGame Steam(Body-1234570) B0.7.9`) do. The only things rejected are `\ / : * ? " < > |`, control characters, and a leading underscore (directories starting with `_` are skipped by the scanner).
 
 ---
 

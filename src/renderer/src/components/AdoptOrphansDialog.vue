@@ -49,7 +49,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
           <input
             ref="input"
             :value="d.name"
-            placeholder="例如 Abya"
+            placeholder="例如 MyGame"
             class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
             @input="d.name = $event.target.value"
             @keydown.enter="canSubmit && submitOrphanDialog()"

@@ -397,7 +397,7 @@ export function renderAppVdf({
     : `//\t"Local"\t\t"..\\..\\ContentServer\\htdocs"`
 
   // App 层 ContentRoot 在 Valve 的语义里是「自己没写 contentroot 的 depot」的默认值。
-  // 这里把它当成**项目文件夹**用：一个 App 一个项目文件夹（D:\SteamBuilds\AbyaDemo），
+  // 这里把它当成**项目文件夹**用：一个 App 一个项目文件夹（D:\SteamBuilds\MyGame），
   // 各平台真正要上传的内容在各 depot 的 contentroot（项目文件夹\win64、\macos、\linux）。
   // 所以这一行**无论几个 Depot 都写**—— 多 Depot 时它的含义是「项目文件夹在哪」，
   // 不是「内容都从这一个目录传」。留空会让界面上的「项目文件夹」格子看着像坏了。

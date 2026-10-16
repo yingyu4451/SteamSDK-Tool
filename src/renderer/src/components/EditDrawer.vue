@@ -547,7 +547,7 @@ onUnmounted(depotDisarm)
               >
                 <input
                   v-model="depotForm.userConfig[i]"
-                  placeholder="ABYA_PB_Data/Progress/Progress_0.PBProg"
+                  placeholder="MyGame_Data/Progress/Progress_0.PBProg"
                   class="flex-1 min-w-0 bg-transparent border-0 outline-none text-[12px] font-mono text-accent placeholder:text-faint"
                 />
                 <button
@@ -565,7 +565,7 @@ onUnmounted(depotDisarm)
             <div class="flex gap-2">
               <input
                 v-model="newUserConfig"
-                placeholder="相对内容目录，例如 ABYA_PB_Data/Progress"
+                placeholder="相对内容目录，例如 MyGame_Data/Progress"
                 class="flex-1 h-8 px-3 rounded-lg bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 @keydown.enter="addUserConfig"
               />

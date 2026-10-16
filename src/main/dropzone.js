@@ -36,13 +36,13 @@ export function isArchive(p) {
   return ARCHIVE_EXT.includes(extOf(p))
 }
 
-/** 从 Unity 自动生成的文件夹名里抠 AppID：ABYA-PB Steam(Body-2670430) B0.7.9 20260429 */
+/** 从 Unity 自动生成的文件夹名里抠 AppID：MyGame Steam(Body-1234567) B0.7.9 20260429 */
 export function guessAppIdFromName(name) {
   const m = String(name).match(/Steam\([A-Za-z]*-(\d{3,})\)/)
   return m ? m[1] : ''
 }
 
-/** 从名字里猜平台：.../win64、.../macos、ABYA_PB_Win64 之类 */
+/** 从名字里猜平台：.../win64、.../macos、MyGame_Win64 之类 */
 function platformFromName(name) {
   const n = String(name).toLowerCase()
   if (/mac|osx|darwin/.test(n)) return 'macos'

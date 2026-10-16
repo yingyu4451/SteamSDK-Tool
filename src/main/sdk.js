@@ -270,7 +270,7 @@ function extractScalar(text, key) {
   return m ? m[1] : null
 }
 
-/** app vdf 的 depots 块里引用了哪些 DepotID（值形如 "...\depot_3036851_win64.vdf"） */
+/** app vdf 的 depots 块里引用了哪些 DepotID（值形如 "...\depot_1234561_win64.vdf"） */
 function referencedDepotIds(appText) {
   const ids = new Set()
   const re = /"(?:\d+)"\s+"([^"]*depot[^"]*\.vdf)"/gi
@@ -747,7 +747,7 @@ function ensureContentDir(dir) {
 /**
  * 把一个 App 下每个 Depot 的内容目录重排成「项目文件夹\<平台后缀>」。
  *
- * 一个 App 一个项目文件夹、各平台在它下面分子目录（AbyaDemo\win64、AbyaDemo\macos…），
+ * 一个 App 一个项目文件夹、各平台在它下面分子目录（MyGame\win64、MyGame\macos…），
  * 这是 Steam 的原生玩法。换了项目文件夹之后各 Depot 的路径必须跟着走，
  * 否则它们还指着旧地方，构建时读到的是过期的内容。
  */
@@ -795,9 +795,9 @@ export function defaultContentRoot(name, platform, settings) {
 
 /**
  * App 的项目文件夹：一个 App 一个，各平台的构建都在它下面。
- *   D:\SteamBuilds\AbyaDemo          ← 项目文件夹（app vdf 的 ContentRoot）
- *   D:\SteamBuilds\AbyaDemo\win64    ← depot 3036851 的 contentroot
- *   D:\SteamBuilds\AbyaDemo\macos    ← depot 3036853 的 contentroot
+ *   D:\SteamBuilds\MyGame          ← 项目文件夹（app vdf 的 ContentRoot）
+ *   D:\SteamBuilds\MyGame\win64    ← depot 1234561 的 contentroot
+ *   D:\SteamBuilds\MyGame\macos    ← depot 1234563 的 contentroot
  * 这就是 Steam 的原生玩法：一个 App 挂多个平台 Depot，一次 run_app_build 全传。
  */
 export function defaultProjectDir(name, settings) {
@@ -1025,7 +1025,7 @@ export function validateAppName(name) {
   if (!n) return { ok: false, error: '名字不能为空' }
   if (n.startsWith('_')) return { ok: false, error: '名字不能以下划线开头（_ 开头的目录会被扫描跳过）' }
   if (/[\\/:*?"<>|]/.test(n)) return { ok: false, error: '名字里不能有 \\ / : * ? " < > | 这几个字符' }
-  // 空格是允许的 —— Valve 自己的例子（ABYA-PB Steam(Body-2670430) B0.7.9）就带空格。
+  // 空格是允许的 —— Valve 自己的例子（MyGame Steam(Body-1234567) B0.7.9）就带空格。
   // 只是不许有控制字符，也不许只有空格（上面 trim 之后为空的已经拦掉了）。
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(n)) return { ok: false, error: '名字里不能有控制字符' }
