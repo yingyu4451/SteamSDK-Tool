@@ -870,9 +870,16 @@ export async function renameApp(dirName, newName) {
  * ------------------------------------------------------------------ */
 
 export async function verifyAgainstSteam(dirName, via) {
+  // 记住这次是给哪个 App 查的。查后台要十几秒（走 steamcmd 时更久），
+  // 期间用户很可能已经切走了 —— 那种情况下结果不能再往界面上写，
+  // 否则 B 的窗口里会冒出 A 的 Depot 列表。
+  const forDir = dirName || state.selectedDir
+  const stale = () => state.selectedDir !== forDir
+
   state.verify = { busy: true, error: null, data: null, via: via || '' }
   try {
-    const res = await api.steam.verifyApp(dirName || state.selectedDir, via)
+    const res = await api.steam.verifyApp(forDir, via)
+    if (stale()) return { ok: false, stale: true }
     if (!res.ok) {
       state.verify = {
         busy: false,
@@ -899,6 +906,7 @@ export async function verifyAgainstSteam(dirName, via) {
     state.syncPicks = picks
     return res
   } catch (e) {
+    if (stale()) return { ok: false, stale: true }
     state.verify = { busy: false, error: e.message, data: null, via: via || '' }
     return { ok: false, error: e.message }
   }
@@ -931,9 +939,10 @@ export async function syncAddSelected() {
   const picked = Object.keys(state.syncPicks)
   if (!picked.length) return { ok: false, error: '一个都没勾' }
   const all = state.verify.data?.steamDepots || []
-  const s = state.settings || {}
   const projectDir = state.detail?.contentRoot || ''
-  const appName = state.detail?.dirName || ''
+  // 勾选、项目文件夹、要写进哪个 App，全部在开跑之前定死 ——
+  // 中途切 App 不能让脚本落进另一个 App 的目录里
+  const forDir = state.selectedDir
   state.syncAdding = true
   const added = []
   const failed = []
@@ -943,7 +952,7 @@ export async function syncAddSelected() {
       if (!d) continue
       // 内容目录默认落在项目文件夹下的平台子目录
       const root = projectDir ? `${projectDir}\\${d.platform}` : ''
-      const res = await api.app.addDepot(state.selectedDir, {
+      const res = await api.app.addDepot(forDir, {
         depotId: id,
         platform: d.platform,
         os: d.os || '',
@@ -957,9 +966,10 @@ export async function syncAddSelected() {
   } finally {
     state.syncAdding = false
   }
-  await reloadDetail()
+  // 结果是写给 forDir 的；如果人已经切走了，就别把它的详情刷到当前 App 上
+  if (state.selectedDir === forDir) await reloadDetail()
   await rescan()
-  state.syncPicks = {}
+  if (state.selectedDir === forDir) state.syncPicks = {}
   if (failed.length) toast(`加了 ${added.length} 个，失败：${failed.join('；')}`, 'bad')
   else toast(`已加入 ${added.length} 个 Depot`, 'ok')
   return { ok: true, added, failed }
@@ -1670,14 +1680,19 @@ export async function dropApply(spec) {
 export async function runPreflight(dirName) {
   const dir = dirName || state.selectedDir
   if (!dir) return null
+  // 跟「同步 Depot」一个道理：扫盘可能很久，扫完时人可能已经切到别的 App 了，
+  // 那份结果不能再往界面上写
+  const stale = () => state.selectedDir !== dir
   state.preflight = { busy: true, error: null, data: null }
   let res = null
   try {
     res = await api.app.preflight(dir)
   } catch (e) {
+    if (stale()) return null
     state.preflight = { busy: false, error: e.message, data: null }
     return null
   }
+  if (stale()) return null
   if (!res || res.ok === false) {
     state.preflight = { busy: false, error: res?.error || '检查文件失败', data: null }
     return null

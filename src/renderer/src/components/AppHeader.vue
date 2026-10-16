@@ -1,22 +1,15 @@
 <script setup>
-import { computed, ref } from 'vue'
-import {
-  state,
-  openDrawer,
-  ignoreProblem,
-  ignoreProblemThisRun,
-  restoreProblemThisRun
-} from '../store.js'
+import { computed } from 'vue'
+import { state, openDrawer, ignoreProblem, ignoreProblemThisRun } from '../store.js'
 import PathLink from './PathLink.vue'
 import { Pencil } from '@lucide/vue'
 
 const app = computed(() => state.detail)
-/** 默认只看见「还该当回事」的；忽略过的点一下表头才展开 */
-const showIgnored = ref(false)
 
 /**
- * 待处理清单本身是常驻的（不会整块消失），但**忽略过的行默认收起来** ——
- * 否则忽略完还在原地，看着像没生效。表头那行计数可以点开看回来。
+ * 待处理清单只列「还该当回事」的那些。
+ * 全部忽略掉之后，块本身整个消失 —— 界面上不再留一个「0 项」的空壳。
+ * 忽略过的那些挪到「编辑 → 已忽略的提示」里，在那儿恢复。
  */
 const rows = computed(() => {
   const dir = app.value?.dirName
@@ -30,10 +23,8 @@ const rows = computed(() => {
 })
 
 const activeRows = computed(() => rows.value.filter((r) => !r.perm && !r.sess))
-const ignoredRows = computed(() => rows.value.filter((r) => r.perm || r.sess))
+const ignoredCount = computed(() => rows.value.filter((r) => r.perm || r.sess).length)
 const activeCount = computed(() => activeRows.value.length)
-const ignoredCount = computed(() => ignoredRows.value.length)
-const visibleRows = computed(() => (showIgnored.value ? rows.value : activeRows.value))
 
 const status = computed(() => {
   if (!app.value || app.value.error) return { tone: 'pill-bad', text: '读取失败' }
@@ -102,59 +93,37 @@ const dup = computed(() => {
       </div>
     </div>
 
-    <!-- 问题清单：块本身常驻，忽略过的行默认收起来（点表头的计数展开） -->
+    <!-- 问题清单：只列还没被忽略的。全忽略完这块整个消失，不留空壳 -->
     <div
-      v-if="rows.length"
+      v-if="activeRows.length"
       class="mt-4 rounded-[10px] border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
     >
       <div class="flex items-center gap-2 mb-1.5">
         <span class="text-[11.5px] font-semibold text-amber">待处理</span>
-        <span class="text-[11px] text-faint num">{{ activeCount }} 项</span>
-        <button
-          v-if="ignoredCount"
-          class="link-btn num"
-          :title="showIgnored ? '把忽略过的收起来' : '看看忽略过哪些，可以恢复'"
-          @click="showIgnored = !showIgnored"
-        >
-          已忽略 {{ ignoredCount }} 项{{ showIgnored ? ' · 收起' : '' }}
-        </button>
+        <span class="text-[11px] text-faint num">{{ activeRows.length }} 项</span>
+        <span v-if="ignoredCount" class="text-[11px] text-faint num">
+          · 另有 {{ ignoredCount }} 项已忽略（在「编辑」里恢复）
+        </span>
       </div>
 
       <div class="flex flex-col gap-1">
-        <div v-for="(r, i) in visibleRows" :key="i" class="flex items-start gap-2 group">
-          <span
-            class="text-[12px] leading-relaxed min-w-0 flex-1"
-            :class="r.perm || r.sess ? 'text-faint line-through' : 'text-[#d7c3a0]'"
-          >{{ r.text }}</span>
+        <div v-for="(r, i) in activeRows" :key="i" class="flex items-start gap-2 group">
+          <span class="text-[12px] leading-relaxed min-w-0 flex-1 text-[#d7c3a0]">{{ r.text }}</span>
 
-          <template v-if="r.perm || r.sess">
-            <span class="text-[10px] shrink-0 text-faint pt-[2px]">
-              {{ r.perm ? '永久忽略' : '本次忽略' }}
-            </span>
-            <button
-              class="link-btn shrink-0"
-              @click="r.perm ? ignoreProblem(r.text, false) : restoreProblemThisRun(r.text)"
-            >
-              恢复
-            </button>
-          </template>
-
-          <template v-else>
-            <button
-              class="link-btn shrink-0"
-              title="只这一次不提示 —— 重开应用会回来"
-              @click="ignoreProblemThisRun(r.text)"
-            >
-              本次忽略
-            </button>
-            <button
-              class="link-btn is-danger shrink-0"
-              title="写进设置，以后都不再提示（原文完全一样才算同一条，路径变了会重新报）"
-              @click="ignoreProblem(r.text, true)"
-            >
-              永久忽略
-            </button>
-          </template>
+          <button
+            class="link-btn shrink-0"
+            title="只这一次不提示 —— 重开应用会回来"
+            @click="ignoreProblemThisRun(r.text)"
+          >
+            本次忽略
+          </button>
+          <button
+            class="link-btn is-danger shrink-0"
+            title="写进设置，以后都不再提示（原文完全一样才算同一条，路径变了会重新报）。想恢复去「编辑」里"
+            @click="ignoreProblem(r.text, true)"
+          >
+            永久忽略
+          </button>
         </div>
       </div>
     </div>

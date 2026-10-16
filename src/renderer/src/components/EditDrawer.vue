@@ -11,10 +11,26 @@ import {
   openDeleteDialog,
   renameApp,
   rescan,
-  toast
+  toast,
+  ignoreProblem,
+  restoreProblemThisRun
 } from '../store.js'
 import PathLink from './PathLink.vue'
 import { X } from '@lucide/vue'
+
+/**
+ * 已忽略的待处理提示 —— 从 App 头上搬到这里。
+ * App 头上只留「还该当回事」的；忽略过的进这里，随时能恢复。
+ */
+const ignoredRows = computed(() => {
+  const d = state.detail
+  if (!d) return []
+  const perm = new Set(d.problemsIgnored || [])
+  const sess = new Set(state.sessionIgnored?.[d.dirName] || [])
+  return (d.problems || [])
+    .filter((t) => perm.has(t) || sess.has(t))
+    .map((text) => ({ text, perm: perm.has(text) }))
+})
 
 /** 「各 Depot 按项目文件夹重排」的状态 */
 const syncingRoots = ref(false)
@@ -402,6 +418,29 @@ onUnmounted(depotDisarm)
                   {{ syncMsg.text }}
                 </div>
               </template>
+            </div>
+          </div>
+
+          <!-- 已忽略的提示：App 头上不再显示它们，来这里恢复 -->
+          <div v-if="ignoredRows.length" class="pt-3 border-t border-line">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-[11.5px] font-semibold text-muted">已忽略的提示</span>
+              <span class="text-[11px] text-faint num">{{ ignoredRows.length }} 条</span>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <div v-for="(r, i) in ignoredRows" :key="i" class="flex items-start gap-2">
+                <span class="text-[11.5px] leading-relaxed min-w-0 flex-1 text-faint">{{ r.text }}</span>
+                <span class="text-[10px] shrink-0 text-faint pt-[2px]">
+                  {{ r.perm ? '永久忽略' : '本次忽略' }}
+                </span>
+                <button
+                  class="link-btn shrink-0"
+                  title="恢复之后会重新出现在 App 头上的待处理里"
+                  @click="r.perm ? ignoreProblem(r.text, false) : restoreProblemThisRun(r.text)"
+                >
+                  恢复提示
+                </button>
+              </div>
             </div>
           </div>
 

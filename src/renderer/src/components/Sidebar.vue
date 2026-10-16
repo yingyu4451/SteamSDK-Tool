@@ -46,8 +46,9 @@ function healthOf(app) {
   if ((app.depots || []).some((d) => d.missing)) return 'bad'
   if (!app.appId) return 'bad'
   if (app.appId && state.duplicates?.some((d) => String(d.appId) === String(app.appId))) return 'bad'
+  // 只数「还当回事」的问题。内容目录不存在这类事 collectProblems 已经算进去了，
+  // 再单独看一眼 analysis.exists 会让「全部忽略完」之后灯还是黄的。
   if (activeProblems(app)) return 'warn'
-  if (!app.analysis?.exists) return 'warn'
   return 'ok'
 }
 
