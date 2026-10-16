@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, nextTick } from 'vue'
+import { computed, onMounted, ref, nextTick, watch } from 'vue'
 import gsap from 'gsap'
 import { Download, RefreshCw, Check, LoaderCircle, TriangleAlert } from '@lucide/vue'
 import {
@@ -69,6 +69,19 @@ onMounted(async () => {
 
 /** 点「完成」之后的验证过程：idle → checking → ok / fail */
 const checkPhase = ref('idle')
+
+/* 这个组件在 App.vue 里是一直挂着的，只有里面那层 div 跟着 open 开关 ——
+ * 所以 checkPhase 会活到下一次打开。上一次「验证通过」留下的 ok 会把
+ * 主按钮永久禁用，从手册重新进来就卡在第一步动不了。每次打开都清一次。 */
+watch(
+  () => o.value.open,
+  (open) => {
+    if (open) {
+      checkPhase.value = 'idle'
+      loginChecked.value = false
+    }
+  }
+)
 
 /** 状态行只在「正在验证」或「验证过」的时候出现 —— 没查过就不替用户下结论 */
 const rowShow = computed(() => checkPhase.value === 'checking' || loginChecked.value)
@@ -406,11 +419,11 @@ function skip() {
         </button>
         <button
           class="btn btn-primary"
-          :disabled="o.busy || checkPhase === 'checking' || checkPhase === 'ok'"
+          :disabled="o.busy || checkPhase === 'checking' || (o.step === 2 && checkPhase === 'ok')"
           @click="next"
         >
           <LoaderCircle v-if="checkPhase === 'checking'" :size="13" class="mr-1.5 drop-spin" />
-          <Check v-else-if="checkPhase === 'ok'" :size="13" class="mr-1.5" />
+          <Check v-else-if="o.step === 2 && checkPhase === 'ok'" :size="13" class="mr-1.5" />
           {{ btnText }}
         </button>
       </footer>
