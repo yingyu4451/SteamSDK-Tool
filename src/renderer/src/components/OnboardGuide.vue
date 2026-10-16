@@ -106,9 +106,41 @@ watch(
       testResult.value = null
       rowUsesRealLogin.value = false
       guardCode.value = ''
+      machineLogin.value = null
+      overrideLogin.value = false
+      if (o.value.step === 2) probeMachineLogin()
     }
   }
 )
+
+/* ---- 一进第三步就先看一眼：这台机器是不是已经登录过了 ----
+ * 已经登录过的人不该再被要求填一遍账号密码 —— 查到了就直接把结论摆出来。
+ * 查不到则什么都不说，只显示输入框：一进门先吃一个否定结论很讨厌。 */
+const machineLogin = ref(null)
+const machineChecking = ref(false)
+/** 已登录，但用户点了「换个账号」要覆盖 */
+const overrideLogin = ref(false)
+
+async function probeMachineLogin() {
+  if (machineChecking.value) return
+  machineChecking.value = true
+  machineLogin.value = null
+  try {
+    machineLogin.value = await checkLogin()
+  } finally {
+    machineChecking.value = false
+  }
+}
+
+watch(
+  () => o.value.step,
+  (s) => {
+    if (s === 2) probeMachineLogin()
+  }
+)
+
+/** 已经登录过、且用户没要求换账号 → 这一步没什么可填的 */
+const alreadyIn = computed(() => !!machineLogin.value?.ready && !overrideLogin.value)
 
 /** 状态行只在「正在验证」或「验证过」的时候出现 —— 没查过就不替用户下结论 */
 const rowShow = computed(() => checkPhase.value === 'checking' || loginChecked.value)
@@ -166,6 +198,13 @@ async function next() {
   }
   if (step === 2) {
     if (checkPhase.value === 'checking') return
+    /* 一进来就查到已经登录过、用户也没点「换个账号」—— 这一步没有任何要验的东西 */
+    if (alreadyIn.value) {
+      checkPhase.value = 'ok'
+      await new Promise((r) => setTimeout(r, 1700))
+      await finishOnboard()
+      return
+    }
     checkPhase.value = 'checking'
     loginChecked.value = false
     testResult.value = null
@@ -403,9 +442,41 @@ function skip() {
         <!-- ── 2 Steam 账号 ── -->
         <template v-else>
           <h2 class="text-[16px] font-semibold m-0">Steam 账号</h2>
+
+          <!-- 一进来就查到已经登录过：直接给结论，不用再填一遍 -->
+          <div
+            v-if="alreadyIn"
+            class="mt-3.5 rounded-lg border border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)] px-3.5 py-3"
+          >
+            <div class="flex items-center gap-2 flex-wrap">
+              <Check :size="15" class="shrink-0 text-success" />
+              <span class="text-[13.5px] font-semibold text-success">已完成登录</span>
+              <span
+                v-if="machineLogin?.steamcmd?.account"
+                class="font-mono text-[12px] text-muted"
+              >
+                {{ machineLogin.steamcmd.account }}
+              </span>
+            </div>
+            <p class="mt-1.5 mb-0 text-[11.5px] text-muted leading-relaxed">
+              steamcmd 里存着这个账号的登录令牌，构建不用再输密码。直接点「完成」就行。
+            </p>
+            <button
+              class="mt-2 text-[11.5px] text-faint hover:text-muted bg-transparent border-0 p-0 cursor-pointer underline decoration-dotted"
+              @click="overrideLogin = true"
+            >
+              换个账号
+            </button>
+          </div>
+
+          <!-- 没登录过（或者用户要换账号）：才让人填 -->
+          <template v-else>
           <p class="text-[12px] text-muted mt-1.5 mb-0 leading-relaxed">
-            steamcmd 要用它上传构建，也用来读你后台配好的 Depot 列表。
-            <span class="text-ink">不需要 Steamworks 管理员</span>。
+            <template v-if="machineChecking">正在看这台机器登录过没有…</template>
+            <template v-else>
+              steamcmd 要用它上传构建，也用来读你后台配好的 Depot 列表。
+              <span class="text-ink">不需要 Steamworks 管理员</span>。
+            </template>
           </p>
 
           <div class="mt-3.5 flex flex-col gap-3">
@@ -497,6 +568,7 @@ function skip() {
               在手机 Steam App 的「Steam 令牌」页，或者 Steam 发来的邮件里。填好点下面的「完成」。
             </p>
           </div>
+          </template>
         </template>
 
         <div
