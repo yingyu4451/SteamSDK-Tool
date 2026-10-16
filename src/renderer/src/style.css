@@ -512,3 +512,19 @@ textarea {
 .bar-pop-right {
   right: 0;
 }
+
+/* 大包解压/统计时的加载圈：主进程那几分钟是忙的，界面得自己转起来 */
+.drop-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(102, 192, 244, 0.22);
+  border-top-color: var(--color-accent);
+  animation: drop-spin 0.75s linear infinite;
+}
+
+@keyframes drop-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

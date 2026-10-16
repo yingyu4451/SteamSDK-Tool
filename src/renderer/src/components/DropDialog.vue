@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import gsap from 'gsap'
 import { state, closeDrop, dropApply, openDepotSlide, dropLookupBackend, dropSyncDepot } from '../store.js'
 import { PLATFORM_LABEL } from '../store.js'
@@ -8,14 +8,35 @@ import { X } from '@lucide/vue'
 
 const el = ref(null)
 
+const d = computed(() => state.drop.data)
+const busy = computed(() => state.drop.busy || state.drop.busy)
+
+/** 已经等了多少秒 —— 秒数一直在跳，就是在告诉用户「没死，还在动」 */
+const elapsed = ref(0)
+let tick = null
+
+/** 加载动画上那行字：阶段 + 已数到多少 + 已经等了多久 */
+const phaseText = computed(() => {
+  const pr = state.drop.progress
+  const tail = elapsed.value >= 3 ? ` · 已等 ${elapsed.value} 秒` : ''
+  if (!pr) return `正在读${d.value?.name ? ' ' + d.value.name : ''}…${tail}`
+  const n = pr.files ? ` · ${pr.files.toLocaleString()} 个文件` : ''
+  const sz = pr.bytes ? ` · ${fmtSize(pr.bytes)}` : ''
+  return `${pr.text || '正在读…'}${n}${sz}${tail}`
+})
+
 onMounted(() => {
   if (el.value) {
     gsap.fromTo(el.value, { opacity: 0, y: 16, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power3.out' })
   }
+  tick = setInterval(() => {
+    elapsed.value = Math.floor((Date.now() - (state.drop.startedAt || Date.now())) / 1000)
+  }, 500)
 })
 
-const d = computed(() => state.drop.data)
-const busy = computed(() => state.drop.busy || state.drop.busy)
+onUnmounted(() => {
+  clearInterval(tick)
+})
 
 /** 目标 Depot：'' = 新建，否则是 depotFile */
 const target = ref('')
@@ -176,7 +197,7 @@ async function doApply() {
     <div ref="el" class="relative card w-full max-w-[680px] max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
         <div class="min-w-0">
-          <h2 class="text-[15px] font-semibold m-0">文件识别</h2>
+          <h2 class="text-[15px] font-semibold m-0">文件导入</h2>
           <p class="mt-1 mb-0 text-[11.5px] text-faint font-mono truncate" :title="d.target">
             {{ d.target }}
           </p>
@@ -190,6 +211,16 @@ async function doApply() {
       </header>
 
       <div class="p-5 flex flex-col gap-4">
+        <!-- 压缩包要先解开、大文件夹要数一遍，这些都得好几分钟。
+             主进程那会儿是忙的，所以这里必须自己动起来 —— 不然用户只会以为卡死了。 -->
+        <div v-if="d.pending" class="flex flex-col items-center gap-3 py-10">
+          <span class="drop-spinner" />
+          <div class="text-[13px] text-ink num">{{ phaseText }}</div>
+          <div class="text-[11.5px] text-faint text-center leading-relaxed max-w-[360px]">
+            压缩包会先在这里解开再数一遍。包大的话要等几分钟 —— 别关窗口，也别再拖一次。
+          </div>
+        </div>
+
         <!-- 看错了就直接说 -->
         <div
           v-if="state.drop.error"
@@ -246,7 +277,7 @@ async function doApply() {
 
           <!-- 放哪个 Depot -->
           <div class="flex flex-col gap-2">
-            <span class="text-[11.5px] text-muted">放进哪个 Depot</span>
+            <span class="text-[11.5px] text-muted">导入哪个 Depot</span>
 
             <div class="flex flex-col gap-1.5">
               <label
@@ -370,7 +401,7 @@ async function doApply() {
           :disabled="!canApply"
           @click="doApply"
         >
-          {{ state.drop.busy ? '处理中…' : effPick ? '同步并放进去' : target ? '放进去' : '新建并放进去' }}
+          {{ state.drop.busy ? '处理中…' : effPick ? '同步并导入' : target ? '导入' : '新建并导入' }}
         </button>
       </footer>
     </div>

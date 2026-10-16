@@ -669,11 +669,13 @@ function registerIpc() {
   })
 
   /* ---- 拖进来的文件夹 / 压缩包 ---- */
-  ipcMain.handle('drop:analyze', (_e, { target } = {}) => {
+  ipcMain.handle('drop:analyze', (e, { target } = {}) => {
     try {
-      return analyzeTarget(target, loadSettings())
-    } catch (e) {
-      return { ok: false, error: e.message }
+      return analyzeTarget(target, loadSettings(), (msg) => {
+        if (!e.sender.isDestroyed()) e.sender.send('drop:progress', msg)
+      })
+    } catch (e2) {
+      return { ok: false, error: e2.message }
     }
   })
   ipcMain.handle('drop:apply', (_e, spec = {}) => {

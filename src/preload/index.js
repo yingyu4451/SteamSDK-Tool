@@ -98,7 +98,12 @@ const api = {
       }
     },
     analyze: (target) => ipcRenderer.invoke('drop:analyze', { target }),
-    apply: (spec) => ipcRenderer.invoke('drop:apply', spec)
+    apply: (spec) => ipcRenderer.invoke('drop:apply', spec),
+    onProgress: (cb) => {
+      const h = (_e, msg) => cb(msg)
+      ipcRenderer.on('drop:progress', h)
+      return () => ipcRenderer.removeListener('drop:progress', h)
+    }
   },
 
   run: {

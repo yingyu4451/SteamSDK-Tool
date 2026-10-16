@@ -18,7 +18,7 @@ const SECTIONS = [
       {
         t: 'dl',
         v: [
-          ['游戏包拖进来', '窗口任意位置拖入文件夹或 zip。自动认出平台（看 UnityPlayer.dll / .app / .so），告诉你该放进哪个 Depot；同一个平台还没 Depot，就现场建一个。'],
+          ['游戏包拖进来', '窗口任意位置拖入文件夹或 zip。自动认出平台（看 UnityPlayer.dll / .app / .so），告诉你该导入哪个 Depot；同一个平台还没 Depot，就现场建一个。'],
           ['读后台 Depot', '向导里填 AppID，点「读取后台 Depot」，拿回后台真实的 DepotID 和体积，不用照着 AppID+1 猜。'],
           ['同步 Depot', '后台建好、本地还没配的 Depot，勾上一次性补进 scripts。'],
           ['一个 App 管多平台', 'win64 / macOS / linux 各建一个 Depot，一次构建全传。不用为了多平台拆成好几个 App。'],

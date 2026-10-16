@@ -136,6 +136,9 @@ export const state = reactive({
     busy: false,
     data: null,
     error: null,
+    // 大包解压要几分钟，这段时间得让界面自己证明还活着
+    startedAt: 0,
+    progress: null,
     // 拖放窗口里的「读后台」：后台有、本地还没配的 Depot
     backend: { busy: false, done: false, error: '', needsCreds: false, appName: '', via: '', depots: [] }
   },
@@ -1507,6 +1510,10 @@ export function wireEvents() {
     state.update.total = total || state.update.total
   })
 
+  api.drop.onProgress((msg) => {
+    if (state.drop.busy) state.drop.progress = msg
+  })
+
   api.run.onData((d) => {
     if (d.stream === 'system') pushLog('system', d.line)
     else pushLog(d.stream, d.line)
@@ -1700,7 +1707,11 @@ export async function dropAnalyze(target) {
   state.drop.over = false
   state.drop.busy = true
   state.drop.error = null
-  state.drop.data = null
+  state.drop.startedAt = Date.now()
+  state.drop.progress = null
+  // 先把窗口支起来。4 GB 的压缩包解压要好几分钟，那段时间里
+  // 主进程是忙的 —— 不留点动的东西，用户只会以为程序挂了。
+  state.drop.data = { pending: true, target: p, name: p.split(/[\\/]/).pop() }
   try {
     const res = await api.drop.analyze(p)
     if (!res || res.ok === false) {
@@ -1714,10 +1725,11 @@ export async function dropAnalyze(target) {
     state.drop.data = { ok: false, target: p, name: p.split(/[\\/]/).pop() }
   } finally {
     state.drop.busy = false
+    state.drop.progress = null
   }
 }
 
-/** 第二步：放进选好的 Depot（没有就给新建一个） */
+/** 第二步：导入选好的 Depot（没有就给新建一个） */
 export async function dropApply(spec) {
   if (!state.selectedDir) return toast('先选一个 App', 'bad')
   state.drop.busy = true

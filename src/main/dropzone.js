@@ -7,7 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { platformById, platformFromOsArch } from './vdf-edit.js'
 import { addDepot, updateDepotFields } from './sdk.js'
 
@@ -169,8 +169,38 @@ function inspectDir(dir) {
   return { ...out, platform, why }
 }
 
+/** 粗略数一下目录里有多少东西 —— 只用来报进度，够用就行 */
+function quickStats(dir, cap = 200000) {
+  let files = 0
+  let bytes = 0
+  const walk = (d) => {
+    let entries
+    try {
+      entries = fs.readdirSync(d, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of entries) {
+      if (files >= cap) return
+      const full = path.join(d, e.name)
+      if (e.isDirectory()) {
+        walk(full)
+        continue
+      }
+      files++
+      try {
+        bytes += fs.statSync(full).size
+      } catch {
+        /* 读不到就不算 */
+      }
+    }
+  }
+  walk(dir)
+  return { files, bytes }
+}
+
 /** 压缩包：先解出来再看。zip 用系统自带的 Expand-Archive，其它格式得装 7-Zip */
-function extractArchive(archive, destRoot) {
+async function extractArchive(archive, destRoot, onProgress) {
   const ext = extOf(archive)
   if (!ZIP_EXT.includes(ext)) {
     return { ok: false, error: `只能自动解 .zip。${ext} 请先用 7-Zip 解开，再把文件夹拖进来。` }
@@ -178,8 +208,13 @@ function extractArchive(archive, destRoot) {
   const base = path.basename(archive, path.extname(archive)).replace(/[\\/:*?"<>|]/g, '_').trim()
   const dest = path.join(destRoot, base)
   if (fs.existsSync(dest)) {
-    const n = fs.readdirSync(dest).length
-    if (n) return { ok: false, error: `${dest} 已经存在而且不是空的 —— 换个地方或者先清掉它。` }
+    // 上一次拖同一个包留下的探测目录。那是我们自己的暂存区，直接清掉重来 ——
+    // 不清的话第二次拖同一个包会报「已经存在而且不是空的」，很莫名其妙。
+    try {
+      fs.rmSync(dest, { recursive: true, force: true })
+    } catch {
+      /* 删不掉就交给 Expand-Archive 自己覆盖 */
+    }
   }
   fs.mkdirSync(dest, { recursive: true })
 
@@ -187,13 +222,43 @@ function extractArchive(archive, destRoot) {
     '$ErrorActionPreference = "Stop"',
     `Expand-Archive -LiteralPath ${JSON.stringify(archive)} -DestinationPath ${JSON.stringify(dest)} -Force`
   ].join('\n')
-  const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], {
-    encoding: 'utf8',
-    timeout: 20 * 60 * 1000,
-    windowsHide: true
+
+  // 用异步 spawn 而不是 spawnSync：同步版本会把主进程整段堵死，
+  // 那样连「解压到哪儿了」这种进度都送不出去，界面只能干等。
+  const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], {
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe']
   })
-  if (r.status !== 0) {
-    return { ok: false, error: (r.stderr || r.stdout || '解压失败').trim().split('\n').slice(-4).join('\n') }
+  let out = ''
+  child.stdout.on('data', (b) => {
+    out += b.toString()
+  })
+  child.stderr.on('data', (b) => {
+    out += b.toString()
+  })
+
+  const poll = setInterval(() => {
+    try {
+      onProgress?.({ phase: 'extract', text: '正在解压…', ...quickStats(dest) })
+    } catch {
+      /* 报进度失败不影响解压 */
+    }
+  }, 700)
+
+  const killTimer = setTimeout(() => {
+    try {
+      child.kill()
+    } catch {
+      /* 已经退了 */
+    }
+  }, 20 * 60 * 1000)
+
+  const code = await new Promise((resolve) => child.on('close', resolve))
+  clearInterval(poll)
+  clearTimeout(killTimer)
+
+  if (code !== 0) {
+    return { ok: false, error: out.trim().split('\n').slice(-4).join('\n') || '解压失败' }
   }
   return { ok: true, dir: dest, extracted: true }
 }
@@ -222,7 +287,14 @@ function unwrapSingleDir(dir) {
 /**
  * 第一步：看。压缩包只解压到临时位置看内容，真正的解压留到 apply 的时候。
  */
-export function analyzeTarget(target, settings) {
+export async function analyzeTarget(target, settings, onProgress) {
+  const say = (o) => {
+    try {
+      onProgress?.(o)
+    } catch {
+      /* 报进度失败不该影响正事 */
+    }
+  }
   const p = String(target || '').trim()
   if (!p) return { ok: false, error: '没拿到路径' }
   if (!fs.existsSync(p)) return { ok: false, error: `找不到：${p}` }
@@ -243,6 +315,7 @@ export function analyzeTarget(target, settings) {
   }
 
   if (st.isDirectory()) {
+    say({ phase: 'scan', text: '正在统计文件…', files: 0, bytes: 0 })
     const info = inspectDir(p)
     return {
       ...base,
@@ -272,13 +345,15 @@ export function analyzeTarget(target, settings) {
   const tmpRoot = path.join(settings?.buildsRoot || path.dirname(p), '.drop-probe')
   let probe
   try {
-    probe = extractArchive(p, tmpRoot)
+    say({ phase: 'extract', text: '正在解压…', files: 0, bytes: 0 })
+    probe = await extractArchive(p, tmpRoot, say)
   } catch (e) {
     return { ok: false, error: `解压失败：${e.message}` }
   }
   if (!probe.ok) return { ok: false, error: probe.error }
 
   const inner = unwrapSingleDir(probe.dir)
+  say({ phase: 'scan', text: '正在统计文件…', files: 0, bytes: 0 })
   const info = inspectDir(inner)
   return {
     ...base,
@@ -328,7 +403,7 @@ export function applyDrop(spec, settings) {
   } else {
     srcDir = String(spec?.dir || spec?.target || '').trim()
   }
-  if (!srcDir || !fs.existsSync(srcDir)) return { ok: false, error: `找不到要放进去的文件夹：${srcDir}` }
+  if (!srcDir || !fs.existsSync(srcDir)) return { ok: false, error: `找不到要导入的文件夹：${srcDir}` }
 
   const platform = String(spec?.platform || '').trim() || 'win64'
   const plat = platformById(platform)
