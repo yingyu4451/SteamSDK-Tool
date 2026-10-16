@@ -120,7 +120,7 @@ const rowTone = computed(() => {
 })
 const rowText = computed(() => {
   if (checkPhase.value === 'checking') {
-    if (mobileWaiting.value) return '等你手机上点确认 —— 在 Steam App 里点「确认登录」'
+    if (mobileWaiting.value) return '等你在手机上点确认 —— 打开 Steam App，点「确认登录」'
     return testResult.value === null && rowUsesRealLogin.value
       ? '正在用你填的账号登录 steamcmd，第一次要十几秒…'
       : '正在验证登录状态…'
@@ -470,17 +470,14 @@ function skip() {
             v-if="mobileWaiting"
             class="mt-2.5 rounded-md border border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)] px-3 py-2.5"
           >
-            <div class="text-[12px] text-accent font-semibold mb-1.5">
-              Steam 十几秒没回话 —— 绑了手机令牌的账号，就是它在等你确认
+            <div class="text-[12.5px] text-accent font-semibold mb-1.5">
+              Steam 正在等你手机上点确认
             </div>
             <ol class="m-0 pl-4 text-[11.5px] text-muted leading-relaxed">
-              <li>打开 Steam 手机 App（就是看令牌那个）</li>
-              <li>右下角盾牌图标 → 里面有一条「确认登录」</li>
-              <li>点它。这边会自己继续，不用在这个窗口做任何操作</li>
+              <li>拿出手机，打开 <strong class="text-ink">Steam App</strong></li>
+              <li>点右下角的<strong class="text-ink">盾牌图标</strong>，里面有一条「确认登录」</li>
+              <li>点它。这边会自己继续，<strong class="text-ink">不用在这个窗口里做任何操作</strong></li>
             </ol>
-            <div class="mt-1.5 text-[11px] text-faint">
-              没绑手机令牌的话这就是网络慢，等它自己出结果即可。
-            </div>
           </div>
 
           <!-- 缺验证码时才出现。steamcmd 一次登录只要一个码，

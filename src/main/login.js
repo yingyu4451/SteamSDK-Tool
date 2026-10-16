@@ -144,14 +144,24 @@ export function loginTest(account, password, guardCode = '', settings, onWait) {
         return
       }
 
-      // ② 兜底：已经 Logging in 了，十几秒既不出错也不 OK —— 那多半就是在等人。
-      //    绑了手机令牌的账号，Steam 会一直挂到你在 App 里点确认为止。
+      // ② 兜底：已经 Logging in 了，半分钟既不出错也不 OK —— 那就是在等人。
+      //
+      // 为什么只能靠「卡住了」这个行为，而不是直接读那句话：
+      // 实测过两遍 —— steamcmd 的 stdout 接管道时是**块缓冲**。让它停在提示上干等，
+      // 20 秒只收到 92 字节的横幅，password: / Cached credentials / Logging in
+      // 一个字都没刷出来，非要等进程结束才一次性吐出来。绑了手机令牌的账号会一直挂到
+      // 你在 App 里点确认，所以那条路读不到实时文本。
+      //
+      // 30 秒这个数是量出来的：
+      //   密码错     → 5 秒（我这边的实测）到 22 秒（用户日志里最慢那次）
+      //   等手机确认 → 60 秒起步（用户日志里卡了 69 秒才出 Retrying）
+      // 取中间，两边都留出余量。
       if (!/Logging in user/i.test(text)) return
       if (/ERROR|Retrying|Logged in OK/i.test(text)) return
       const m = /\[([\d-]+ [\d:]+)\] Logging in user/.exec(text)
       const since = m ? Date.parse(m[1].replace(' ', 'T') + '+08:00') : NaN
       const waited = Number.isFinite(since) ? Date.now() - since : 0
-      if (waited > 15000) {
+      if (waited > 30000) {
         toldMobile = true
         onWait?.({ kind: 'mobile' })
       }
