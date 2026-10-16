@@ -131,7 +131,14 @@ export const state = reactive({
   },
   // 拖进来的文件夹 / 压缩包：{ over, busy, data, error }
   // over 是「正拖着东西悬在窗口上」，data 是分析结果
-  drop: { over: false, busy: false, data: null, error: null },
+  drop: {
+    over: false,
+    busy: false,
+    data: null,
+    error: null,
+    // 拖放窗口里的「读后台」：后台有、本地还没配的 Depot
+    backend: { busy: false, done: false, error: '', needsCreds: false, appName: '', via: '', depots: [] }
+  },
   // 工具自身的更新（GitHub Releases）
   update: {
     current: '',
@@ -1612,6 +1619,78 @@ export function closeDrop() {
   state.drop.data = null
   state.drop.error = null
   state.drop.over = false
+  state.drop.backend = { busy: false, done: false, error: '', needsCreds: false, appName: '', via: '', depots: [] }
+}
+
+/**
+ * 拖放窗口里读后台，列出「后台有、本地还没配」的 Depot。
+ * 为什么值得自动跑：后台如果已经有一个同平台的 Depot，而本地只有别的平台，
+ * 那么窗口默认给出的「新建一个 Depot（AppID+1）」就会撞上一个已经存在的 ID。
+ */
+export async function dropLookupBackend() {
+  const dir = state.selectedDir
+  const appId = String(state.detail?.appId || '').trim()
+  const box = state.drop.backend
+  if (!dir || !/^\d+$/.test(appId)) {
+    box.error = '这个 App 还没有 AppID，读不了后台'
+    box.done = true
+    return
+  }
+  box.busy = true
+  box.error = ''
+  box.done = false
+  box.depots = []
+  try {
+    const res = await api.steam.appDepots(appId)
+    // 切走了就别把 A 的后台结果写进 B 的窗口
+    if (state.selectedDir !== dir) return
+    if (!res || res.ok === false) {
+      box.error = res?.error || '读不出来'
+      if (res?.needsKey || res?.needsPassword) box.needsCreds = true
+      return
+    }
+    const localIds = new Set((state.detail?.depots || []).map((x) => String(x.id)))
+    box.appName = res.appName || ''
+    box.via = res.via || ''
+    box.depots = (res.depots || []).filter((x) => x.platform && !localIds.has(String(x.depotId)))
+    box.done = true
+  } catch (e) {
+    if (state.selectedDir === dir) box.error = e.message
+  } finally {
+    if (state.selectedDir === dir) box.busy = false
+  }
+}
+
+/** 把后台某个 Depot 补进本地脚本，返回它的 depotFile 以便直接选中 */
+export async function dropSyncDepot(depotId, platform) {
+  const dir = state.selectedDir
+  if (!dir || !depotId) return { ok: false, error: '没什么可同步的' }
+  state.drop.busy = true
+  try {
+    const base = String(state.detail?.contentRoot || '').replace(/[\\/]+$/, '')
+    const res = await api.app.addDepot(dir, {
+      depotId: String(depotId),
+      platform,
+      contentRoot: base ? `${base}\\${platform}` : '',
+      allowDuplicatePlatform: true
+    })
+    if (!res || res.ok === false) {
+      state.drop.error = res?.error || '补不进来'
+      return { ok: false, error: state.drop.error }
+    }
+    await rescan()
+    if (state.selectedDir === dir) await reloadDetail()
+    // 后台清单里已经有的那条现在落到本地了，从待选里摘掉
+    state.drop.backend.depots = state.drop.backend.depots.filter((x) => String(x.depotId) !== String(depotId))
+    const made = (state.detail?.depots || []).find((x) => String(x.id) === String(depotId))
+    toast(`已把 Depot ${depotId} 补进本地`)
+    return { ok: true, file: made?.file || '' }
+  } catch (e) {
+    state.drop.error = e.message
+    return { ok: false, error: e.message }
+  } finally {
+    state.drop.busy = false
+  }
 }
 
 /** 第一步：看它是什么。压缩包会先解到 .drop-probe 里探一下 */

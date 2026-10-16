@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onMounted, watch } from 'vue'
 import gsap from 'gsap'
-import { state, closeDrop, dropApply, openDepotSlide } from '../store.js'
+import { state, closeDrop, dropApply, openDepotSlide, dropLookupBackend, dropSyncDepot } from '../store.js'
 import { PLATFORM_LABEL } from '../store.js'
 import { fmtSize } from '../format.js'
 import { X } from '@lucide/vue'
@@ -51,6 +51,7 @@ const newDepotFile = computed(() => {
 
 const canApply = computed(() => {
   if (!d.value?.ok || state.drop.busy) return false
+  if (effPick.value) return true
   if (!target.value) return /^\d+$/.test(newDepotId.value.trim())
   if (mode.value === 'copy') {
     const dep = depots.value.find((x) => x.file === target.value)
@@ -62,6 +63,11 @@ const canApply = computed(() => {
 const willDo = computed(() => {
   if (!d.value?.ok) return ''
   const src = d.value.kind === 'archive' ? `先解压到 ${state.settings?.buildsRoot || ''}，再把` : '把这个文件夹'
+  if (effPick.value) {
+    const r = effPick.value
+    const root = `${String(state.detail?.contentRoot || '').replace(/[\\/]+$/, '')}\\${r.platform}`
+    return `先把后台的 Depot ${r.depotId} 补成本地脚本，再把它的内容目录指到 ${root}`
+  }
   if (!target.value) {
     return `${src}当作新 Depot ${newDepotId.value.trim()} 的内容目录`
   }
@@ -74,6 +80,8 @@ const willDo = computed(() => {
 
 // 分析结果出来之后，默认选同平台那个 depot；没有就默认新建
 watch(d, (v) => {
+  backendPick.value = null
+  newPick.value = false
   if (!v) return
   mode.value = 'bind'
   platform.value = v.platform || ''
@@ -81,6 +89,8 @@ watch(d, (v) => {
   const same = (state.detail?.depots || []).filter((x) => x.platformId === v.platform)
   target.value = same.length === 1 ? same[0].file : ''
   if (!target.value) newDepotId.value = suggestDepotId()
+  // 顺带读一次后台：本地缺同平台 Depot 时，默认那个「新建」会撞上后台已有的 ID
+  dropLookupBackend()
 })
 
 /** 新建 Depot 的默认 ID：AppID + 1 起，跳过已经用掉的 */
@@ -98,6 +108,59 @@ function suggestDepotId() {
 function pickPlatform(id) {
   platform.value = id
   if (!newDepotId.value) newDepotId.value = suggestDepotId()
+}
+
+/* ---- 后台同步：后台有、本地还没配的 Depot 直接补进来 ---- */
+
+const bk = computed(() => state.drop.backend)
+/** 用户显式点中的后台 Depot（null = 没点，交给 effPick 判断） */
+const backendPick = ref(null)
+/** 用户显式点了「新建一个 Depot」，压过自动建议 */
+const newPick = ref(false)
+
+/** 后台里跟拖进来的东西同平台的那些 —— 最可能是用户要放的目标 */
+const backendSamePlatform = computed(() => (bk.value.depots || []).filter((x) => x.platform === suggested.value))
+
+/** 本地没有同平台 Depot、但后台有 —— 这时「新建一个」多半会撞 ID */
+const clashWarning = computed(() => !samePlatform.value.length && backendSamePlatform.value.length > 0)
+
+/**
+ * 实际生效的后台选择：用户点过就用他的；
+ * 没点过而本地又缺同平台 Depot，就直接用后台那条 —— 否则绿色的按钮
+ * 默认会拿 AppID+1 去新建一个跟后台撞 ID 的 Depot。
+ */
+const effPick = computed(() => {
+  if (newPick.value) return null
+  if (backendPick.value) return backendPick.value
+  return clashWarning.value ? backendSamePlatform.value[0] || null : null
+})
+
+function pickBackend(row) {
+  newPick.value = false
+  backendPick.value = row
+  target.value = ''
+}
+
+/** 补一个后台 Depot 进来，然后把拖进来的东西指过去 */
+async function doApply() {
+  const pick = effPick.value
+  if (pick) {
+    const r = await dropSyncDepot(pick.depotId, pick.platform)
+    if (!r?.ok) return
+    const file =
+      r.file || (state.detail?.depots || []).find((x) => String(x.id) === String(pick.depotId))?.file || ''
+    if (!file) return
+    await dropApply({ depotFile: file, mode: 'bind', platform: pick.platform, depotId: '', depotName: '', contentRoot: '' })
+    return
+  }
+  await dropApply({
+    depotFile: target.value,
+    mode: mode.value,
+    platform: platform.value || suggested.value || 'win64',
+    depotId: newDepotId.value,
+    depotName: depotName.value,
+    contentRoot: depots.value.find((x) => x.file === target.value)?.contentRoot || ''
+  })
 }
 </script>
 
@@ -155,7 +218,7 @@ function pickPlatform(id) {
             </div>
 
             <!-- 平台认错了，让用户改 -->
-            <div v-if="!target" class="mt-3">
+            <div v-if="!target && !effPick" class="mt-3">
               <div class="text-[11.5px] text-muted mb-1.5">新建 Depot 的平台</div>
               <div class="flex gap-1.5 flex-wrap">
                 <button
@@ -200,7 +263,7 @@ function pickPlatform(id) {
                     : 'border-line hover:border-[#2a3644]'
                 "
               >
-                <input type="radio" value="" :checked="target === dep.file" class="accent-[#66c0f4]" @change="target = dep.file" />
+                <input type="radio" value="" :checked="target === dep.file" class="accent-[#66c0f4]" @change="newPick = false; target = dep.file; backendPick = null" />
                 <span class="text-[12.5px] text-ink">{{ PLATFORM_LABEL[dep.platformId] || dep.platformId }}</span>
                 <span class="font-mono num text-[11.5px] text-faint">{{ dep.id }}</span>
                 <span
@@ -214,20 +277,63 @@ function pickPlatform(id) {
                 </span>
               </label>
 
+              <!-- 后台有、本地没配的 -->
+              <label
+                v-for="row in bk.depots"
+                :key="'bk' + row.depotId"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-[10px] border cursor-pointer transition-colors"
+                :class="
+                  effPick?.depotId === row.depotId
+                    ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]'
+                    : 'border-line hover:border-[#2a3644]'
+                "
+              >
+                <input
+                  type="radio"
+                  :checked="effPick?.depotId === row.depotId"
+                  class="accent-[#66c0f4]"
+                  @change="pickBackend(row)"
+                />
+                <span class="text-[12.5px] text-ink">{{ row.platformLabel || PLATFORM_LABEL[row.platform] }}</span>
+                <span class="font-mono num text-[11.5px] text-faint">{{ row.depotId }}</span>
+                <span class="pill pill-idle">后台有，本地没配</span>
+                <span v-if="row.platform === suggested" class="pill pill-ok">和你拖的对得上</span>
+                <span class="ml-auto text-[11px] text-faint num shrink-0">{{ fmtSize(row.size) }}</span>
+              </label>
+
               <label
                 class="flex items-center gap-2.5 px-3 py-2 rounded-[10px] border cursor-pointer transition-colors"
                 :class="
-                  !target ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]' : 'border-line hover:border-[#2a3644]'
+                  !target && !effPick ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]' : 'border-line hover:border-[#2a3644]'
                 "
               >
-                <input type="radio" :checked="!target" class="accent-[#66c0f4]" @change="target = ''" />
+                <input type="radio" :checked="!target && !effPick" class="accent-[#66c0f4]" @change="newPick = true; target = ''; backendPick = null" />
                 <span class="text-[12.5px] text-ink">新建一个 Depot</span>
                 <span v-if="!depots.length" class="text-[11.5px] text-faint">（这个 App 还没有 Depot）</span>
               </label>
             </div>
 
+            <!-- 后台读取状态 -->
+            <div v-if="bk.busy" class="text-[11px] text-faint">正在读后台…</div>
+            <div v-else-if="bk.error && !bk.depots.length" class="text-[11px] text-faint">
+              没读到后台：{{ bk.error }}
+              <button class="link-btn" @click="dropLookupBackend">重试</button>
+            </div>
+            <div v-else-if="bk.done && !bk.depots.length" class="text-[11px] text-faint">
+              后台的 Depot 本地都配齐了{{ bk.appName ? `（${bk.appName}）` : '' }}。
+            </div>
+
+            <!-- 会撞 ID 的提醒 -->
+            <div
+              v-if="clashWarning"
+              class="rounded-[10px] border border-[rgba(240,169,46,.26)] bg-[rgba(240,169,46,.06)] px-3 py-2 text-[11.5px] text-amber"
+            >
+              后台已经有 {{ PLATFORM_LABEL[suggested] }} 的 Depot（{{ backendSamePlatform.map((x) => x.depotId).join('、') }}），
+              本地没配。新建一个会跟它撞 ID —— 选上面那条「后台有，本地没配」更稳妥。
+            </div>
+
             <!-- 新建的字段 -->
-            <div v-if="!target" class="grid grid-cols-2 gap-3 pl-3 pt-1">
+            <div v-if="!target && !effPick" class="grid grid-cols-2 gap-3 pl-3 pt-1">
               <label class="flex flex-col gap-1.5">
                 <span class="text-[11.5px] text-muted">DepotID</span>
                 <input
@@ -275,18 +381,9 @@ function pickPlatform(id) {
         <button
           class="btn btn-primary no-drag"
           :disabled="!canApply"
-          @click="
-            dropApply({
-              depotFile: target,
-              mode,
-              platform: platform || suggested || 'win64',
-              depotId: newDepotId,
-              depotName,
-              contentRoot: depots.find((x) => x.file === target)?.contentRoot || ''
-            })
-          "
+          @click="doApply"
         >
-          {{ state.drop.busy ? '处理中…' : target ? '放进去' : '新建并放进去' }}
+          {{ state.drop.busy ? '处理中…' : effPick ? '同步并放进去' : target ? '放进去' : '新建并放进去' }}
         </button>
       </footer>
     </div>
