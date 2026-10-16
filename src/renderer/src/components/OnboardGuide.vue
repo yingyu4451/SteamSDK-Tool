@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
 import gsap from 'gsap'
-import { Download, RefreshCw, Check, LogIn, Sparkles, LoaderCircle } from '@lucide/vue'
+import { Download, RefreshCw, Check, LoaderCircle } from '@lucide/vue'
 import {
   state,
   onboardGo,
@@ -11,7 +11,6 @@ import {
   onboardSaveAccount,
   finishOnboard,
   onboardMode,
-  openLogin,
   goSettings,
   checkLogin
 } from '../store.js'
@@ -329,42 +328,25 @@ function skip() {
             不进命令行参数、不写进任何日志。不存也行，每次构建会问你要。
           </p>
 
-          <!-- 更省事的一条路：让 steamcmd 自己在控制台里登录一次，
-               它会把凭据缓存下来，之后构建就不用再输密码了 -->
-          <div class="mt-3.5 rounded-lg border border-line p-3">
-            <div class="flex items-center gap-2">
-              <Sparkles :size="14" class="text-accent shrink-0" />
-              <span class="text-[12px] text-ink font-medium">便捷登录（推荐）</span>
-            </div>
-            <p class="text-[11.5px] text-muted mt-1.5 mb-0 leading-relaxed">
-              开一个 steamcmd 控制台窗口，在里面输一次账号密码 + Steam Guard。
-              登录成功后 steamcmd 自己会记住，以后构建都不用再输密码，上面两个框也可以空着。
-            </p>
-            <button class="btn mt-2.5 no-drag" @click="openLogin">
-              <LogIn :size="14" />
-              打开登录窗口
-            </button>
-
-            <!-- 登录成功与否由主进程读 steamcmd 的 config.vdf 判断，
-                 不用用户自己回来打勾 —— 他在控制台里登录完，这里自己就绿了 -->
-            <div
-              class="mt-3 rounded-md border px-3 py-2.5 flex items-start gap-2"
-              :class="
-                lg?.ready
-                  ? 'border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)]'
-                  : 'border-line bg-[rgba(9,15,23,.5)]'
-              "
-            >
-              <component
-                :is="lg?.ready ? Check : LoaderCircle"
-                :size="14"
-                class="shrink-0 mt-0.5"
-                :class="lg?.ready ? 'text-success' : 'text-faint drop-spin-slow'"
-              />
-              <span class="text-[11.5px] leading-relaxed" :class="lg?.ready ? 'text-success' : 'text-muted'">
-                {{ loginText }}
-              </span>
-            </div>
+          <!-- 登录成功与否由主进程读 steamcmd 的 config.vdf 判断，
+               不用用户自己回来打勾 —— 状态变了这里自己就绿 -->
+          <div
+            class="mt-3.5 rounded-md border px-3 py-2.5 flex items-start gap-2"
+            :class="
+              lg?.ready
+                ? 'border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)]'
+                : 'border-line bg-[rgba(9,15,23,.5)]'
+            "
+          >
+            <component
+              :is="lg?.ready ? Check : LoaderCircle"
+              :size="14"
+              class="shrink-0 mt-0.5"
+              :class="lg?.ready ? 'text-success' : 'text-faint drop-spin-slow'"
+            />
+            <span class="text-[11.5px] leading-relaxed" :class="lg?.ready ? 'text-success' : 'text-muted'">
+              {{ loginText }}
+            </span>
           </div>
 
           <div
