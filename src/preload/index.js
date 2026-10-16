@@ -31,7 +31,9 @@ const api = {
   },
 
   login: {
-    state: () => ipcRenderer.invoke('login:state')
+    state: () => ipcRenderer.invoke('login:state'),
+    describe: () => ipcRenderer.invoke('login:describe'),
+    forget: () => ipcRenderer.invoke('login:forget')
   },
 
   vdf: {

@@ -1,7 +1,16 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Download } from '@lucide/vue'
-import { state, rescan, openLogin, checkUpdateNow, downloadUpdateNow, installUpdateNow, openReleases } from '../store.js'
+import { Download, ShieldOff } from '@lucide/vue'
+import {
+  state,
+  rescan,
+  openLogin,
+  openForget,
+  checkUpdateNow,
+  downloadUpdateNow,
+  installUpdateNow,
+  openReleases
+} from '../store.js'
 
 /** 官方 SDK 下载页。要 Steamworks 账号登录（就是上传构建那个），没有匿名直链 */
 const SDK_DOWNLOAD = 'https://partner.steamgames.com/downloads/list'
@@ -240,11 +249,15 @@ function openExternal(url) {
             <button class="btn btn-danger no-drag" :disabled="!state.hasPassword" @click="clearPw">清除</button>
           </div>
 
-          <div class="mt-3 pt-3 border-t border-line-soft">
-            <div class="text-[11.5px] text-muted">
-              更省事：先在控制台窗口里 <code class="text-accent">login {{ state.settings?.account || '<账号>' }}</code>
-            </div>
-            <button class="btn no-drag mt-2.5" @click="openLogin">打开登录窗口</button>
+          <div class="mt-3 pt-3 border-t border-line-soft flex items-center gap-2 flex-wrap">
+            <button class="btn no-drag" @click="openLogin">打开登录窗口</button>
+            <button class="btn btn-danger no-drag" @click="openForget">
+              <ShieldOff :size="14" />
+              忘记账号
+            </button>
+            <span class="text-[11px] text-faint">
+              清掉 steamcmd 的登录令牌、用户档案和本机保存的密码
+            </span>
           </div>
         </section>
 

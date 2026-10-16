@@ -48,6 +48,7 @@ import {
   readSteamLogin
 } from './sdk.js'
 import { preflightApp } from './preflight.js'
+import { describeLogin, forgetLogin } from './forget.js'
 import {
   checkUpdate,
   downloadUpdate,
@@ -468,6 +469,14 @@ function registerIpc() {
       ready: sc.cached || savedPassword,
       checkedAt: Date.now()
     }
+  })
+
+  /** 「忘记账号」：先看有什么，再决定清不清 */
+  ipcMain.handle('login:describe', () => describeLogin(loadSettings()))
+  ipcMain.handle('login:forget', () => {
+    const r = forgetLogin(loadSettings())
+    // 清完把界面上的标记同步过去，标题栏那颗「凭据已存」要立刻消失
+    return { ...r, hasPassword: hasPassword() }
   })
   ipcMain.handle('sdk:status', () => sdkStatus(loadSettings()))
   ipcMain.handle('sdk:scan', () => scanApps(loadSettings()))

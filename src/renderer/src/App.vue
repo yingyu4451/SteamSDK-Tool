@@ -15,6 +15,7 @@ import NewDepotSlideover from './components/NewDepotSlideover.vue'
 import EditDrawer from './components/EditDrawer.vue'
 import DeleteAppDialog from './components/DeleteAppDialog.vue'
 import AdoptOrphansDialog from './components/AdoptOrphansDialog.vue'
+import ForgetDialog from './components/ForgetDialog.vue'
 import DropDialog from './components/DropDialog.vue'
 import OnboardGuide from './components/OnboardGuide.vue'
 import { Upload } from '@lucide/vue'
@@ -147,6 +148,7 @@ function onLeave(el, done) {
     <EditDrawer />
     <DeleteAppDialog />
     <AdoptOrphansDialog />
+    <ForgetDialog />
     <DropDialog />
     <OnboardGuide />
 

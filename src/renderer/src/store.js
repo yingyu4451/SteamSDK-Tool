@@ -40,6 +40,7 @@ export const state = reactive({
   // 首次运行引导
   onboard: { open: false, step: 0, busy: false, error: null, candidates: [], manual: '', account: '', password: '', saved: '' },
   login: { ok: false, ready: false, error: null, steamcmd: null, saved: null, checkedAt: 0 },
+  forget: { open: false, busy: false, data: null, result: null, error: null },
 
   running: false,
   runKind: null, // check | build
@@ -337,6 +338,41 @@ export async function checkLogin() {
   } catch (e) {
     state.login = { ...state.login, ok: false, error: String(e?.message || e) }
     return state.login
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  「忘记账号」—— 清掉工具链上所有登录痕迹
+ * ------------------------------------------------------------------ */
+
+export async function openForget() {
+  state.forget = { ...state.forget, open: true, busy: true, error: null, data: null, result: null }
+  try {
+    const r = await api.login.describe()
+    state.forget = { ...state.forget, busy: false, data: r }
+  } catch (e) {
+    state.forget = { ...state.forget, busy: false, error: String(e?.message || e) }
+  }
+}
+
+export function closeForget() {
+  state.forget = { open: false, busy: false, data: null, result: null, error: null }
+}
+
+/** 真清。清完刷新登录状态，标题栏那颗「凭据已存」要立刻消失 */
+export async function doForgetLogin() {
+  const f = state.forget
+  if (f.busy) return
+  state.forget = { ...f, busy: true, error: null }
+  try {
+    const r = await api.login.forget()
+    state.forget = { ...state.forget, busy: false, result: r }
+    state.hasPassword = false
+    state.settings = { ...(state.settings || {}), account: '' }
+    await checkLogin()
+    toast(`已清掉 ${r?.removed?.length || 0} 项登录痕迹`)
+  } catch (e) {
+    state.forget = { ...state.forget, busy: false, error: String(e?.message || e) }
   }
 }
 

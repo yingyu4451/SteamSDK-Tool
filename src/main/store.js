@@ -200,6 +200,16 @@ export function hasPassword() {
   return fs.existsSync(credFile())
 }
 
+/** 给「忘记账号」用：密码文件到底在哪 */
+export function credentialsPath() {
+  return credFile()
+}
+
+/** 给「忘记账号」用：settings.json 所在目录 */
+export function settingsFileDir() {
+  return path.dirname(settingsFile())
+}
+
 /* ------------------------------------------------------------------ *
  *  Steamworks Web API 密钥：公开 API 端点不带 key 一律 403，
  *  只有 Steamworks 后台签发的密钥才能读到「后台到底有哪些 App /
