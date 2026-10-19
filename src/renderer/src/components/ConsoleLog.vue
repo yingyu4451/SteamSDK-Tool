@@ -141,7 +141,8 @@ const exitTone = computed(() => {
 </script>
 
 <template>
-  <section class="card overflow-hidden flex flex-col min-h-0 min-w-0" v-reveal="{ delay: 0.08 }">
+  <!-- 固定高度：日志再长也不把整页撑高，自己在框里滚 -->
+  <section class="card overflow-hidden flex flex-col min-w-0 h-[460px]" v-reveal="{ delay: 0.08 }">
     <div v-if="state.running" class="scanline" />
 
     <header class="px-5 py-3 flex items-center gap-2.5 border-b border-line shrink-0">
@@ -271,7 +272,7 @@ const exitTone = computed(() => {
 
     <div
       ref="bodyEl"
-      class="flex-1 min-h-[180px] overflow-y-auto scroll-thin px-5 py-3 bg-[#080b10]"
+      class="flex-1 min-h-0 overflow-y-auto scroll-thin px-5 py-3 bg-[#080b10] select-text"
       @scroll="onScroll"
     >
       <div v-for="(l, i) in state.logs" :key="i" class="log-line">

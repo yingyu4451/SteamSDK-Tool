@@ -391,6 +391,10 @@ textarea {
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-all;
+  /* body 上默认 user-select: none（免得点哪儿都是选中的蓝块），
+     但日志是要拿去搜/贴的，这里单独放开 */
+  user-select: text;
+  cursor: text;
 }
 .log-ts {
   color: var(--color-faint);
