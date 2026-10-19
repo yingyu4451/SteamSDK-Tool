@@ -59,3 +59,9 @@ nsis:
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
   installerHeaderIcon: build/icon.ico
+  # 向导左侧竖图（164x314），跟应用同一套配色和 logo
+  installerSidebar: build/installerSidebar.bmp
+  uninstallerSidebar: build/uninstallerSidebar.bmp
+  # 默认装到 D:\SDK Tool、盘符根自动补目录名。
+  # 注意：electron-builder 本来就默认读 build\installer.nsh，这里不要再写路径 ——
+  # 写了会按 buildResources（build\）再叠一层，变成 build\build\installer.nsh 而找不到。
