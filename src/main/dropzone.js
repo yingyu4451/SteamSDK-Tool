@@ -384,7 +384,7 @@ export async function analyzeTarget(target, settings, onProgress) {
  *
  * depotFile 为空表示要新建一个 Depot。
  */
-export function applyDrop(spec, settings) {
+export async function applyDrop(spec, settings) {
   const appDirName = String(spec?.appDirName || '').trim()
   if (!appDirName) return { ok: false, error: '先选一个 App' }
 
@@ -394,12 +394,38 @@ export function applyDrop(spec, settings) {
   let srcDir = ''
   let extractedTo = ''
   if (spec?.kind === 'archive') {
-    const destRoot = String(spec?.extractTo || settings?.buildsRoot || path.dirname(spec.archive)).trim()
-    if (!fs.existsSync(destRoot)) fs.mkdirSync(destRoot, { recursive: true })
-    const r = extractArchive(spec.archive, destRoot)
-    if (!r.ok) return { ok: false, error: r.error }
-    srcDir = unwrapSingleDir(r.dir)
-    extractedTo = srcDir
+    /* 分析那一步已经把包解到 .drop-probe 了，这里接着用，不再解一遍
+     * （再解要多花十几秒、多占一份空间）。
+     * 但 .drop-probe 是临时目录、回头会被清掉，所以先把解出来的东西
+     * 挪到一个稳定位置再绑 —— 否则内容目录会指向一个随时消失的地方。 */
+    const reused = String(spec?.dir || '').trim()
+    const buildsRoot = String(settings?.buildsRoot || path.dirname(spec.archive)).trim()
+    const probeRoot = path.join(buildsRoot, '.drop-probe')
+    const inProbe =
+      reused &&
+      fs.existsSync(reused) &&
+      path.resolve(reused).toLowerCase().startsWith(path.resolve(probeRoot).toLowerCase() + path.sep)
+    if (inProbe) {
+      const stable = path.join(buildsRoot, path.basename(reused))
+      try {
+        if (fs.existsSync(stable)) fs.rmSync(stable, { recursive: true, force: true })
+        fs.renameSync(reused, stable)
+      } catch {
+        // 跨卷之类挪不动的，退回复制
+        fs.cpSync(reused, stable, { recursive: true, force: true })
+      }
+      srcDir = stable
+      extractedTo = stable
+    } else if (reused && fs.existsSync(reused)) {
+      srcDir = reused
+    } else {
+      const destRoot = String(spec?.extractTo || buildsRoot).trim()
+      if (!fs.existsSync(destRoot)) fs.mkdirSync(destRoot, { recursive: true })
+      const r = await extractArchive(spec.archive, destRoot)
+      if (!r || r.ok === false) return { ok: false, error: r?.error || '解压失败' }
+      srcDir = unwrapSingleDir(r.dir)
+      extractedTo = srcDir
+    }
   } else {
     srcDir = String(spec?.dir || spec?.target || '').trim()
   }

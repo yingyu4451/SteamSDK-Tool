@@ -719,9 +719,9 @@ function registerIpc() {
       return { ok: false, error: e2.message }
     }
   })
-  ipcMain.handle('drop:apply', (_e, spec = {}) => {
+  ipcMain.handle('drop:apply', async (_e, spec = {}) => {
     try {
-      return applyDrop(spec, loadSettings())
+      return await applyDrop(spec, loadSettings())
     } catch (e) {
       return { ok: false, error: e.message }
     }
