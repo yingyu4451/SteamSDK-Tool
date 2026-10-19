@@ -56,7 +56,7 @@ jobs:
         run: pnpm dist
 
       - name: 列出产物
-        run: Get-ChildItem release -Filter *.exe | Select-Object Name, Length
+        run: Get-ChildItem release -File | Where-Object { $_.Extension -in '.exe','.yml','.blockmap' } | Select-Object Name, Length
         shell: pwsh
 
       - name: 上传产物
@@ -68,6 +68,7 @@ jobs:
           path: |
             release/*.exe
             release/*.blockmap
+            release/latest.yml
 
       # 只有推标签时才动 Release。gh 在 runner 上是预装的。
       - name: 挂到 Release
@@ -84,6 +85,10 @@ jobs:
           } else {
             Write-Host "Release $tag 已存在，只补文件"
           }
-          gh release upload $tag (Get-ChildItem release -Filter *.exe | ForEach-Object { $_.FullName }) --clobber
+          # latest.yml 和 .blockmap 是增量更新的凭据，少一个就退回整包下载
+          $files = Get-ChildItem release -File |
+            Where-Object { $_.Extension -in '.exe','.blockmap' -or $_.Name -eq 'latest.yml' } |
+            ForEach-Object { $_.FullName }
+          gh release upload $tag $files --clobber
           Write-Host "完成："
           gh release view $tag --json assets --jq '.assets[] | "  \(.name)  \(.size) 字节"'

@@ -35,15 +35,22 @@ win:
       arch:
         - x64
   icon: build/icon.ico
-  artifactName: ${productName}-${version}-setup.${ext}
+  # 不用 ${productName}：它带空格，gh 上传时会把空格换成点，
+  # 跟 latest.yml 里记的文件名对不上，electron-updater 就会 404。
+  artifactName: SteamSDK-Tool-${version}-setup.${ext}
 
 portable:
   # 名字里带 portable，别让更新逻辑把它当成安装包
-  # （updater 挑资产时优先选名字含 setup 的那个）
-  artifactName: ${productName}-${version}-portable.${ext}
+  artifactName: SteamSDK-Tool-${version}-portable.${ext}
   # 不申请管理员权限：便携版的意义就是解压即用
   requestExecutionLevel: user
   unpackDirName: SteamSDKTool
+
+# 增量更新：electron-updater 靠 latest.yml 找版本、靠 .blockmap 只下改动的块。
+# 走 generic + /releases/latest/download/，不需要 api.github.com（那里匿名只有 60 次/小时）。
+publish:
+  provider: generic
+  url: https://github.com/yingyu4451/SteamSDK-Tool/releases/latest/download/
 
 nsis:
   oneClick: false

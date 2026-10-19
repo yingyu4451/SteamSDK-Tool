@@ -427,6 +427,8 @@ export async function loadUpdateInfo() {
       state.update.current = r.current
       state.update.repo = r.repo
       state.update.portable = !!r.portable
+      // 装出来的版本走增量下载（只下改动的块）；便携版只能整包
+      state.update.incremental = !!r.incremental
     }
   } catch {
     /* 拿不到就算了，不是关键路径 */
@@ -461,16 +463,25 @@ export async function checkUpdateNow(quiet = false) {
 export async function downloadUpdateNow() {
   const u = state.update
   const a = u.data?.asset
-  if (!a) return toast('这个 release 里没有 .exe 安装包', 'bad')
+  // 装在系统里的版本走增量：不需要 asset（主进程自己读 latest.yml），
+  // 但界面上还得有个「要不要下」的依据，所以没有 asset 也能往下走。
+  if (!a && !u.incremental) return toast('这个 release 里没有 .exe 安装包', 'bad')
   u.downloading = true
   u.got = 0
-  u.total = a.size || 0
+  u.total = a?.size || 0
+  u.incremental = !!u.incremental
   u.error = null
   try {
-    const r = await api.update.download(a.url, a.name)
-    if (r?.ok) {
-      u.ready = r.path
-      toast('下载好了，点「重启并安装」')
+    const r = await api.update.download(a?.url, a?.name)
+    if (r?.ok && r.upToDate) {
+      u.ready = null
+      toast('刚才那份已经是最新的了')
+    } else if (r?.ok) {
+      // 增量由 electron-updater 自己记账，不需要我们再传路径；
+      // 整包才有 path，安装时要用它起安装程序。
+      u.ready = r.path || '__updater__'
+      u.viaIncremental = !!r.incremental
+      toast(r.incremental ? `增量包下好了（v${r.version}），点「重启并安装」` : '下载好了，点「重启并安装」')
     } else {
       u.error = r?.error || '下载失败'
       toast(u.error, 'bad')
@@ -483,7 +494,9 @@ export async function downloadUpdateNow() {
 export async function installUpdateNow() {
   const u = state.update
   if (!u.ready) return toast('先点「下载更新」', 'bad')
-  const r = await api.update.install(u.ready)
+  // 增量下好的那份不用给路径 —— electron-updater 自己知道在哪
+  const passPath = u.ready === '__updater__' ? undefined : u.ready
+  const r = await api.update.install(passPath)
   if (!r?.ok) return toast(r?.error || '安装失败', 'bad')
   // 便携版：主进程只把文件夹打开，替换得用户自己来
   if (r.manual) toast('已经把新版所在的位置打开了 —— 关掉工具，替换掉你那个 exe')
@@ -1610,9 +1623,13 @@ export function pushLog(stream, line) {
  * ------------------------------------------------------------------ */
 
 export function wireEvents() {
-  api.update.onProgress(({ got, total }) => {
-    state.update.got = got
-    state.update.total = total || state.update.total
+  api.update.onProgress(({ got, total, percent, incremental, note }) => {
+    // 增量下载时 total 是「这次要下的字节数」，可能只有几 MB —— 界面按它算百分比
+    if (typeof got === 'number') state.update.got = got
+    if (total) state.update.total = total
+    if (typeof percent === 'number') state.update.percent = percent
+    if (incremental) state.update.viaIncremental = true
+    if (note && /incremental-fallback/.test(String(note))) state.update.viaIncremental = false
   })
 
   api.drop.onProgress((msg) => {

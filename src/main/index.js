@@ -59,7 +59,10 @@ import {
   openReleases,
   currentVersion,
   repoUrl,
-  isPortable
+  isPortable,
+  canIncremental,
+  incrementalDownload,
+  incrementalInstall
 } from './updater.js'
 import { analyzeTarget, applyDrop } from './dropzone.js'
 import { localStatus, startLocal, stopLocal, probePort, steamDevCfg, writeSteamDevCfg } from './localserver.js'
@@ -740,26 +743,52 @@ function registerIpc() {
   ipcMain.handle('local:enableDevcfg', (_e, { port } = {}) =>
     writeSteamDevCfg(loadSettings(), port || 80)
   )
-  ipcMain.handle('update:info', () => ({ ok: true, current: currentVersion(), repo: repoUrl(), portable: isPortable() }))
+  ipcMain.handle('update:info', () =>
+    ({ ok: true, current: currentVersion(), repo: repoUrl(), portable: isPortable(), incremental: canIncremental() })
+  )
 
   ipcMain.handle('update:check', () => checkUpdate())
 
   ipcMain.handle('update:download', async (e, { url, name } = {}) => {
+    const send = (m) => {
+      if (!e.sender.isDestroyed()) e.sender.send('update:progress', m)
+    }
     let last = 0
-    return downloadUpdate({
-      url,
-      name,
-      onProgress: (got, total) => {
-        // 进度事件别刷太密，一秒钟几十次对界面没意义
-        const now = Date.now()
-        if (now - last < 150 && got !== total) return
-        last = now
-        if (!e.sender.isDestroyed()) e.sender.send('update:progress', { got, total })
+    const throttle = (got, total) => {
+      // 进度事件别刷太密，一秒钟几十次对界面没意义
+      const now = Date.now()
+      if (now - last < 150 && got !== total) return
+      last = now
+      send({ got, total })
+    }
+
+    // 装在系统里的那份先试增量：只下改动的块，通常几 MB 而不是 106 MB。
+    // 失败（没 latest.yml / 没 blockmap / 证书 / 网络）就静静退回整包 ——
+    // 绝不能因为「增量这条路没打通」让更新整个不可用。
+    if (canIncremental()) {
+      try {
+        const r = await incrementalDownload((p) => send({ got: p.got, total: p.total, percent: p.percent, incremental: true }))
+        if (r?.upToDate) return { ok: true, upToDate: true, version: r.version, incremental: true }
+        return { ok: true, incremental: true, version: r.version }
+      } catch (err) {
+        send({ note: `incremental-fallback: ${err.message}` })
       }
-    })
+    }
+
+    return downloadUpdate({ url, name, onProgress: throttle })
   })
 
-  ipcMain.handle('update:install', (_e, { path: filePath } = {}) => installUpdate(filePath))
+  ipcMain.handle('update:install', (_e, { path: filePath } = {}) => {
+    // 走增量下的那份由 electron-updater 自己记账，不用我们给路径
+    if (!filePath && canIncremental()) {
+      try {
+        return incrementalInstall()
+      } catch (err) {
+        return { ok: false, error: err.message }
+      }
+    }
+    return installUpdate(filePath)
+  })
 
   ipcMain.handle('update:openReleases', () => openReleases())
 

@@ -1,20 +1,20 @@
 /**
  * 工具自己的更新检查 —— 走 GitHub Releases。
  *
- * 为什么不引 electron-updater：那套要求 electron-builder 的 publish 配置、
- * latest.yml、还有它自己的一套事件模型；我们只要「查一下有没有新版 →
- * 下载那个 .exe → 起安装程序」这三步，自己写反而更好控（进度、错误文案都能自己定）。
+ * 两条路并存：
  *
- * 仓库是公开的，所以不需要 token。
+ * A) **查版本 / 显示更新说明**：自己走网页端点。
+ *    刻意**不走 api.github.com**：匿名 API 是 60 次/小时/IP，用的人一多
+ *    （同一个办公室/学校出口 IP 下几十个人）就会被限流，更新检查直接失效。
+ *      1. GET /releases.atom                    → tag + 发布时间 + 更新说明
+ *      2. GET /releases/expanded_assets/<tag>   → 一小段 HTML，里面有资产的真实地址
  *
- * 刻意**不走 api.github.com**：匿名 API 是 60 次/小时/IP，用的人一多
- * （同一个办公室/学校出口 IP 下几十个人）就会被限流，更新检查直接失效。
- * 改走网页端点，没有这个额度：
- *   1. HEAD /releases/latest        → 302，Location 里带最新 tag
- *   2. GET  /releases/expanded_assets/<tag>  → 一小段 HTML，里面有资产的真实地址
- *   3. GET  /releases/tag/<tag>     → 只有真有新版时才取，从正文里抠更新说明
+ * B) **下载**：装在系统里的那份走 electron-updater 的增量下载
+ *    （latest.yml + .blockmap，只下改动的块）；便携版 / 没有 latest.yml 的
+ *    旧版本退回整包下载。详见文件末尾「增量更新」那段。
  */
 import { app, net, shell } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -423,4 +423,70 @@ export function pruneOldDownloads(maxAgeDays = 3) {
   } catch {
     /* 清理失败不该拦住启动 */
   }
+}
+
+/* ───────────────────────── 增量更新（electron-updater） ─────────────────────────
+ *
+ * 整包 106 MB，但每次发版真正改的只有 app.asar 那不到 1 MB。electron-updater
+ * 会拿新旧两版的 .blockmap 对比，只下改动的块 —— 这就是「增量」。
+ *
+ * 它读的资源是：
+ *   resources\app-update.yml   electron-builder 打包时写进去的（provider 见
+ *                              electron-builder.yml 的 publish 段）
+ *   <url>/latest.yml           版本号 + 文件名 + sha512 + 发布日期
+ *   <新>.<exe>.blockmap        新版的块表
+ *   <旧>.<exe>.blockmap        （缓存里有上一版安装包时才拿得到）
+ *
+ * 有几件事它做不了，所以只在「装在系统里的版本」上用它：
+ *   · 便携版没有安装目录，quitAndInstall 无处可装
+ *   · 没打过 latest.yml 的旧 release 会让它 404
+ *   · 缓存里没有上一版安装包时它会自动退回整包下载（不是错误）
+ */
+
+let updaterWired = false
+
+/** 这个版本有没有资格走增量（装出来的、不是便携版、并且确实是打包产物） */
+export function canIncremental() {
+  return app.isPackaged && !isPortable()
+}
+
+function wireUpdater(ctx = {}) {
+  if (updaterWired) return
+  updaterWired = true
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = false
+  autoUpdater.allowPrerelease = false
+  autoUpdater.logger = null
+  autoUpdater.on('download-progress', (p) => {
+    ctx.onProgress?.({
+      got: p.transferred,
+      total: p.total,
+      percent: Math.round(p.percent || 0),
+      bytesPerSecond: p.bytesPerSecond || 0
+    })
+  })
+}
+
+/**
+ * 走 electron-updater 下载（能增量就增量）。
+ * 返回 `{ ok, version, upToDate }`；抛错由调用方决定要不要退回整包。
+ */
+export async function incrementalDownload(onProgress) {
+  wireUpdater({ onProgress })
+
+  const r = await autoUpdater.checkForUpdates()
+  const latest = String(r?.updateInfo?.version || '')
+  if (!latest) throw new Error('没读到 latest.yml 里的版本号')
+  if (compareVersions(latest, currentVersion()) <= 0) {
+    return { ok: true, upToDate: true, version: latest }
+  }
+
+  await autoUpdater.downloadUpdate()
+  return { ok: true, upToDate: false, version: latest }
+}
+
+/** 关掉自己、装掉刚下好的那份、再起来 */
+export function incrementalInstall() {
+  autoUpdater.quitAndInstall(false, true)
+  return { ok: true }
 }
