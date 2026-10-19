@@ -141,8 +141,9 @@ const exitTone = computed(() => {
 </script>
 
 <template>
-  <!-- 固定高度：日志再长也不把整页撑高，自己在框里滚 -->
-  <section class="card overflow-hidden flex flex-col min-w-0 h-[460px]" v-reveal="{ delay: 0.08 }">
+  <!-- 高度跟着左列（Depot + 分支）走，底边齐平。
+       日志多了在框里滚（min-h-0 让 flex 子项能被压缩），不会把整页撑高 -->
+  <section class="card overflow-hidden flex flex-col min-h-0 min-w-0" v-reveal="{ delay: 0.08 }">
     <div v-if="state.running" class="scanline" />
 
     <header class="px-5 py-3 flex items-center gap-2.5 border-b border-line shrink-0">
