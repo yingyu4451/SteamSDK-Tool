@@ -20,3 +20,23 @@
 !macro customWelcomePage
   !insertmacro MUI_PAGE_WELCOME
 !macroend
+
+; 目录页：用户把路径改成盘符根（D:\ 或 D:）时，自动补成 D:\SteamSDK Tool。
+;
+; 为什么必须补：NSIS 的目录页不允许装到盘符根，路径是 D:\ 时右下角按钮直接变灰、
+; 点不动，用户会以为卡住了。
+;
+; 为什么补的是「SteamSDK Tool」而不是「SDK Tool」：electron-builder 自带的
+; instFilesPre 会在最后检查路径里有没有 ${APP_FILENAME}（=SteamSDK Tool），
+; 没有就再拼一层。补成 D:\SDK Tool 的话会被拼成 D:\SDK Tool\SteamSDK Tool。
+!include "LogicLib.nsh"
+
+Function .onVerifyInstDir
+  StrLen $0 "$INSTDIR"
+  ${If} $0 == 3
+    StrCpy $1 "$INSTDIR" 2          ; "D:\" 取前两个字符 → "D:"
+    StrCpy $INSTDIR "$1\SteamSDK Tool"
+  ${ElseIf} $0 == 2
+    StrCpy $INSTDIR "$INSTDIR\SteamSDK Tool"
+  ${EndIf}
+FunctionEnd
