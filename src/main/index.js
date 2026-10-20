@@ -951,7 +951,16 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   app.whenReady().then(() => {
-    app.setAppUserModelId('com.yingyu.steamsdktool')
+    // 任务栏 / 开始菜单靠这个 ID 认「这是哪个应用」。
+    //
+    // **开发版必须用另一个 ID**：开发时跑的是 node_modules\electron\dist\electron.exe，
+    // 如果和打包版共用一个 ID，Windows 会把「com.yingyu.steamsdktool」这个身份跟
+    // electron.exe 的图标（那个原子球）绑在一起缓存下来 —— 用户装好的应用再打开，
+    // 任务栏和快捷方式就会显示成 Electron 的图标。以前好几轮「图标又变回 electron」
+    // 都是这个原因，不是打包没带图标。
+    app.setAppUserModelId(
+      app.isPackaged ? 'com.yingyu.steamsdktool' : 'com.yingyu.steamsdktool.dev'
+    )
     pruneOldDownloads()
     registerIpc()
     createWindow()
