@@ -14,3 +14,10 @@ allowBuilds:
   esbuild: true
   # electron-builder 的 Squirrel 辅助包。我们只用 NSIS，但它的脚本无害
   electron-winstaller: true
+# pnpm 11 会拦「发布不满一个最小年龄」的新版本（supply-chain 策略）。
+# 这几个是 2026-10 刚发的新版，pnpm 自动记进这里的白名单；删了下次
+# install 还会被它重新加上，所以留着。
+minimumReleaseAgeExclude:
+  - '@lucide/vue@1.60.0'
+  - electron-updater@6.8.11
+  - electron@44.9.2
