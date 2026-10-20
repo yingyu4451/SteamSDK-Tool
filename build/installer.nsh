@@ -21,15 +21,40 @@
   !insertmacro MUI_PAGE_WELCOME
 !macroend
 
+; 默认安装目录钉到 D:\SteamSDK Tool。
+;
+; 直接改 $INSTDIR 是没用的：customInit 跑完之后，用户点「仅为我安装」会触发
+; setInstallModePerUser，它把 $INSTDIR 重设一遍。但它是**先读注册表**的：
+;
+;     ReadRegStr $perUserInstallationFolder HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation
+;     ${if} $perUserInstallationFolder == ""
+;       → 才用 %LOCALAPPDATA%\Programs\<APP_FILENAME>
+;
+; 所以只要在 customInit（在 initMultiUser 之后、安装模式页之前）里把那个键
+; 预置成 D:\SteamSDK Tool，安装模式页一过，目录页显示的就是它。
+; 装完之后安装器自己会把真实路径写回去，不会一直钉着。
+;
+; 只在这两种情况下钉：① 从没装过（键里没值）② D 盘存在。
+; 已经装过的人不该被挪走 —— 他们升级时应该还在原来的位置。
+;
+; 为什么是「SteamSDK Tool」而不是「SDK Tool」：electron-builder 自带的
+; instFilesPre 会检查路径里有没有 ${APP_FILENAME}（= SteamSDK Tool），
+; 没有就再拼一层。所以 D:\SDK Tool 会变成 D:\SDK Tool\SteamSDK Tool。
+!include "LogicLib.nsh"
+
+!macro customInit
+  ReadRegStr $0 HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation
+  ${If} $0 == ""
+    ${If} ${FileExists} "D:\*.*"
+      WriteRegStr HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation "D:\SteamSDK Tool"
+    ${EndIf}
+  ${EndIf}
+!macroend
+
 ; 目录页：用户把路径改成盘符根（D:\ 或 D:）时，自动补成 D:\SteamSDK Tool。
 ;
 ; 为什么必须补：NSIS 的目录页不允许装到盘符根，路径是 D:\ 时右下角按钮直接变灰、
 ; 点不动，用户会以为卡住了。
-;
-; 为什么补的是「SteamSDK Tool」而不是「SDK Tool」：electron-builder 自带的
-; instFilesPre 会在最后检查路径里有没有 ${APP_FILENAME}（=SteamSDK Tool），
-; 没有就再拼一层。补成 D:\SDK Tool 的话会被拼成 D:\SDK Tool\SteamSDK Tool。
-!include "LogicLib.nsh"
 
 Function .onVerifyInstDir
   StrLen $0 "$INSTDIR"
