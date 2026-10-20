@@ -142,13 +142,22 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       </div>
 
       <!-- 左边 Depot（下面挂分支），右边构建输出。
-           两列都 stretch：构建输出的底边跟分支那块的底边齐平。 -->
+           右列用「absolute 包裹层 + 卡片 h-full」：包裹层不参与行高计算，
+           行高完全由左列（Depot + 分支）决定 —— 构建输出底边永远跟分支齐平，
+           日志再长也只在框里滚，不会把这一行撑高。
+           注意：不能直接给卡片加 absolute —— style.css 里的 .card 是**无层**样式，
+           `position: relative` 会盖掉 Tailwind 分层里的 .absolute。
+           min-h 只是兜底：万一左列特别矮，别让控制台缩成一条缝。 -->
       <div class="grid grid-cols-2 gap-4 min-w-0">
         <div class="flex flex-col gap-4 min-w-0">
           <DepotMatrix :depots="detail.depots || []" />
           <BranchPanel />
         </div>
-        <ConsoleLog />
+        <div class="relative min-w-0 min-h-[360px]">
+          <div class="absolute inset-0">
+            <ConsoleLog class="h-full" />
+          </div>
+        </div>
       </div>
       </div>
 
