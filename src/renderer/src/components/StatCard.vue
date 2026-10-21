@@ -45,6 +45,6 @@ const toneClass = computed(
       <span class="num text-[26px] font-semibold leading-none" :class="toneClass">{{ text }}</span>
       <span v-if="unitText" class="text-[12px] text-faint">{{ unitText }}</span>
     </div>
-    <div v-if="hint" class="mt-2 text-[11.5px] text-faint leading-snug">{{ hint }}</div>
+    <div v-if="hint" class="mt-2 text-[12px] text-faint leading-snug">{{ hint }}</div>
   </div>
 </template>

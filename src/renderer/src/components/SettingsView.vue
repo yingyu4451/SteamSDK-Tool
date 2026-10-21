@@ -209,7 +209,7 @@ function openExternal(url) {
           </div>
 
           <div class="mt-4 grid grid-cols-1 gap-1.5">
-            <div v-for="c in checks" :key="c.label" class="flex items-center gap-2.5 text-[11.5px]">
+            <div v-for="c in checks" :key="c.label" class="flex items-center gap-2.5 text-[12px]">
               <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="c.ok ? 'bg-success' : 'bg-danger'" />
               <span class="w-[110px] shrink-0" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
               <span class="font-mono text-faint truncate" :title="c.path">{{ c.path }}</span>
@@ -270,7 +270,7 @@ function openExternal(url) {
           <div class="flex items-center gap-2">
             <h2 class="text-[13px] font-semibold m-0">Steamworks Web API 密钥</h2>
             <span
-              class="px-2 py-[3px] rounded-full text-[10.5px] border"
+              class="px-2 py-[3px] rounded-full text-[11px] border"
               :class="
                 keyState.has
                   ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
@@ -286,7 +286,7 @@ function openExternal(url) {
               v-model="apiKeyDraft"
               type="password"
               placeholder="32 位十六进制 Publisher 密钥"
-              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12.5px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
             />
             <button class="btn no-drag" :disabled="!apiKeyDraft.trim()" @click="saveKey">加密保存</button>
             <button class="btn no-drag" :disabled="!keyState.has" @click="clearKey">清除</button>
@@ -302,7 +302,7 @@ function openExternal(url) {
             >
               去后台取密钥
             </button>
-            <span v-if="keyMsg" class="text-[11.5px]" :class="keyMsg.tone === 'bad' ? 'text-danger' : 'text-accent'">
+            <span v-if="keyMsg" class="text-[12px]" :class="keyMsg.tone === 'bad' ? 'text-danger' : 'text-accent'">
               {{ keyMsg.text }}
             </span>
           </div>
@@ -320,7 +320,7 @@ function openExternal(url) {
             <span v-if="u.data?.hasUpdate" class="pill pill-warn">有新版本 v{{ u.data.latest }}</span>
             <span v-else-if="u.checked && u.data" class="pill pill-ok">已是最新</span>
             <button
-              class="ml-auto btn h-7 px-2.5 text-[11.5px] no-drag"
+              class="ml-auto btn h-7 px-2.5 text-[12px] no-drag"
               :disabled="u.busy"
               @click="checkUpdateNow()"
             >
@@ -328,7 +328,7 @@ function openExternal(url) {
             </button>
           </div>
 
-          <div v-if="u.error" class="mt-2.5 text-[11.5px] text-amber">{{ u.error }}</div>
+          <div v-if="u.error" class="mt-2.5 text-[12px] text-amber">{{ u.error }}</div>
 
           <div
             v-if="u.data?.hasUpdate"
@@ -358,16 +358,16 @@ function openExternal(url) {
             <div class="mt-2.5 flex items-center gap-2 flex-wrap">
               <button
                 v-if="!u.ready"
-                class="btn btn-primary h-8 px-3 text-[11.5px] no-drag"
+                class="btn btn-primary h-8 px-3 text-[12px] no-drag"
                 :disabled="u.downloading || !u.data.asset"
                 @click="downloadUpdateNow()"
               >
                 {{ u.downloading ? '下载中…' : u.data.asset ? '下载更新' : '这个 release 里没有 .exe' }}
               </button>
-              <button v-else class="btn btn-primary h-8 px-3 text-[11.5px] no-drag" @click="installUpdateNow()">
+              <button v-else class="btn btn-primary h-8 px-3 text-[12px] no-drag" @click="installUpdateNow()">
                 {{ u.portable ? '打开下载位置' : '重启并安装' }}
               </button>
-              <button class="btn h-8 px-3 text-[11.5px] no-drag" @click="openReleases()">在 GitHub 上看</button>
+              <button class="btn h-8 px-3 text-[12px] no-drag" @click="openReleases()">在 GitHub 上看</button>
             </div>
 
             <div v-if="u.ready && u.portable" class="mt-2 text-[11px] text-faint">

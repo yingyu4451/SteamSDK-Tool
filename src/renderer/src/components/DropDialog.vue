@@ -198,7 +198,7 @@ async function doApply() {
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
         <div class="min-w-0">
           <h2 class="text-[15px] font-semibold m-0">文件导入</h2>
-          <p class="mt-1 mb-0 text-[11.5px] text-faint font-mono truncate" :title="d.target">
+          <p class="mt-1 mb-0 text-[12px] text-faint font-mono truncate" :title="d.target">
             {{ d.target }}
           </p>
         </div>
@@ -216,7 +216,7 @@ async function doApply() {
         <div v-if="d.pending" class="flex flex-col items-center gap-3 py-10">
           <span class="drop-spinner" />
           <div class="text-[13px] text-ink num">{{ phaseText }}</div>
-          <div class="text-[11.5px] text-faint text-center leading-relaxed max-w-[360px]">
+          <div class="text-[12px] text-faint text-center leading-relaxed max-w-[360px]">
             压缩包会先在这里解开再数一遍。包大的话要等几分钟 —— 别关窗口，也别再拖一次。
           </div>
         </div>
@@ -243,19 +243,19 @@ async function doApply() {
               <span v-if="d.appIdGuess" class="pill pill-idle">名字里的 AppID {{ d.appIdGuess }}</span>
             </div>
 
-            <div v-if="d.why?.length" class="mt-2 text-[11.5px] text-faint">
+            <div v-if="d.why?.length" class="mt-2 text-[12px] text-faint">
               判断依据：{{ d.why.join(' · ') }}
             </div>
-            <div v-if="d.markers?.length" class="mt-1 text-[11.5px] text-faint">
+            <div v-if="d.markers?.length" class="mt-1 text-[12px] text-faint">
               特征：{{ d.markers.join(' · ') }}
             </div>
-            <div v-if="d.truncated" class="mt-1 text-[11.5px] text-amber">
+            <div v-if="d.truncated" class="mt-1 text-[12px] text-amber">
               文件太多，只统计了前 3 万个。
             </div>
 
             <!-- 平台认错了，让用户改 -->
             <div v-if="!target && !effPick" class="mt-3">
-              <div class="text-[11.5px] text-muted mb-1.5">新建 Depot 的平台</div>
+              <div class="text-[12px] text-muted mb-1.5">新建 Depot 的平台</div>
               <div class="flex gap-1.5 flex-wrap">
                 <button
                   v-for="p in platformChoices"
@@ -270,14 +270,14 @@ async function doApply() {
             </div>
 
             <!-- .app bundle -->
-            <div v-if="d.hasAppBundle" class="mt-2 text-[11.5px] text-amber">
+            <div v-if="d.hasAppBundle" class="mt-2 text-[12px] text-amber">
               macOS 的 .app bundle 传上去容易坏签名 —— 跑「检查文件」能看到详情，Valve 的 tools\ContentPrep 是专门处理这个的。
             </div>
           </div>
 
           <!-- 放哪个 Depot -->
           <div class="flex flex-col gap-2">
-            <span class="text-[11.5px] text-muted">导入哪个 Depot</span>
+            <span class="text-[12px] text-muted">导入哪个 Depot</span>
 
             <div class="flex flex-col gap-1.5">
               <label
@@ -291,8 +291,8 @@ async function doApply() {
                 "
               >
                 <input type="radio" value="" :checked="target === dep.file" class="accent-[#66c0f4]" @change="newPick = false; target = dep.file; backendPick = null" />
-                <span class="text-[12.5px] text-ink">{{ PLATFORM_LABEL[dep.platformId] || dep.platformId }}</span>
-                <span class="font-mono num text-[11.5px] text-faint">{{ dep.id }}</span>
+                <span class="text-[13px] text-ink">{{ PLATFORM_LABEL[dep.platformId] || dep.platformId }}</span>
+                <span class="font-mono num text-[12px] text-faint">{{ dep.id }}</span>
                 <span
                   v-if="dep.platformId === suggested"
                   class="pill pill-ok"
@@ -321,8 +321,8 @@ async function doApply() {
                   class="accent-[#66c0f4]"
                   @change="pickBackend(row)"
                 />
-                <span class="text-[12.5px] text-ink">{{ row.platformLabel || PLATFORM_LABEL[row.platform] }}</span>
-                <span class="font-mono num text-[11.5px] text-faint">{{ row.depotId }}</span>
+                <span class="text-[13px] text-ink">{{ row.platformLabel || PLATFORM_LABEL[row.platform] }}</span>
+                <span class="font-mono num text-[12px] text-faint">{{ row.depotId }}</span>
                 <span class="pill pill-idle">未在本地配置</span>
                 <span v-if="row.platform === suggested" class="pill pill-ok">平台一致</span>
                 <span class="ml-auto text-[11px] text-faint num shrink-0">{{ fmtSize(row.size) }}</span>
@@ -335,8 +335,8 @@ async function doApply() {
                 "
               >
                 <input type="radio" :checked="!target && !effPick" class="accent-[#66c0f4]" @change="newPick = true; target = ''; backendPick = null" />
-                <span class="text-[12.5px] text-ink">新建一个 Depot</span>
-                <span v-if="!depots.length" class="text-[11.5px] text-faint">（这个 App 还没有 Depot）</span>
+                <span class="text-[13px] text-ink">新建一个 Depot</span>
+                <span v-if="!depots.length" class="text-[12px] text-faint">（这个 App 还没有 Depot）</span>
               </label>
             </div>
 
@@ -353,7 +353,7 @@ async function doApply() {
             <!-- 新建的字段 -->
             <div v-if="!target && !effPick" class="grid grid-cols-2 gap-3 pl-3 pt-1">
               <label class="flex flex-col gap-1.5">
-                <span class="text-[11.5px] text-muted">DepotID</span>
+                <span class="text-[12px] text-muted">DepotID</span>
                 <input
                   v-model="newDepotId"
                   placeholder="AppID+1"
@@ -361,7 +361,7 @@ async function doApply() {
                 />
               </label>
               <label class="flex flex-col gap-1.5">
-                <span class="text-[11.5px] text-muted">Depot 名称</span>
+                <span class="text-[12px] text-muted">Depot 名称</span>
                 <input
                   v-model="depotName"
                   :placeholder="`${state.selectedDir || ''} Content`"
@@ -372,11 +372,11 @@ async function doApply() {
 
             <!-- 已经有了：直接指过去 or 复制进去 -->
             <div v-if="target" class="flex items-center gap-2 flex-wrap pl-3">
-              <label class="flex items-center gap-1.5 text-[11.5px] text-muted cursor-pointer select-none">
+              <label class="flex items-center gap-1.5 text-[12px] text-muted cursor-pointer select-none">
                 <input type="radio" value="bind" :checked="mode === 'bind'" class="accent-[#66c0f4]" @change="mode = 'bind'" />
                 直接指过去（不复制）
               </label>
-              <label class="flex items-center gap-1.5 text-[11.5px] text-muted cursor-pointer select-none">
+              <label class="flex items-center gap-1.5 text-[12px] text-muted cursor-pointer select-none">
                 <input type="radio" value="copy" :checked="mode === 'copy'" class="accent-[#66c0f4]" @change="mode = 'copy'" />
                 复制进现有内容目录
               </label>
@@ -384,7 +384,7 @@ async function doApply() {
           </div>
 
           <!-- 会做什么 -->
-          <div v-if="willDo || scriptLine" class="card-flat px-3.5 py-2.5 text-[11.5px] text-muted">
+          <div v-if="willDo || scriptLine" class="card-flat px-3.5 py-2.5 text-[12px] text-muted">
             <div v-if="willDo">{{ willDo }}</div>
             <div v-if="scriptLine" class="font-mono text-[11px] text-faint" :class="willDo ? 'mt-1' : ''">
               ＋ 脚本 {{ scriptLine }}

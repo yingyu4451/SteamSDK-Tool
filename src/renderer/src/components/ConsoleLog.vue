@@ -147,7 +147,7 @@ const exitTone = computed(() => {
     <div v-if="state.running" class="scanline" />
 
     <header class="px-5 py-3 flex items-center gap-2.5 border-b border-line shrink-0">
-      <h2 class="text-[13px] font-semibold tracking-tight m-0">构建输出</h2>
+      <h2 class="text-[13px] font-semibold tracking-tight m-0 shrink-0 whitespace-nowrap">构建输出</h2>
 
       <span v-if="state.running" class="pill pill-warn">
         <span class="w-1.5 h-1.5 rounded-full bg-amber animate-pulse" />
@@ -156,12 +156,12 @@ const exitTone = computed(() => {
       <span v-else-if="state.lastExit" class="pill" :class="exitTone === 'ok' ? 'pill-ok' : 'pill-bad'">
         退出码 {{ state.lastExit.code }}
       </span>
-      <span v-else class="text-[11.5px] text-faint">还没有运行过</span>
+      <span v-else class="text-[12px] text-faint shrink-0 whitespace-nowrap hidden xl:inline">还没有运行过</span>
 
-      <span class="ml-auto num text-[11px] text-faint">{{ state.logs.length }} 行</span>
+      <span class="ml-auto num text-[11px] text-faint shrink-0 whitespace-nowrap">{{ state.logs.length }} 行</span>
 
       <label
-        class="flex items-center gap-1.5 text-[11.5px] text-faint cursor-pointer select-none"
+        class="flex items-center gap-1.5 text-[12px] text-faint cursor-pointer select-none shrink-0 whitespace-nowrap"
         title="打开后 steamcmd 会逐个文件打印，日志会长很多 —— 排查「到底传了哪些文件」时才需要"
       >
         <input
@@ -174,18 +174,18 @@ const exitTone = computed(() => {
         详细日志
       </label>
 
-      <label class="flex items-center gap-1.5 text-[11.5px] text-faint cursor-pointer select-none">
+      <label class="flex items-center gap-1.5 text-[12px] text-faint cursor-pointer select-none shrink-0 whitespace-nowrap">
         <input type="checkbox" v-model="autoScroll" class="accent-[#66c0f4]" />
         自动滚动
       </label>
 
-      <button class="btn h-7 px-2.5 text-[11.5px] no-drag" :disabled="!state.logs.length" @click="copyAll">
+      <button class="btn h-7 px-2.5 text-[12px] no-drag" :disabled="!state.logs.length" @click="copyAll">
         复制
       </button>
-      <button class="btn h-7 px-2.5 text-[11.5px] no-drag" :disabled="!state.logs.length" @click="clear">
+      <button class="btn h-7 px-2.5 text-[12px] no-drag" :disabled="!state.logs.length" @click="clear">
         清空
       </button>
-      <button v-if="state.running" class="btn btn-danger h-7 px-2.5 text-[11.5px] no-drag" @click="cancelRun">
+      <button v-if="state.running" class="btn btn-danger h-7 px-2.5 text-[12px] no-drag" @click="cancelRun">
         中止
       </button>
     </header>
@@ -202,11 +202,11 @@ const exitTone = computed(() => {
         class="px-5 py-2.5 border-b border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)] flex items-center gap-3 shrink-0"
       >
         <TriangleAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
-        <span class="text-[12.5px] text-amber">{{ state.prompt.hint }}</span>
+        <span class="text-[13px] text-amber">{{ state.prompt.hint }}</span>
         <!-- 手机确认那条不用输任何东西，去手机上点就行 —— 别摆一个让人以为要打字的框 -->
         <template v-if="state.prompt.kind === 'mobile-confirm'">
           <LoaderCircle :size="15" class="text-amber shrink-0 drop-spin" />
-          <span class="text-[11.5px] text-faint">等你在手机上点确认…（盾牌图标 → 确认登录）</span>
+          <span class="text-[12px] text-faint">等你在手机上点确认…（盾牌图标 → 确认登录）</span>
         </template>
         <template v-else>
           <input
@@ -234,7 +234,7 @@ const exitTone = computed(() => {
         class="px-5 py-2.5 border-b border-[rgba(240,169,46,.24)] bg-[rgba(240,169,46,.06)] flex items-center gap-3 shrink-0 flex-wrap"
       >
         <ShieldAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
-        <span class="text-[12.5px] text-amber">
+        <span class="text-[13px] text-amber">
           Steam 要 Steam Guard 验证码 —— 手机 Steam App 的「Steam 令牌」页或邮件里的那串码
         </span>
         <input
@@ -262,7 +262,7 @@ const exitTone = computed(() => {
         class="px-5 py-2.5 border-b border-[rgba(74,222,128,.24)] bg-[rgba(74,222,128,.06)] flex items-center gap-3 shrink-0"
       >
         <Check :size="16" :stroke-width="2.4" class="text-success shrink-0" />
-        <span class="text-[12.5px] text-success">
+        <span class="text-[13px] text-success">
           上传成功。还差一步：去 Steamworks 把这次构建设为 live（分支由 SetLive 决定）。
         </span>
         <div class="flex-1" />

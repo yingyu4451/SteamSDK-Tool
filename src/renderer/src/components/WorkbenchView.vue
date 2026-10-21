@@ -55,7 +55,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       <div class="flex items-start gap-3">
         <TriangleAlert :size="20" :stroke-width="1.9" class="shrink-0 text-amber mt-0.5" />
         <div class="min-w-0 flex-1">
-          <div class="text-[12.5px] text-amber font-medium">
+          <div class="text-[13px] text-amber font-medium">
             scripts 根目录下有 {{ state.orphans.length }} 个 vdf 没有被任何 App 管着
           </div>
           <div class="mt-2 flex flex-col gap-0.5">

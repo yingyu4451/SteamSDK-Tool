@@ -131,7 +131,7 @@ function openRepo() {
       <BookOpen :size="20" :stroke-width="1.8" class="text-accent shrink-0" />
       <div class="min-w-0">
         <h1 class="text-[15px] font-semibold m-0">使用手册</h1>
-        <p class="mt-1 mb-0 text-[11.5px] text-faint">每个按钮是干什么的、怎么开始。</p>
+        <p class="mt-1 mb-0 text-[12px] text-faint">每个按钮是干什么的、怎么开始。</p>
       </div>
       <input
         v-model="q"
@@ -171,28 +171,28 @@ function openRepo() {
 
         <div v-else-if="b.t === 'dl'" class="m-0 mb-3 flex flex-col gap-3.5">
           <div v-for="(pair, k) in b.v" :key="k" class="grid grid-cols-[110px_1fr] gap-x-5 items-baseline">
-            <span class="text-[12.5px] text-ink font-medium">{{ pair[0] }}</span>
+            <span class="text-[13px] text-ink font-medium">{{ pair[0] }}</span>
             <span class="text-[13px] text-muted leading-[1.75]">{{ pair[1] }}</span>
           </div>
         </div>
 
         <div
           v-else-if="b.t === 'note'"
-          class="mt-1.5 mb-2 rounded-[9px] border border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)] px-3.5 py-2.5 text-[12.5px] text-accent/90 leading-[1.7]"
+          class="mt-1.5 mb-2 rounded-[9px] border border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)] px-3.5 py-2.5 text-[13px] text-accent/90 leading-[1.7]"
         >
           {{ b.v }}
         </div>
       </template>
     </div>
 
-    <div v-if="!shown.length" class="card p-8 text-center text-[12.5px] text-faint">
+    <div v-if="!shown.length" class="card p-8 text-center text-[13px] text-faint">
       没有匹配「{{ q }}」的章节。
     </div>
 
     <div class="card p-4 flex items-center gap-3" v-reveal>
       <div class="min-w-0">
-        <div class="text-[12.5px] text-ink">完整文档在仓库里</div>
-        <div class="mt-0.5 text-[11.5px] text-faint">中文和 English README 内容更全，含已知限制和开发说明。</div>
+        <div class="text-[13px] text-ink">完整文档在仓库里</div>
+        <div class="mt-0.5 text-[12px] text-faint">中文和 English README 内容更全，含已知限制和开发说明。</div>
       </div>
       <div class="ml-auto flex items-center gap-2 shrink-0">
         <button class="btn no-drag" @click="openRepo">

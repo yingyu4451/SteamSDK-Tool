@@ -65,7 +65,7 @@ onUnmounted(disarm)
         <TriangleAlert :size="18" class="text-warn shrink-0 mt-0.5" />
         <div class="min-w-0">
           <h2 class="text-[15px] font-semibold m-0">忘记账号</h2>
-          <p class="mt-1 mb-0 text-[11.5px] text-faint leading-relaxed">
+          <p class="mt-1 mb-0 text-[12px] text-faint leading-relaxed">
             清掉这台机器上所有的 Steam 登录痕迹，之后构建会重新问你要账号密码。
           </p>
         </div>
@@ -84,12 +84,12 @@ onUnmounted(disarm)
             </div>
           </div>
 
-          <div v-if="result.skipped?.length" class="rounded-md border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3.5 py-2.5 text-[11.5px] text-warn">
+          <div v-if="result.skipped?.length" class="rounded-md border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3.5 py-2.5 text-[12px] text-warn">
             <div v-for="(s, i) in result.skipped" :key="i">{{ s }}</div>
           </div>
 
           <div v-if="result.backupDir" class="rounded-md border border-line bg-[rgba(9,15,23,.5)] px-3.5 py-2.5">
-            <div class="text-[11.5px] text-muted leading-relaxed">
+            <div class="text-[12px] text-muted leading-relaxed">
               清之前整份备份在这里，后悔了把里面的文件拷回去就行：
             </div>
             <div class="mt-1.5 flex items-center gap-2 min-w-0">
@@ -104,9 +104,9 @@ onUnmounted(disarm)
 
         <!-- 清之前：列清单 -->
         <template v-else>
-          <div class="text-[11.5px] text-muted">会处理这些：</div>
+          <div class="text-[12px] text-muted">会处理这些：</div>
 
-          <div v-if="f.busy && !items.length" class="flex items-center gap-2 text-[11.5px] text-faint py-2">
+          <div v-if="f.busy && !items.length" class="flex items-center gap-2 text-[12px] text-faint py-2">
             <LoaderCircle :size="14" class="drop-spin-slow" />
             正在检查…
           </div>
@@ -121,19 +121,19 @@ onUnmounted(disarm)
             </div>
           </div>
 
-          <div class="rounded-md border border-line bg-[rgba(9,15,23,.5)] px-3.5 py-2.5 text-[11.5px] text-muted leading-relaxed">
+          <div class="rounded-md border border-line bg-[rgba(9,15,23,.5)] px-3.5 py-2.5 text-[12px] text-muted leading-relaxed">
             清之前会整份备份到 SDK 根目录下的 <code class="font-mono text-accent">_login-backup-…</code>，后悔了能拷回来。
           </div>
 
           <div
-            class="rounded-md border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3.5 py-2.5 text-[11.5px] text-warn leading-relaxed"
+            class="rounded-md border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3.5 py-2.5 text-[12px] text-warn leading-relaxed"
             :class="armed ? '' : 'hidden'"
           >
             再点一次下面那个红色按钮才会真的清。关掉窗口就取消。
           </div>
         </template>
 
-        <div v-if="f.error" class="rounded-md border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3.5 py-2.5 text-[11.5px] text-danger">
+        <div v-if="f.error" class="rounded-md border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3.5 py-2.5 text-[12px] text-danger">
           {{ f.error }}
         </div>
       </div>

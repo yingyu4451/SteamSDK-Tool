@@ -164,7 +164,7 @@ function healthTitle(app) {
         </div>
         <div class="mt-1.5 flex items-center gap-2 text-[11px] text-faint num">
           <span>App {{ app.appId || '?' }}</span>
-          <span class="text-line">·</span>
+          <span class="text-rule">·</span>
           <span>{{ app.depots?.length || 0 }} depot</span>
           <span v-if="app.setLive" class="ml-auto text-amber truncate max-w-[74px]">
             {{ app.setLive }}
@@ -173,7 +173,7 @@ function healthTitle(app) {
       </button>
 
       <div v-if="!state.apps.length && !state.scanning" class="px-1 py-3">
-        <button class="btn h-7 px-2.5 text-[11.5px] w-full" @click="openWizard">
+        <button class="btn h-7 px-2.5 text-[12px] w-full" @click="openWizard">
           ＋ 新建 App
         </button>
       </div>

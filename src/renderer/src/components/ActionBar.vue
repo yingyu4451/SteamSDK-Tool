@@ -245,7 +245,7 @@ watch(
             class="flex-1 min-w-[200px] h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(255,180,84,.5)]"
             @keydown.enter="submitPw"
           />
-          <label class="flex items-center gap-1.5 text-[11.5px] text-muted cursor-pointer select-none">
+          <label class="flex items-center gap-1.5 text-[12px] text-muted cursor-pointer select-none">
             <input type="checkbox" v-model="pwRemember" class="accent-[#66c0f4]" />
             加密保存
           </label>
@@ -297,11 +297,11 @@ watch(
         <template v-else-if="vd">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="font-semibold text-[12px]">同步 Depot</span>
-            <span class="px-2 py-[3px] rounded-full text-[10.5px] border text-muted border-line">
+            <span class="px-2 py-[3px] rounded-full text-[11px] border text-muted border-line">
               {{ viaLabel }}
             </span>
             <span
-              class="px-2 py-[3px] rounded-full text-[10.5px] border"
+              class="px-2 py-[3px] rounded-full text-[11px] border"
               :class="
                 vd.appIdKnown
                   ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
@@ -318,8 +318,8 @@ watch(
           <div v-if="steamDepots.length" class="mt-2.5 pt-2.5 border-t border-line-soft">
             <div class="flex items-center gap-2 mb-1.5">
               <span class="text-[11px] text-faint">勾选要加进本地的</span>
-              <button class="btn h-6 px-2 text-[10.5px] no-drag" @click="syncPickAll(true)">全选</button>
-              <button class="btn h-6 px-2 text-[10.5px] no-drag" @click="syncPickAll(false)">全不选</button>
+              <button class="btn h-6 px-2 text-[11px] no-drag" @click="syncPickAll(true)">全选</button>
+              <button class="btn h-6 px-2 text-[11px] no-drag" @click="syncPickAll(false)">全不选</button>
             </div>
 
             <div
@@ -335,13 +335,13 @@ watch(
                 @change="toggleSyncPick(d.depotId)"
               />
               <span class="font-mono num text-[12px] shrink-0">{{ d.depotId }}</span>
-              <span class="text-[11.5px] text-muted shrink-0">{{ d.platformLabel || '平台未知' }}</span>
+              <span class="text-[12px] text-muted shrink-0">{{ d.platformLabel || '平台未知' }}</span>
               <span v-if="d.branch" class="text-[11px] text-faint shrink-0">{{ d.branch }}</span>
               <span class="text-[11px] text-faint num shrink-0">{{ fmtSize(d.size) }}</span>
               <span v-if="localIds.has(String(d.depotId))" class="text-[11px] text-accent shrink-0">本地已有</span>
               <button
                 v-else-if="!d.platform"
-                class="ml-auto btn h-6 px-2 text-[10.5px] no-drag"
+                class="ml-auto btn h-6 px-2 text-[11px] no-drag"
                 @click="openDepotSlide()"
               >
                 手动加
@@ -350,7 +350,7 @@ watch(
 
             <div class="mt-2 flex items-center gap-2 flex-wrap">
               <button
-                class="btn btn-primary h-7 px-3 text-[11.5px] no-drag"
+                class="btn btn-primary h-7 px-3 text-[12px] no-drag"
                 :disabled="!pickCount || state.syncAdding"
                 @click="syncAddSelected"
               >
@@ -358,7 +358,7 @@ watch(
               </button>
             </div>
           </div>
-          <div v-else class="mt-2.5 pt-2.5 border-t border-line-soft text-[11.5px] text-faint">
+          <div v-else class="mt-2.5 pt-2.5 border-t border-line-soft text-[12px] text-faint">
             后台这个 App 下还没有任何 Depot。
           </div>
 
@@ -369,7 +369,7 @@ watch(
               <span
                 v-for="b in branchList"
                 :key="b.key"
-                class="px-2 py-[3px] rounded-full text-[10.5px] border"
+                class="px-2 py-[3px] rounded-full text-[11px] border"
                 :class="
                   b.key === 'public' || b.key === 'default'
                     ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
@@ -414,7 +414,7 @@ watch(
         <div v-if="state.preflight.error" class="mt-2 text-[12px] text-amber">
           {{ state.preflight.error }}
         </div>
-        <div v-else-if="pf && !pf.problems.length" class="mt-2 text-[11.5px] text-accent">
+        <div v-else-if="pf && !pf.problems.length" class="mt-2 text-[12px] text-accent">
           没有发现问题。
         </div>
         <div v-else-if="pf" class="mt-2 flex flex-col gap-2">

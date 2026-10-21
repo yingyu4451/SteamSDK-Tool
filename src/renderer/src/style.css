@@ -14,8 +14,17 @@
   --color-line-soft: #22334a;
 
   --color-ink: #dbe6ef;
-  --color-muted: #8f98a0;
-  --color-faint: #66707a;
+  /* 中性三档都必须过 WCAG 4.5:1（在最亮的那层 surface-3 上也要过）。
+     原来 muted #8f98a0 在 surface-2 上只有 4.33、faint #66707a 全都在 2.9–3.5，
+     两档都是「灰到看不清」。现在的实测（surface / base / surface-2）：
+       ink   #dbe6ef  11.78 / 13.74 / 10.02
+       muted #a8b5c2   7.13 /  8.32 /  6.06
+       faint #909dab   5.40 /  6.30 /  4.59   */
+  --color-muted: #a8b5c2;
+  --color-faint: #909dab;
+
+  /* 分隔符（· / |）专用。它属于结构线不属于文字，故意低于正文对比度 */
+  --color-rule: #3d5a7a;
 
   --color-accent: #66c0f4;
   --color-accent-dim: #2f7dad;
@@ -98,7 +107,7 @@ textarea {
 .card-flat {
   background: rgba(9, 15, 23, 0.62);
   border: 1px solid #223650;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 /* ---------- 切换 App 的过渡 ----------
@@ -151,10 +160,10 @@ textarea {
   gap: 8px;
   padding: 0 14px;
   height: 34px;
-  border-radius: 5px;
+  border-radius: 6px;
   border: 1px solid #3d6588;
   background: linear-gradient(180deg, #3a6285, #2b4a6a);
-  color: #d6e6f5;
+  color: var(--color-ink);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -186,7 +195,7 @@ textarea {
   background: linear-gradient(180deg, #75b022, #588a1b);
   border-color: #4f7d18;
   color: #d2e885;
-  font-weight: 650;
+  font-weight: 600;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
 }
 .btn-primary:hover:not(:disabled) {
@@ -209,7 +218,7 @@ textarea {
   background: linear-gradient(180deg, #e24b4b, #c33a3a);
   border-color: #e24b4b;
   color: #2a0006;
-  font-weight: 650;
+  font-weight: 600;
 }
 .btn-danger-solid:hover:not(:disabled) {
   background: linear-gradient(180deg, #ef6a6a, #c94a4a);
@@ -224,8 +233,8 @@ textarea {
   background: transparent;
   border: 0;
   padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 10.5px;
+  border-radius: 6px;
+  font-size: 11px;
   line-height: 1.5;
   color: var(--color-faint);
   cursor: pointer;
@@ -257,7 +266,7 @@ textarea {
   gap: 6px;
   padding: 3px 9px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
@@ -298,7 +307,7 @@ textarea {
   border: 1px dashed rgba(102, 192, 244, 0.4);
   background: transparent;
   color: var(--color-accent);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -353,12 +362,12 @@ textarea {
   max-width: 100%;
   min-width: 0;
   padding: 2.5px 9px 2.5px 7px;
-  border-radius: 7px;
+  border-radius: 6px;
   border: 1px solid rgba(102, 192, 244, 0.2);
   background: rgba(102, 192, 244, 0.055);
   color: #a8d8f0;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.5;
   cursor: pointer;
   transition:
@@ -497,7 +506,7 @@ textarea {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  border-radius: 12px;
+  border-radius: 10px;
   background: linear-gradient(180deg, #1f3448, #182636);
   box-shadow:
     0 26px 56px -18px rgba(0, 0, 0, 0.86),

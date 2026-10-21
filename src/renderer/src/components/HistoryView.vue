@@ -74,7 +74,7 @@ function openLogDir() {
       <input
         v-model="filter"
         placeholder="筛选文件名"
-        class="h-8 w-[200px] px-3 rounded-lg bg-surface border border-line text-[12.5px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+        class="h-8 w-[200px] px-3 rounded-lg bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
       />
       <button class="btn h-8 no-drag" :disabled="!logDir" title="在资源管理器里打开日志所在文件夹" @click="openLogDir">
         <FolderOpen :size="14" :stroke-width="1.9" />
@@ -109,7 +109,7 @@ function openLogDir() {
       <!-- 列表 -->
       <div class="card overflow-y-auto scroll-thin min-h-0 min-w-0" v-reveal>
         <div v-for="[group, items] in shownGroups" :key="group" class="p-2.5">
-          <div class="px-2 py-1.5 text-[10.5px] font-semibold tracking-wider text-faint uppercase">
+          <div class="px-2 py-1.5 text-[11px] font-semibold tracking-wider text-faint uppercase">
             {{ group }}
           </div>
           <button
@@ -123,22 +123,22 @@ function openLogDir() {
             "
             @click="open(h)"
           >
-            <div class="text-[12.5px] font-medium truncate">{{ h.name }}</div>
-            <div class="mt-1 flex items-center gap-2 text-[10.5px] text-faint num">
+            <div class="text-[13px] font-medium truncate">{{ h.name }}</div>
+            <div class="mt-1 flex items-center gap-2 text-[11px] text-faint num">
               <span>{{ fmtTime(h.mtime) }}</span>
-              <span class="text-line">·</span>
+              <span class="text-rule">·</span>
               <span>{{ fmtSize(h.size) }}</span>
             </div>
           </button>
         </div>
 
-        <div v-if="!shown.length" class="p-6 text-[12.5px] text-faint">还没有构建日志</div>
+        <div v-if="!shown.length" class="p-6 text-[13px] text-faint">还没有构建日志</div>
       </div>
 
       <!-- 内容 -->
       <div class="card overflow-hidden flex flex-col min-h-0 min-w-0" v-reveal="{ delay: 0.04 }">
         <header class="px-4 py-2.5 border-b border-line flex items-center gap-3 shrink-0">
-          <span class="text-[12.5px] font-medium truncate">
+          <span class="text-[13px] font-medium truncate">
             {{ selected?.name || '选一个日志' }}
           </span>
           <span v-if="selected" class="text-[11px] text-faint font-mono truncate ml-auto" :title="selected.file">
@@ -149,7 +149,7 @@ function openLogDir() {
           <div v-if="loading" class="text-[12px] text-faint">读取中…</div>
           <pre
             v-else-if="content"
-            class="m-0 text-[11.5px] leading-[1.7] font-mono text-[#c6d4df] whitespace-pre-wrap break-all"
+            class="m-0 text-[12px] leading-[1.7] font-mono text-[#c6d4df] whitespace-pre-wrap break-all"
             >{{ content }}</pre
           >
           <div v-else class="text-[12px] text-faint">左侧点一个日志查看内容。</div>

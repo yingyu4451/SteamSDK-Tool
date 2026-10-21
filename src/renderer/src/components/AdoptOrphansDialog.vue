@@ -45,7 +45,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
 
       <div class="p-6 flex flex-col gap-4">
         <label class="flex flex-col gap-1.5">
-          <span class="text-[11.5px] text-muted">App 名字（新文件夹的名字）</span>
+          <span class="text-[12px] text-muted">App 名字（新文件夹的名字）</span>
           <input
             ref="input"
             :value="d.name"
@@ -63,7 +63,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
           <div
             v-for="o in apps"
             :key="o.file"
-            class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
+            class="font-mono text-[12px] text-accent/90 py-0.5 truncate"
           >
             <span class="text-faint">app　</span>{{ o.file }}
             <span class="text-faint"> → app_{{ o.appId || 'unknown' }}.vdf</span>
@@ -71,7 +71,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
           <div
             v-for="o in depots"
             :key="o.file"
-            class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
+            class="font-mono text-[12px] text-accent/90 py-0.5 truncate"
           >
             <span class="text-faint">depot</span> {{ o.file }}
           </div>

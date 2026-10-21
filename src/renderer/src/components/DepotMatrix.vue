@@ -90,8 +90,8 @@ async function openPath(p) {
   <section class="card overflow-hidden min-w-0" v-reveal="{ delay: 0.04 }">
     <header class="px-5 pt-4 pb-3 flex items-center gap-3 flex-wrap">
       <h2 class="text-[13px] font-semibold tracking-tight m-0">Depot</h2>
-      <span class="text-[11.5px] text-faint num">{{ sortedDepots.length }}</span>
-      <button class="ml-auto btn h-7 px-2.5 text-[11.5px] no-drag" @click="openDepotSlide()">
+      <span class="text-[12px] text-faint num">{{ sortedDepots.length }}</span>
+      <button class="ml-auto btn h-7 px-2.5 text-[12px] no-drag" @click="openDepotSlide()">
         ＋ 新建 Depot
       </button>
     </header>
@@ -123,7 +123,7 @@ async function openPath(p) {
             }"
           />
           <span
-            class="text-[12.5px] font-medium truncate"
+            class="text-[13px] font-medium truncate"
             :class="String(d.id) === String(current?.id) ? 'text-ink' : 'text-muted'"
           >
             {{ platLabel(d.platform) }}
@@ -131,7 +131,7 @@ async function openPath(p) {
         </div>
         <div class="mt-1 flex items-center gap-1.5 text-[11px] text-faint num min-w-0">
           <span class="font-mono truncate">{{ d.id }}</span>
-          <span class="text-line">·</span>
+          <span class="text-rule">·</span>
           <span class="shrink-0">{{ fmtSize(d.analysis?.totalBytes) }}</span>
         </div>
       </button>
@@ -151,19 +151,19 @@ async function openPath(p) {
           >
             {{ depotState(current).text }}
           </span>
-          <span class="text-[11.5px] text-muted">{{ osLabel(current.meta?.os) }} {{ archLabel(current.meta?.arch) }}</span>
-          <span class="text-[11.5px] text-faint">{{ langLabel(current.meta?.language) }}</span>
+          <span class="text-[12px] text-muted">{{ osLabel(current.meta?.os) }} {{ archLabel(current.meta?.arch) }}</span>
+          <span class="text-[12px] text-faint">{{ langLabel(current.meta?.language) }}</span>
           <span v-if="metaLine.length" class="text-[12px] text-muted truncate">{{ metaLine[0] }}</span>
 
           <div class="ml-auto flex items-center gap-1.5">
             <button
               v-if="a && !a.exists"
-              class="btn h-7 px-2.5 text-[11.5px] no-drag border-[rgba(255,180,84,.3)] text-amber hover:bg-[rgba(255,180,84,.08)]"
+              class="btn h-7 px-2.5 text-[12px] no-drag border-[rgba(255,180,84,.3)] text-amber hover:bg-[rgba(255,180,84,.08)]"
               @click="createDir(current)"
             >
               创建目录
             </button>
-            <button class="btn h-7 px-2.5 text-[11.5px] no-drag" @click="openDrawer('depot', current.file)">
+            <button class="btn h-7 px-2.5 text-[12px] no-drag" @click="openDrawer('depot', current.file)">
               编辑
             </button>
           </div>
@@ -172,27 +172,27 @@ async function openPath(p) {
         <!-- 数字 -->
         <div v-if="a" class="mt-3 grid grid-cols-4 gap-3">
           <div>
-            <div class="text-[10.5px] text-faint tracking-wide">磁盘文件</div>
+            <div class="text-[11px] text-faint tracking-wide">磁盘文件</div>
             <div class="num text-[15px] font-semibold mt-0.5">{{ fmtInt(a.fileCount) }}</div>
           </div>
           <div>
-            <div class="text-[10.5px] text-faint tracking-wide">总体积</div>
+            <div class="text-[11px] text-faint tracking-wide">总体积</div>
             <div class="num text-[15px] font-semibold mt-0.5">{{ fmtSize(a.totalBytes) }}</div>
           </div>
           <div>
-            <div class="text-[10.5px] text-amber/80 tracking-wide">被排除</div>
+            <div class="text-[11px] text-amber/80 tracking-wide">被排除</div>
             <div class="num text-[15px] font-semibold mt-0.5" :class="a.excludedCount ? 'text-amber' : 'text-faint'">
               {{ fmtInt(a.excludedCount) }}
             </div>
           </div>
           <div>
-            <div class="text-[10.5px] text-accent/80 tracking-wide">会上传</div>
+            <div class="text-[11px] text-accent/80 tracking-wide">会上传</div>
             <div class="num text-[15px] font-semibold mt-0.5 text-accent">{{ fmtInt(a.uploadCount) }}</div>
           </div>
         </div>
 
         <div class="mt-2.5 flex flex-col gap-1">
-          <div class="flex items-center gap-2 text-[11.5px] min-w-0">
+          <div class="flex items-center gap-2 text-[12px] min-w-0">
             <span class="shrink-0 w-[52px] text-faint/70">内容目录</span>
             <PathLink
               v-if="a?.contentRoot"
@@ -203,17 +203,17 @@ async function openPath(p) {
             />
             <span v-else class="text-faint">未设置</span>
           </div>
-          <div class="flex items-center gap-2 text-[11.5px] min-w-0">
+          <div class="flex items-center gap-2 text-[12px] min-w-0">
             <span class="shrink-0 w-[52px] text-faint/70">脚本</span>
             <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
           </div>
-          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-[11.5px] min-w-0">
+          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-[12px] min-w-0">
             <span class="shrink-0 w-[52px] text-faint/70">存档保护</span>
             <span class="font-mono break-all text-muted">
               {{ current.userConfig.join('、') }}
             </span>
           </div>
-          <div v-else class="flex items-center gap-2 text-[11.5px] min-w-0">
+          <div v-else class="flex items-center gap-2 text-[12px] min-w-0">
             <span class="shrink-0 w-[52px] text-faint/70">存档保护</span>
             <span class="text-amber/80">没标任何玩家数据文件</span>
           </div>
@@ -232,7 +232,7 @@ async function openPath(p) {
         :class="['text-danger transition-transform', showSuspicious && 'rotate-90']"
       />
           <span class="text-[12px] font-medium text-danger">会被上传的可疑文件</span>
-          <span class="num text-[11.5px] text-faint">{{ a.suspicious.length }}</span>
+          <span class="num text-[12px] text-faint">{{ a.suspicious.length }}</span>
           <span class="ml-auto text-[11px] text-faint">这些应该加进 FileExclusion</span>
         </button>
         <div v-show="showSuspicious" class="px-5 pb-3 max-h-[200px] overflow-y-auto scroll-thin">
@@ -241,8 +241,8 @@ async function openPath(p) {
             :key="i"
             class="flex items-center gap-3 py-1.5 border-b border-line-soft last:border-b-0"
           >
-            <span class="font-mono text-[11.5px] text-[#ffb0b8] truncate flex-1 min-w-0" :title="f.rel">{{ f.rel }}</span>
-            <span class="num text-[10.5px] text-faint shrink-0">{{ fmtSize(f.size) }}</span>
+            <span class="font-mono text-[12px] text-[#ffb0b8] truncate flex-1 min-w-0" :title="f.rel">{{ f.rel }}</span>
+            <span class="num text-[11px] text-faint shrink-0">{{ fmtSize(f.size) }}</span>
           </div>
         </div>
       </div>
@@ -259,7 +259,7 @@ async function openPath(p) {
         :class="['text-amber transition-transform', showExcluded && 'rotate-90']"
       />
           <span class="text-[12px] font-medium text-amber">被 FileExclusion 挡下的文件</span>
-          <span class="num text-[11.5px] text-faint">{{ a?.excludedCount || 0 }}</span>
+          <span class="num text-[12px] text-faint">{{ a?.excludedCount || 0 }}</span>
           <span class="ml-auto text-[11px] text-faint">只不上传，本地都还在</span>
         </button>
         <div v-show="showExcluded" class="px-5 pb-3 max-h-[240px] overflow-y-auto scroll-thin">
@@ -282,14 +282,14 @@ async function openPath(p) {
               … 还有 {{ files.length - 30 }} 个
             </div>
           </div>
-          <div v-if="!excludedByRule.length" class="text-[11.5px] text-faint py-1">
+          <div v-if="!excludedByRule.length" class="text-[12px] text-faint py-1">
             没有文件被排除。
           </div>
         </div>
       </div>
     </div>
 
-    <div v-else class="border-t border-line px-5 py-6 text-[12.5px] text-faint">
+    <div v-else class="border-t border-line px-5 py-6 text-[13px] text-faint">
       这个 App 还没有 Depot。
     </div>
   </section>

@@ -59,12 +59,12 @@ function openExternal(url) {
     </div>
 
     <div v-if="known.length" class="mt-3">
-      <div class="text-[10.5px] text-faint tracking-wide mb-1.5">用过的分支</div>
+      <div class="text-[11px] text-faint tracking-wide mb-1.5">用过的分支</div>
       <div class="flex flex-wrap gap-1.5">
         <button
           v-for="b in known"
           :key="b"
-          class="px-2.5 h-6 rounded-full border text-[11.5px] cursor-pointer transition-colors bg-transparent"
+          class="px-2.5 h-6 rounded-full border text-[12px] cursor-pointer transition-colors bg-transparent"
           :class="
             b === current
               ? 'border-[rgba(255,180,84,.35)] text-amber'
@@ -96,7 +96,7 @@ function openExternal(url) {
     >
       <div
         v-if="message"
-        class="mt-3 text-[11.5px] rounded-lg px-3 py-2 border"
+        class="mt-3 text-[12px] rounded-lg px-3 py-2 border"
         :class="
           message.tone === 'ok'
             ? 'text-accent border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)]'

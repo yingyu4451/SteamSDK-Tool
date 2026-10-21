@@ -55,24 +55,24 @@ const dup = computed(() => {
           </button>
         </div>
 
-        <div v-if="app.desc" class="mt-2 text-[12.5px] text-muted truncate">{{ app.desc }}</div>
+        <div v-if="app.desc" class="mt-2 text-[13px] text-muted truncate">{{ app.desc }}</div>
 
         <div class="mt-2.5 flex items-center gap-3 flex-wrap text-[12px] text-muted">
           <span class="num">
             AppID <span class="text-ink font-medium">{{ app.appId || '—' }}</span>
           </span>
-          <span class="text-line">|</span>
+          <span class="text-rule">|</span>
           <span class="num">{{ app.depots.length }} 个 Depot</span>
         </div>
 
         <div class="mt-3 flex flex-col gap-1.5 min-w-0">
           <div class="flex items-center gap-3 min-w-0">
-            <span class="shrink-0 w-[64px] text-[11.5px] text-faint whitespace-nowrap">内容根目录</span>
+            <span class="shrink-0 w-[64px] text-[12px] text-faint whitespace-nowrap">内容根目录</span>
             <PathLink :path="app.contentRoot" kind="folder" class="min-w-0" />
           </div>
 
           <div class="flex items-center gap-3 min-w-0">
-            <span class="shrink-0 w-[64px] text-[11.5px] text-faint whitespace-nowrap tracking-[0.3em]">构建脚本</span>
+            <span class="shrink-0 w-[64px] text-[12px] text-faint whitespace-nowrap tracking-[0.3em]">构建脚本</span>
             <PathLink :path="app.appPath" kind="file" class="min-w-0" />
           </div>
         </div>
@@ -84,7 +84,7 @@ const dup = computed(() => {
       v-if="dup"
       class="mt-4 rounded-[10px] border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] p-3"
     >
-      <div class="text-[11.5px] font-semibold text-danger mb-1.5">AppID 冲突</div>
+      <div class="text-[12px] font-semibold text-danger mb-1.5">AppID 冲突</div>
       <div class="text-[12px] text-[#ffb0b8] leading-relaxed">
         AppID <span class="num font-semibold">{{ dup.appId }}</span> 同时被这些本地 App 使用：
         <span class="font-mono">{{ dup.apps.join('、') }}</span>。<br />
@@ -99,7 +99,7 @@ const dup = computed(() => {
       class="mt-4 rounded-[10px] border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
     >
       <div class="flex items-center gap-2 mb-1.5">
-        <span class="text-[11.5px] font-semibold text-amber">待处理</span>
+        <span class="text-[12px] font-semibold text-amber">待处理</span>
         <span class="text-[11px] text-faint num">{{ activeRows.length }} 项</span>
         <span v-if="ignoredCount" class="text-[11px] text-faint num">
           · 另有 {{ ignoredCount }} 项已忽略（在「编辑」里恢复）
@@ -131,6 +131,6 @@ const dup = computed(() => {
 
   <div v-else-if="app?.error" class="card p-5 border-[#4a2a2a]">
     <div class="text-[14px] font-semibold text-[#ff8a8a]">读取 App 失败</div>
-    <div class="text-[12.5px] text-muted mt-1.5">{{ app.error }}</div>
+    <div class="text-[13px] text-muted mt-1.5">{{ app.error }}</div>
   </div>
 </template>

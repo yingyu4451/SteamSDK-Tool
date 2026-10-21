@@ -167,7 +167,7 @@ function onLeave(el, done) {
         <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
           <Upload :size="32" :stroke-width="1.8" />
           <div class="text-[13px] font-semibold">松手就分析</div>
-          <div class="text-[11.5px] text-muted">文件夹，或者 .zip</div>
+          <div class="text-[12px] text-muted">文件夹，或者 .zip</div>
         </div>
       </div>
     </Transition>
@@ -180,7 +180,7 @@ function onLeave(el, done) {
     >
       <div
         v-if="state.toast"
-        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-[11px] border text-[12.5px] shadow-2xl max-w-[80vw] truncate"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-[11px] border text-[13px] shadow-2xl max-w-[80vw] truncate"
         :class="
           state.toast.tone === 'bad'
             ? 'border-[rgba(255,92,108,.3)] bg-[#221a1a] text-[#ff8a8a]'

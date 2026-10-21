@@ -206,7 +206,7 @@ const descTab = ref('desc')
       <div class="p-6 flex flex-col gap-4">
         <!-- 名字 -->
         <label class="flex flex-col gap-1.5">
-          <span class="text-[11.5px] text-muted">App 名字</span>
+          <span class="text-[12px] text-muted">App 名字</span>
           <input
             ref="nameInput"
             :value="w.name"
@@ -218,7 +218,7 @@ const descTab = ref('desc')
 
         <!-- AppID -->
         <div class="flex flex-col gap-1.5">
-          <span class="text-[11.5px] text-muted">AppID</span>
+          <span class="text-[12px] text-muted">AppID</span>
           <div class="flex items-center gap-2">
             <input
               :value="w.appId"
@@ -236,7 +236,7 @@ const descTab = ref('desc')
               </option>
             </datalist>
             <select
-              class="h-9 px-2 rounded-[9px] bg-surface border border-line text-[11.5px] outline-none max-w-[190px] disabled:opacity-45"
+              class="h-9 px-2 rounded-[9px] bg-surface border border-line text-[12px] outline-none max-w-[190px] disabled:opacity-45"
               :disabled="!knownApps.length"
               :title="
                 state.partnerAppCount
@@ -256,13 +256,13 @@ const descTab = ref('desc')
             </select>
           </div>
           <span v-if="resolvedName === '查询中…'" class="text-[11px] text-faint">查询中…</span>
-          <span v-else-if="resolvedName" class="text-[11.5px] text-accent">{{ resolvedName }}</span>
+          <span v-else-if="resolvedName" class="text-[12px] text-accent">{{ resolvedName }}</span>
 
           <div
             v-if="appIdConflict.length"
             class="rounded-[10px] border border-[rgba(255,180,84,.26)] bg-[rgba(255,180,84,.06)] px-3 py-2 flex items-center gap-2 flex-wrap"
           >
-            <span class="text-[11.5px] text-amber">
+            <span class="text-[12px] text-amber">
               AppID {{ w.appId }} 已经被本地 App「{{ appIdConflict.join('、') }}」用了 ——
               再建一个就是两个本地 App 指着同一个 Steam App，构建会传到同一处。
             </span>
@@ -273,19 +273,19 @@ const descTab = ref('desc')
         <!-- 从后台读 Depot -->
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2 flex-wrap">
-            <button class="btn h-8 px-3 text-[11.5px]" :disabled="!appIdOk || lk?.busy" @click="doLookup">
+            <button class="btn h-8 px-3 text-[12px]" :disabled="!appIdOk || lk?.busy" @click="doLookup">
               <ListFilter :size="14" :stroke-width="1.8" class="mr-1.5" />
               {{ lk?.busy ? '读取中…' : '读取后台 Depot' }}
             </button>
             <button
-              class="btn h-8 px-3 text-[11.5px]"
+              class="btn h-8 px-3 text-[12px]"
               title="在 Steamworks 后台打开这个 App"
               @click="openPartner"
             >
               <ExternalLink :size="14" :stroke-width="2" class="mr-1.5" />
               {{ appIdOk ? '打开后台 App 页' : '打开后台 App 列表' }}
             </button>
-            <button v-if="anyUnowned" class="btn h-8 px-3 text-[11.5px]" @click="wizardApplyAllSteam">
+            <button v-if="anyUnowned" class="btn h-8 px-3 text-[12px]" @click="wizardApplyAllSteam">
               全部勾上
             </button>
           </div>
@@ -293,7 +293,7 @@ const descTab = ref('desc')
           <!-- 出错 -->
           <div
             v-if="lk?.error"
-            class="rounded-[10px] border px-3.5 py-2.5 text-[11.5px] leading-relaxed"
+            class="rounded-[10px] border px-3.5 py-2.5 text-[12px] leading-relaxed"
             :class="
               lk.needsKey || lk.needsPassword
                 ? 'border-[rgba(255,180,84,.26)] bg-[rgba(255,180,84,.06)] text-amber'
@@ -329,7 +329,7 @@ const descTab = ref('desc')
               </button>
             </div>
 
-            <div v-if="!lk.depots.length" class="text-[11.5px] text-faint">后台这个 App 下还没有任何 Depot。</div>
+            <div v-if="!lk.depots.length" class="text-[12px] text-faint">后台这个 App 下还没有任何 Depot。</div>
 
             <div v-for="d in lk.depots" :key="d.depotId" class="flex items-center gap-2.5 py-1 min-w-0">
               <input
@@ -341,16 +341,16 @@ const descTab = ref('desc')
               />
               <select
                 v-else-if="!d.on"
-                class="h-6 px-1.5 rounded-md bg-surface border border-line text-[10.5px] shrink-0"
+                class="h-6 px-1.5 rounded-md bg-surface border border-line text-[11px] shrink-0"
                 @change="onPickPlatform(d, $event)"
               >
                 <option value="">平台…</option>
                 <option v-for="p in w.platforms" :key="p.id" :value="p.id">{{ p.label }}</option>
               </select>
-              <span v-else class="text-[10.5px] text-accent shrink-0">{{ platLabel(d.appliedAs) }}</span>
+              <span v-else class="text-[11px] text-accent shrink-0">{{ platLabel(d.appliedAs) }}</span>
 
               <span class="font-mono num text-[12px] shrink-0">{{ d.depotId }}</span>
-              <span v-if="d.platform" class="text-[11.5px] shrink-0" :class="d.on ? 'text-accent' : 'text-muted'">
+              <span v-if="d.platform" class="text-[12px] shrink-0" :class="d.on ? 'text-accent' : 'text-muted'">
                 {{ d.platformLabel }}
               </span>
               <span v-else class="text-[11px] text-faint shrink-0">平台未知</span>
@@ -367,11 +367,11 @@ const descTab = ref('desc')
 
         <!-- 平台 -->
         <div class="flex flex-col gap-2">
-          <span class="text-[11.5px] text-muted">平台</span>
+          <span class="text-[12px] text-muted">平台</span>
 
           <div class="rounded-[10px] border border-line overflow-hidden">
             <div
-              class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-7 bg-[rgba(255,255,255,.022)] text-[10.5px] text-faint tracking-wider uppercase"
+              class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-7 bg-[rgba(255,255,255,.022)] text-[11px] text-faint tracking-wider uppercase"
             >
               <span />
               <span />
@@ -418,7 +418,7 @@ const descTab = ref('desc')
                 :value="w.picks[p.id].depotId"
                 :disabled="!w.picks[p.id].on"
                 placeholder="AppID+1"
-                class="h-7 px-2 rounded-md bg-surface border border-line text-[11.5px] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
+                class="h-7 px-2 rounded-md bg-surface border border-line text-[12px] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
                 @input="wizardSetDepotId(p.id, $event.target.value)"
               />
               <input
@@ -455,7 +455,7 @@ const descTab = ref('desc')
                 class="absolute left-0 right-0 -bottom-px h-[2px] rounded-full bg-accent"
               />
             </button>
-            <span v-if="descTab === 'will'" class="ml-auto text-[11.5px] text-faint num">
+            <span v-if="descTab === 'will'" class="ml-auto text-[12px] text-faint num">
               {{ willCreate.scripts.length }} 个脚本 · {{ willCreate.dirs.length }} 个目录
             </span>
           </div>
@@ -481,7 +481,7 @@ const descTab = ref('desc')
                 class="group"
               >
                 <summary
-                  class="flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-[11.5px] text-muted hover:text-ink"
+                  class="flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-[12px] text-muted hover:text-ink"
                 >
                   <span class="text-faint">{{ grp.name }}</span>
                   <span class="num text-faint">{{ grp.rows.length }}</span>
@@ -492,7 +492,7 @@ const descTab = ref('desc')
                   <div
                     v-for="(f, i) in grp.rows"
                     :key="grp.name + i"
-                    class="font-mono text-[11.5px] text-accent/90 py-0.5 truncate"
+                    class="font-mono text-[12px] text-accent/90 py-0.5 truncate"
                   >
                     <span class="text-faint">{{ grp.icon }}</span>{{ f }}
                   </div>
@@ -502,7 +502,7 @@ const descTab = ref('desc')
           </div>
         </div>
 
-        <div v-if="depotIdDup" class="text-[11.5px] text-danger">
+        <div v-if="depotIdDup" class="text-[12px] text-danger">
           DepotID 有重复 —— 同一个 App 下每个 DepotID 必须不一样。
         </div>
 
