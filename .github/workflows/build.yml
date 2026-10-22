@@ -1,5 +1,9 @@
 name: 构建
 
+# 推 tag 时要建 Release、传产物；默认只读的 GITHUB_TOKEN 会 403
+permissions:
+  contents: write
+
 # 什么时候跑：
 #   - 在 GitHub 网页上手动点（Actions → 构建 → Run workflow）
 #   - 往 main 推（只为验证「还能不能构建出来」，不碰 Release）
