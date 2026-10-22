@@ -359,10 +359,15 @@ function openExternal(url) {
               <button
                 v-if="!u.ready"
                 class="btn btn-primary h-8 px-3 text-[12px] no-drag"
-                :disabled="u.downloading || !u.data.asset"
+                :disabled="u.downloading || !(u.data.asset || u.incremental)"
+                :title="
+                  u.data.asset || u.incremental
+                    ? '下载新版安装包；装在系统里的版本会走增量下载'
+                    : 'GitHub 这次没返回 release 的资产列表（刚发版时偶尔会这样）。过一会儿再点一次「检查更新」就有了，或者点「在 GitHub 上看」手动下载。'
+                "
                 @click="downloadUpdateNow()"
               >
-                {{ u.downloading ? '下载中…' : u.data.asset ? '下载更新' : '这个 release 里没有 .exe' }}
+                {{ u.downloading ? '下载中…' : u.data.asset || u.incremental ? '下载更新' : '没读到安装包' }}
               </button>
               <button v-else class="btn btn-primary h-8 px-3 text-[12px] no-drag" @click="installUpdateNow()">
                 {{ u.portable ? '打开下载位置' : '重启并安装' }}
@@ -370,6 +375,9 @@ function openExternal(url) {
               <button class="btn h-8 px-3 text-[12px] no-drag" @click="openReleases()">在 GitHub 上看</button>
             </div>
 
+            <div v-if="!u.ready && !u.data.asset && !u.incremental" class="mt-2 text-[11px] text-faint">
+              这次没读到 release 的安装包列表（刚发版时偶尔会这样）。过一会儿再点「检查更新」，或者点「在 GitHub 上看」手动下载。
+            </div>
             <div v-if="u.ready && u.portable" class="mt-2 text-[11px] text-faint">
               便携版没有安装目录，也覆盖不了正在运行的自己。
               点「打开下载位置」，关掉工具，用新版替换掉你那个 exe 就行。

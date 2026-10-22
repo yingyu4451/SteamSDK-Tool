@@ -220,6 +220,40 @@ function htmlToText(html) {
 }
 
 /**
+ * 兜底：expanded_assets 片段读不到时（刚发版那几分钟会这样），
+ * 直接按 tag 拉 latest.yml —— 里面写着安装包文件名和字节数，拼出下载地址。
+ */
+async function assetFromLatestYml(tag) {
+  try {
+    const y = await getText(`${repoUrl()}/releases/download/${encodeURIComponent(tag)}/latest.yml`, 'text/yaml')
+    if (y.statusCode !== 200) return null
+    const m = /(?:^|\n)\s*-\s*url:\s*"?([^"\r\n]+?\.exe)"?\s*(?:\n|$)/i.exec(y.text)
+    if (!m) return null
+    const setupName = m[1].trim()
+    const sizeM = /(?:^|\n)\s*size:\s*(\d+)/.exec(y.text)
+    const size = Number(sizeM && sizeM[1]) || 0
+    const urlOf = (name) => `${repoUrl()}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(name)}`
+
+    // latest.yml 永远指向安装包；便携版用户要换成 -portable.exe，先探一下有没有
+    let name = setupName
+    if (isPortable()) {
+      const portableName = setupName.replace(/-setup\.exe$/i, '-portable.exe')
+      if (portableName !== setupName) {
+        try {
+          const h = await headFollow(urlOf(portableName))
+          if (h.statusCode === 200) name = portableName
+        } catch {
+          /* 探测失败就用安装包 */
+        }
+      }
+    }
+    return { name, url: urlOf(name), size, tag }
+  } catch {
+    return null
+  }
+}
+
+/**
  * 查最新版。全程走网页端点，不碰 api.github.com。
  * @returns {Promise<{ok:boolean, hasUpdate?:boolean, current:string, latest?:string,
  *   notes?:string, publishedAt?:string, asset?:object, htmlUrl?:string, error?:string}>}
@@ -266,16 +300,28 @@ export async function checkUpdate() {
   // 2) 资产列表 —— 拿不到也不算什么，用户还能点「在 GitHub 上看」
   //    名字不能自己拼：本地是 "SteamSDK Tool-0.1.1-setup.exe"（带空格），
   //    gh 上传之后 GitHub 会把它变成 "SteamSDK.Tool-0.1.1-setup.exe"
+  //    刚发版那几分钟 expanded_assets 有时返回空片段，所以重试两次再兜底读 latest.yml。
   let asset = null
-  try {
-    const frag = await getText(`${repoUrl()}/releases/expanded_assets/${encodeURIComponent(tag)}`)
-    const exes = parseAssets(frag.text).filter((a) => /\.exe$/i.test(a.name))
+  let assetError = ''
+  const pickExe = (html) => {
+    const exes = parseAssets(html).filter((a) => /\.exe$/i.test(a.name))
     // 装的是哪个版本，就给哪个版本的包：
     // 便携版用户拿安装包去「重启并安装」是说不通的 —— 他没有安装目录
     const preferred = isPortable() ? /portable/i : /setup/i
-    asset = exes.find((a) => preferred.test(a.name)) || exes.find((a) => /setup/i.test(a.name)) || exes[0] || null
-  } catch {
-    /* 忽略 */
+    return exes.find((a) => preferred.test(a.name)) || exes.find((a) => /setup/i.test(a.name)) || exes[0] || null
+  }
+  for (let i = 0; i < 2 && !asset; i++) {
+    if (i) await new Promise((r) => setTimeout(r, 400))
+    try {
+      const frag = await getText(`${repoUrl()}/releases/expanded_assets/${encodeURIComponent(tag)}`)
+      asset = pickExe(frag.text)
+    } catch (e) {
+      assetError = e.message
+    }
+  }
+  if (!asset && hasUpdate) {
+    asset = await assetFromLatestYml(tag)
+    if (!asset) assetError = assetError || '资产列表里没找到 .exe'
   }
 
   // 3) 体积：expanded_assets 片段里只有 sha256，没有字节数，单独 HEAD 一下。
@@ -290,7 +336,7 @@ export async function checkUpdate() {
     }
   }
 
-  return { ok: true, current, latest, hasUpdate, notes, publishedAt, htmlUrl, asset, via: 'web' }
+  return { ok: true, current, latest, hasUpdate, notes, publishedAt, htmlUrl, asset, assetError, via: 'web' }
 }
 
 /**
@@ -298,7 +344,7 @@ export async function checkUpdate() {
  * @param {{url:string, name:string, onProgress?:(got:number,total:number)=>void}} o
  */
 export async function downloadUpdate({ url, name, onProgress } = {}) {
-  if (!url) return { ok: false, error: '这个 release 里没有 .exe 安装包' }
+  if (!url) return { ok: false, error: '没读到安装包地址（GitHub 的资产列表当时没返回）。过一会儿再点一次「检查更新」。' }
   const dir = path.join(app.getPath('userData'), 'updates')
   fs.mkdirSync(dir, { recursive: true })
   const dest = path.join(dir, String(name || 'SteamSDK-Tool-setup.exe').replace(/[\\/:*?"<>|]/g, '_'))

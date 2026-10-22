@@ -477,7 +477,7 @@ export async function downloadUpdateNow() {
   const a = u.data?.asset
   // 装在系统里的版本走增量：不需要 asset（主进程自己读 latest.yml），
   // 但界面上还得有个「要不要下」的依据，所以没有 asset 也能往下走。
-  if (!a && !u.incremental) return toast('这个 release 里没有 .exe 安装包', 'bad')
+  if (!a && !u.incremental) return toast('没读到安装包地址，过一会儿再点「检查更新」', 'bad')
   u.downloading = true
   u.got = 0
   u.total = a?.size || 0
