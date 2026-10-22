@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { fmtSize, fmtInt } from '../format.js'
-import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, openSteamStrip, PLATFORM_LABEL } from '../store.js'
+import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL } from '../store.js'
 import PathLink from './PathLink.vue'
 import { ChevronRight } from '@lucide/vue'
 
@@ -162,14 +162,6 @@ async function openPath(p) {
               @click="createDir(current)"
             >
               创建目录
-            </button>
-            <button
-              v-if="a && a.exists"
-              class="btn h-7 px-2.5 text-[12px] no-drag"
-              title="把内容目录里的 steam_api64.dll 等 Steam 运行库挪到旁边的备份文件夹，游戏启动就不再绑定 Steam（随时可还原）"
-              @click="openSteamStrip(current)"
-            >
-              剥离 Steam
             </button>
             <button class="btn h-7 px-2.5 text-[12px] no-drag" @click="openDrawer('depot', current.file)">
               编辑

@@ -49,13 +49,7 @@ import {
 } from './sdk.js'
 import { loginTest } from './login.js'
 import { preflightApp } from './preflight.js'
-import {
-  scanSteamFiles,
-  stripSteamFiles,
-  listSteamBackups,
-  restoreSteamBackup,
-  readSteamBackup
-} from './steamstrip.js'
+import { inspectFolder, copyAndStripFolder, suggestDest } from './steamstrip.js'
 import { describeLogin, forgetLogin } from './forget.js'
 import {
   checkUpdate,
@@ -719,86 +713,51 @@ function registerIpc() {
     }
   })
 
-  /* ---- 剥离 Steam 运行库 ----
-     把一个 Depot 的内容目录里的 steam_api64.dll 之类挪到目录外的备份文件夹，
-     启动游戏就不再绑定 Steam。只动内容目录里的文件，不碰 vdf、不上传。 */
-  function resolveStripDepot({ dirName, depotFile } = {}) {
-    const s = loadSettings()
-    const app = readApp(dirName, s)
-    if (app.error) return { ok: false, error: app.error }
-    const depot = (app.depots || []).find(
-      (d) => d.file === depotFile || String(d.id) === String(depotFile)
-    )
-    if (!depot) return { ok: false, error: `找不到 Depot ${depotFile || '(未指定)'}` }
-    if (depot.missing) return { ok: false, error: `Depot 脚本缺失：${depot.file}` }
-    if (!depot.contentRoot) return { ok: false, error: '这个 Depot 还没有内容目录，先「创建目录」或编辑里填一个' }
-    if (!fs.existsSync(depot.contentRoot)) {
-      return { ok: false, error: `内容目录不存在：${depot.contentRoot}` }
-    }
-    return { ok: true, app, depot, root: depot.contentRoot }
-  }
-  function stripInfo(r) {
-    return {
-      appId: r.app.appId || '',
-      appDirName: r.app.dirName || '',
-      depot: { id: r.depot.id || '', file: r.depot.file || '', platform: r.depot.platform || '' },
-      depotMeta: r.depot.meta || null
-    }
-  }
+  /* ---- 剥离 Steam（独立功能）----
+     拖一个打包好的文件夹进来，复制一份到旁边，副本里去掉 Steam 原生运行库。
+     原文件夹完全不动，和当前选中的 App / Depot 也没关系。 */
+  ipcMain.handle('strip:pickFolder', async (_e, { current } = {}) => {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: '选择要剥离 Steam 的文件夹',
+      defaultPath: current || '',
+      properties: ['openDirectory']
+    })
+    if (res.canceled || !res.filePaths.length) return { ok: false }
+    return { ok: true, path: res.filePaths[0] }
+  })
 
-  ipcMain.handle('strip:scan', (_e, { dirName, depotFile } = {}) => {
+  ipcMain.handle('strip:inspect', (_e, { target } = {}) => {
     try {
-      const r = resolveStripDepot({ dirName, depotFile })
-      if (!r.ok) return r
-      const scan = scanSteamFiles(r.root)
-      return { ok: true, ...scan, ...stripInfo(r), existingBackups: scan.backups }
+      return inspectFolder(target)
     } catch (e) {
       return { ok: false, error: e.message }
     }
   })
 
-  ipcMain.handle('strip:apply', (_e, { dirName, depotFile, removeConfig = true } = {}) => {
+  ipcMain.handle('strip:copy', (e, { src, dest, removeConfig = true } = {}) => {
     try {
-      const r = resolveStripDepot({ dirName, depotFile })
-      if (!r.ok) return r
-      const res = stripSteamFiles({
-        root: r.root,
-        removeConfig: removeConfig !== false,
-        meta: {
-          appId: r.app.appId || '',
-          appDirName: r.app.dirName || '',
-          depotId: r.depot.id || '',
-          depotFile: r.depot.file || ''
+      return copyAndStripFolder({
+        src,
+        dest,
+        removeConfig,
+        onProgress: (p) => {
+          if (!e.sender.isDestroyed()) e.sender.send('strip:progress', p)
         }
       })
-      if (!res.ok) return res
-      return { ...res, ...stripInfo(r) }
-    } catch (e) {
-      return { ok: false, error: e.message }
+    } catch (err) {
+      return { ok: false, error: err.message }
     }
   })
 
-  ipcMain.handle('strip:backups', (_e, { dirName, depotFile } = {}) => {
+  ipcMain.handle('strip:pickDest', async (_e, { current, name } = {}) => {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: '选择副本放在哪个文件夹',
+      defaultPath: current ? path.dirname(current) : '',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (res.canceled || !res.filePaths.length) return { ok: false }
     try {
-      const r = resolveStripDepot({ dirName, depotFile })
-      if (!r.ok) return r
-      return listSteamBackups({ root: r.root })
-    } catch (e) {
-      return { ok: false, error: e.message }
-    }
-  })
-
-  ipcMain.handle('strip:restore', (_e, { backupDir } = {}) => {
-    try {
-      return restoreSteamBackup({ backupDir })
-    } catch (e) {
-      return { ok: false, error: e.message }
-    }
-  })
-
-  ipcMain.handle('strip:readBackup', (_e, { backupDir } = {}) => {
-    try {
-      return readSteamBackup({ backupDir })
+      return { ok: true, path: suggestDest(res.filePaths[0], name) }
     } catch (e) {
       return { ok: false, error: e.message }
     }

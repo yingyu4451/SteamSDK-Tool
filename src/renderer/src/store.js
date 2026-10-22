@@ -149,16 +149,17 @@ export const state = reactive({
     // 拖放窗口里的「读后台」：后台有、本地还没配的 Depot
     backend: { busy: false, done: false, error: '', needsCreds: false, appName: '', via: '', depots: [] }
   },
-  // 剥离 Steam 运行库：{ open, busy, depot, root, scan, removeConfig, result, error }
+  // 剥离 Steam（独立功能）：拖文件夹 → 二次确认 → 复制一份 → 剥掉副本里的运行库
   strip: {
-    open: false,
+    inspect: null, // inspectFolder 的结果：原文件夹、要剥的文件、默认副本位置
+    confirmOpen: false,
     busy: false,
-    depot: null,
-    root: '',
-    scan: null,
+    dest: "",
     removeConfig: true,
+    progress: null, // { copiedFiles, totalFiles, copiedBytes, totalBytes, rel }
     result: null,
-    error: null
+    error: null,
+    lastTarget: ""
   },
   // 工具自身的更新（GitHub Releases）
   update: {
@@ -1448,113 +1449,147 @@ export async function openVdf(depotFile) {
 }
 
 /* ------------------------------------------------------------------ *
- *  剥离 Steam 运行库
- *  把内容目录里的 steam_api64.dll 之类挪到目录外的备份文件夹，
- *  游戏启动就不再绑定 Steam；随时能还原。
+ *  剥离 Steam（独立功能）
+ *  拖进一个打包好的文件夹 → 二次确认 → 复制一份到旁边，副本里去掉
+ *  steam_api64.dll 这类原生运行库。原文件夹一个字节都不动。
  * ------------------------------------------------------------------ */
 
-export function openSteamStrip(depot) {
-  if (!depot || !state.selectedDir) return
-  state.strip = {
-    open: true,
-    busy: true,
-    depot: { id: depot.id, file: depot.file, platform: depot.platform },
-    root: depot.contentRoot || '',
-    scan: null,
-    removeConfig: true,
-    result: null,
-    error: null
+/** 失败时统一把错误收进弹窗 */
+function stripFailed(message) {
+  const s = state.strip
+  s.busy = false
+  s.progress = null
+  s.error = message || "操作失败"
+}
+
+export async function pickStripFolder() {
+  const res = await api.strip.pickFolder(state.strip.lastTarget || state.settings?.buildsRoot || "")
+  if (!res?.ok || !res.path) return
+  await inspectStripFolder(res.path)
+}
+
+/** 拖进来 / 选完文件夹之后先看一眼：里面有什么、要剥什么、默认复制到哪 */
+export async function inspectStripFolder(target) {
+  const p = String(target || "").trim()
+  if (!p) return
+  const s = state.strip
+  s.busy = true
+  s.error = null
+  s.result = null
+  s.progress = null
+  s.lastTarget = p
+  let res
+  try {
+    res = await api.strip.inspect(p)
+  } catch (e) {
+    stripFailed(e.message)
+    toast(e.message, "bad")
+    return
   }
-  scanSteamStrip()
+  if (state.strip !== s) return
+  s.busy = false
+  if (!res?.ok) {
+    s.inspect = null
+    stripFailed(res?.error || "读不了这个文件夹")
+    toast(s.error, "bad")
+    return
+  }
+  s.inspect = res
+  s.dest = res.defaultDest || ""
+  s.removeConfig = true
+  s.confirmOpen = true
 }
 
-export function closeSteamStrip() {
+export function closeStripConfirm() {
   if (state.strip.busy) return
-  state.strip.open = false
+  state.strip.confirmOpen = false
 }
 
-/** 取消时立刻把弹窗藏掉 —— 不让用户等扫描结束 */
-export function dismissSteamStrip() {
-  state.strip.open = false
-  state.strip.busy = false
+export function setStripDest(v) {
+  const s = state.strip
+  s.dest = String(v ?? "")
+  s.error = null
+}
+
+/** 选一个父文件夹，副本放进去 */
+export async function pickStripDest() {
+  const s = state.strip
+  if (!s.inspect || s.busy) return
+  const res = await api.strip.pickDest(s.dest, s.inspect.name)
+  if (res?.ok && res.path) {
+    s.dest = res.path
+    s.error = null
+  } else if (res?.error) {
+    s.error = res.error
+  }
+}
+
+/** 还没确认就先把弹窗关了：从「已选文件夹」小结里重新打开 */
+export function reopenStripConfirm() {
+  const s = state.strip
+  if (!s.inspect || s.busy) return
+  s.error = null
+  s.confirmOpen = true
 }
 
 export function setStripRemoveConfig(v) {
-  if (!state.strip.open) return
   state.strip.removeConfig = !!v
 }
 
-export async function scanSteamStrip() {
+/** 二次确认后：复制 + 剥离。进度走 strip:progress 事件 */
+export async function confirmStripCopy() {
   const s = state.strip
-  if (!s || !s.open || !state.selectedDir) return
-  s.busy = true
-  s.error = null
-  const res = await window.api.strip.scan(state.selectedDir, s.depot?.file)
-  if (state.strip !== s || !s.open) return
-  s.busy = false
-  if (!res.ok) {
-    s.error = res.error || '读取失败'
+  if (!s.inspect || s.busy) return
+  if (!s.dest.trim()) {
+    s.error = "先填一个副本位置"
     return
   }
-  s.scan = res
-  s.root = res.root || s.root
-}
-
-export async function applySteamStrip() {
-  const s = state.strip
-  if (!s || !s.open || s.busy || !state.selectedDir) return
   s.busy = true
   s.error = null
-  const res = await window.api.strip.apply(state.selectedDir, s.depot?.file, s.removeConfig)
-  if (state.strip !== s || !s.open) return
-  if (!res.ok) {
-    s.busy = false
-    s.error = res.error || '剥离失败'
+  s.progress = {
+    copiedFiles: 0,
+    totalFiles: s.inspect.totalFiles,
+    copiedBytes: 0,
+    totalBytes: s.inspect.totalBytes
+  }
+  let res
+  try {
+    res = await api.strip.copy(s.inspect.root, s.dest.trim(), s.removeConfig)
+  } catch (e) {
+    stripFailed(e.message)
+    return
+  }
+  if (state.strip !== s) return
+  s.busy = false
+  s.progress = null
+  if (!res?.ok) {
+    s.error = res?.error || "复制失败"
     return
   }
   s.result = res
-  const scan = await window.api.strip.scan(state.selectedDir, s.depot?.file)
-  if (state.strip !== s || !s.open) return
-  s.busy = false
-  if (scan.ok) s.scan = scan
-  await reloadDetail()
-  toast(
-    res.moved?.length
-      ? `已剥离 ${res.moved.length} 个 Steam 文件，备份在内容目录旁边`
-      : res.message || '没有需要剥离的文件'
-  )
+  s.inspect = null
+  s.confirmOpen = false
+  toast(res.stripped.length ? `已复制并剥离：${res.name}` : `已复制：${res.name}（没找到 Steam 运行库）`)
 }
 
-export async function restoreSteamStrip(backupDir) {
+export async function openStripDest() {
+  const dest = state.strip.result?.dest
+  if (!dest) return
+  const r = await api.shell.openPath(dest)
+  if (!r?.ok) toast(r?.error || "打不开", "bad")
+}
+
+/** 回到「拖一个文件夹进来」的起点 */
+export function resetStrip() {
   const s = state.strip
-  if (!s || !s.open || s.busy || !state.selectedDir) return
-  s.busy = true
+  if (s.busy) return
+  s.inspect = null
+  s.confirmOpen = false
+  s.dest = ""
+  s.progress = null
+  s.result = null
   s.error = null
-  const res = await window.api.strip.restore(backupDir)
-  if (state.strip !== s || !s.open) return
-  if (!res.ok) {
-    s.busy = false
-    s.error = res.error || '还原失败'
-    return
-  }
-  if (res.conflicts?.length || res.failed?.length) {
-    const parts = []
-    if (res.conflicts?.length) {
-      parts.push(`原位置已有 ${res.conflicts.length} 个同名文件（${res.conflicts.slice(0, 2).join('、')}${res.conflicts.length > 2 ? ' …' : ''}）`)
-    }
-    if (res.failed?.length) parts.push(`${res.failed.length} 个文件没能还原（${res.failed[0].error}）`)
-    s.error = parts.join('；') + '，备份还留着'
-  } else {
-    s.result = null
-  }
-  const scan = await window.api.strip.scan(state.selectedDir, s.depot?.file)
-  if (state.strip !== s || !s.open) return
-  s.busy = false
-  if (scan.ok) s.scan = scan
-  await reloadDetail()
-  if (!s.error) toast(`已还原 ${res.restored} 个文件`)
 }
-
 
 /* ------------------------------------------------------------------ *
  *  删除 App
@@ -1754,6 +1789,10 @@ export function wireEvents() {
 
   api.drop.onProgress((msg) => {
     if (state.drop.busy) state.drop.progress = msg
+  })
+
+  api.strip.onProgress((p) => {
+    if (state.strip.busy) state.strip.progress = p
   })
 
   api.run.onData((d) => {

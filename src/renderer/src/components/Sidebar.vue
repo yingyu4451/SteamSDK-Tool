@@ -1,6 +1,15 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { LayoutDashboard, History, Settings, RefreshCw, ShieldCheck, Plus, BookOpen } from '@lucide/vue'
+import {
+  LayoutDashboard,
+  History,
+  Settings,
+  RefreshCw,
+  ShieldCheck,
+  Plus,
+  BookOpen,
+  Unplug
+} from '@lucide/vue'
 import { state, selectApp, rescan, openWizard, runCheckAll } from '../store.js'
 import { useListStagger } from '../motion.js'
 
@@ -19,6 +28,7 @@ watch(
 const nav = [
   { id: 'workbench', label: '工作台', icon: LayoutDashboard },
   { id: 'history', label: '构建历史', icon: History },
+  { id: 'strip', label: '剥离 Steam', icon: Unplug },
   { id: 'manual', label: '使用手册', icon: BookOpen },
   { id: 'settings', label: '设置', icon: Settings }
 ]

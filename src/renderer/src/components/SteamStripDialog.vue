@@ -1,226 +1,251 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import gsap from 'gsap'
 import {
   state,
-  PLATFORM_LABEL,
-  dismissSteamStrip,
+  closeStripConfirm,
+  setStripDest,
   setStripRemoveConfig,
-  applySteamStrip,
-  restoreSteamStrip,
-  toast
+  confirmStripCopy,
+  pickStripDest
 } from '../store.js'
-import { fmtSize } from '../format.js'
+import { fmtInt, fmtSize } from '../format.js'
+import { Unplug, X, Copy, TriangleAlert } from '@lucide/vue'
 import PathLink from './PathLink.vue'
-import { X } from '@lucide/vue'
 
 const el = ref(null)
 
-onMounted(() => {
-  if (el.value) {
-    gsap.fromTo(
-      el.value,
-      { opacity: 0, y: 18, scale: 0.985 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power3.out' }
-    )
-  }
-})
-
 const s = computed(() => state.strip)
-const scan = computed(() => s.value?.scan || null)
-const natives = computed(() => scan.value?.native || [])
-const configs = computed(() => scan.value?.config || [])
-const managed = computed(() => scan.value?.managed || [])
-const backups = computed(() => scan.value?.backups || [])
+const inspect = computed(() => s.value.inspect)
+const native = computed(() => inspect.value?.native || [])
+const config = computed(() => inspect.value?.config || [])
+const managed = computed(() => inspect.value?.managed || [])
+const removeConfig = computed(() => !!s.value.removeConfig)
+const busy = computed(() => !!s.value.busy)
+const open = computed(() => !!s.value.confirmOpen && !!inspect.value)
 
-const platformLabel = computed(
-  () => PLATFORM_LABEL[s.value?.depot?.platform] || s.value?.depot?.platform || ''
+const stripCount = computed(
+  () => native.value.length + (removeConfig.value ? config.value.length : 0)
 )
-
-const managedNames = computed(() => {
-  const names = managed.value.map((f) => f.name || f.rel.split('/').pop())
-  return names.length <= 2 ? names.join('、') : `${names.slice(0, 2).join('、')} 等 ${names.length} 个`
+const copyFiles = computed(
+  () => (inspect.value?.copyFiles || 0) + (removeConfig.value ? 0 : config.value.length)
+)
+const copyBytes = computed(() => {
+  const base = inspect.value?.copyBytes || 0
+  if (removeConfig.value) return base
+  return base + config.value.reduce((n, f) => n + (Number(f.size) || 0), 0)
 })
 
-const strippable = computed(
-  () => natives.value.length + (s.value?.removeConfig ? configs.value.length : 0)
-)
-const canApply = computed(() => !s.value?.busy && strippable.value > 0)
+const pct = computed(() => {
+  const p = s.value.progress
+  if (!p || !p.totalBytes) return 0
+  return Math.min(100, (p.copiedBytes / p.totalBytes) * 100)
+})
 
-const fmtTime = (iso) => {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+function animateIn() {
+  if (!el.value) return
+  gsap.fromTo(
+    el.value,
+    { opacity: 0, y: 16, scale: 0.985 },
+    { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out' }
+  )
 }
 
-async function openPath(p) {
-  if (!p) return
-  const r = await window.api.shell.openPath(p)
-  if (!r.ok) toast(r.error || '打不开', 'bad')
+watch(open, async (v) => {
+  if (!v) return
+  await nextTick()
+  animateIn()
+})
+
+function onKey(e) {
+  if (!open.value) return
+  if (e.key === 'Escape' && !busy.value) closeStripConfirm()
 }
+
+onMounted(() => {
+  window.addEventListener('keydown', onKey)
+  if (open.value) animateIn()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey)
+  if (el.value) gsap.killTweensOf(el.value)
+})
 </script>
 
 <template>
-  <div v-if="s.open" class="fixed inset-0 z-50 grid place-items-center p-6">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="dismissSteamStrip" />
-
-    <div
-      ref="el"
-      class="relative card w-full max-w-[640px] max-h-[86vh] overflow-y-auto scroll-thin no-drag"
-    >
-      <header class="px-6 pt-5 pb-4 border-b border-line flex items-start gap-3">
-        <div class="min-w-0">
-          <h2 class="text-[16px] font-semibold m-0">剥离 Steam 运行库</h2>
-          <div class="mt-1 text-[12px] text-faint flex items-center gap-2 min-w-0">
-            <span class="shrink-0">{{ platformLabel }}</span>
-            <span class="text-rule">·</span>
-            <span class="font-mono truncate">{{ s.depot?.id }}</span>
+  <div
+    v-if="open"
+    class="fixed inset-0 z-[62] grid place-items-center bg-[rgba(6,9,14,.62)] backdrop-blur-[2px] px-6"
+    @click.self="!busy && closeStripConfirm()"
+  >
+    <div ref="el" class="w-full max-w-[640px] card overflow-hidden">
+      <!-- 头 -->
+      <div class="flex items-start gap-3 px-5 py-4 border-b border-line-soft">
+        <div
+          class="shrink-0 w-9 h-9 rounded-[9px] grid place-items-center bg-[rgba(102,192,244,.1)] text-accent border border-[rgba(102,192,244,.18)]"
+        >
+          <Unplug :size="17" :stroke-width="1.8" />
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-[15px] font-semibold text-ink">剥离 Steam 运行库</div>
+          <div class="mt-0.5 text-[12px] text-muted">
+            复制一份到旁边，只去掉副本里的 Steam 原生运行库
           </div>
         </div>
         <button
-          class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer shrink-0"
-          @click="dismissSteamStrip"
+          class="shrink-0 w-7 h-7 grid place-items-center rounded-md text-faint hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent disabled:opacity-50"
+          :disabled="busy"
+          title="关闭"
+          @click="closeStripConfirm"
         >
           <X :size="16" :stroke-width="2" />
         </button>
-      </header>
-
-      <div class="p-6 flex flex-col gap-4">
-        <div class="flex items-start gap-2 text-[12px] min-w-0">
-          <span class="shrink-0 w-[64px] whitespace-nowrap text-faint/70">内容目录</span>
-          <PathLink v-if="s.root" :path="s.root" kind="folder" class="min-w-0 flex-1" />
-          <span v-else class="text-faint">—</span>
-        </div>
-
-        <div
-          v-if="s.error"
-          class="rounded-[10px] border border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)] px-3.5 py-2.5 text-[12px] text-danger"
-        >
-          {{ s.error }}
-        </div>
-
-        <div v-if="s.busy && !scan" class="text-[12px] text-faint py-2">正在扫描内容目录…</div>
-
-        <template v-else-if="scan">
-          <!-- 没东西可剥离 -->
-          <div
-            v-if="!strippable"
-            class="card-flat p-3.5 text-[12px] leading-[1.7] text-muted"
-          >
-            {{
-              backups.length
-                ? '这个目录里已经没有 Steam 运行库了，下面的备份可以还原。'
-                : '这个目录里没有 Steam 运行库（steam_api64.dll / steam_api.dll / libsteam_api.so / libsteam_api.dylib）。'
-            }}
-          </div>
-
-          <template v-else>
-            <div class="card-flat p-3.5">
-              <div class="text-[11px] font-semibold tracking-wider text-faint uppercase mb-2">
-                要挪走的文件 · {{ strippable }}
-              </div>
-              <div
-                v-for="f in natives"
-                :key="f.rel"
-                class="flex items-center gap-3 py-1.5 border-b border-line-soft last:border-b-0"
-              >
-                <span class="font-mono text-[12px] text-ink/90 truncate flex-1 min-w-0" :title="f.rel">
-                  {{ f.rel }}
-                </span>
-                <span class="num text-[11px] text-faint shrink-0">{{ fmtSize(f.size) }}</span>
-              </div>
-
-              <label
-                v-if="configs.length"
-                class="mt-2.5 pt-2.5 border-t border-line-soft flex items-start gap-2 text-[12px] text-muted cursor-pointer select-none"
-              >
-                <input
-                  type="checkbox"
-                  class="accent-[#66c0f4] w-3.5 h-3.5 mt-[1px] shrink-0"
-                  :checked="s.removeConfig"
-                  @change="setStripRemoveConfig($event.target.checked)"
-                />
-                <span>
-                  同时挪走 steam_appid.txt（{{ configs.length }} 个）
-                  <span class="text-faint">—— 有它时 SteamAPI_Init 会拿写死的 AppID 绑 Steam</span>
-                </span>
-              </label>
-            </div>
-
-            <div class="flex items-start gap-2 text-[12px] min-w-0">
-              <span class="shrink-0 w-[64px] whitespace-nowrap text-faint/70">托管 DLL</span>
-              <span class="text-muted min-w-0">
-                {{
-                  managed.length
-                    ? `保留 ${managedNames}（游戏代码还引用它，删了会启动报错）`
-                    : '没有托管 Steamworks DLL'
-                }}
-              </span>
-            </div>
-
-            <div class="flex items-start gap-2 text-[12px] min-w-0">
-              <span class="shrink-0 w-[64px] whitespace-nowrap text-faint/70">挪到</span>
-              <PathLink :path="scan.backupRoot" kind="folder" class="min-w-0 flex-1" />
-              <span class="text-faint shrink-0">内容目录外，不会上传</span>
-            </div>
-          </template>
-
-          <!-- 刚剥离完的结果 -->
-          <div
-            v-if="s.result && s.result.moved?.length"
-            class="rounded-[10px] border border-[rgba(102,192,244,.24)] bg-[rgba(102,192,244,.06)] px-3.5 py-2.5 text-[12px] text-accent flex items-center gap-2 min-w-0"
-          >
-            <span class="shrink-0">
-              已剥离 {{ s.result.moved.length }} 个文件 · {{ fmtSize(s.result.totalBytes) }}
-            </span>
-            <PathLink :path="s.result.backupDir" kind="folder" class="min-w-0 flex-1" />
-          </div>
-
-          <!-- 已有备份 -->
-          <div v-if="backups.length" class="card-flat p-3.5">
-            <div class="text-[11px] font-semibold tracking-wider text-faint uppercase mb-1.5">
-              备份 · {{ backups.length }}
-            </div>
-            <div
-              v-for="b in backups"
-              :key="b.backupDir"
-              class="flex items-center gap-2 py-1.5 border-b border-line-soft last:border-b-0"
-            >
-              <button
-                class="min-w-0 flex-1 text-left bg-transparent border-0 p-0 cursor-pointer"
-                :title="b.backupDir"
-                @click="openPath(b.backupDir)"
-              >
-                <div class="text-[12px] text-ink/90 truncate">{{ b.name }}</div>
-                <div class="num text-[11px] text-faint mt-0.5">
-                  {{ fmtTime(b.createdAt) }} · {{ b.files }} 个文件 · {{ fmtSize(b.bytes) }}
-                </div>
-              </button>
-              <button class="btn h-7 px-2.5 text-[12px] shrink-0" @click="openPath(b.backupDir)">
-                打开
-              </button>
-              <button
-                class="btn h-7 px-2.5 text-[12px] shrink-0"
-                :disabled="s.busy"
-                @click="restoreSteamStrip(b.backupDir)"
-              >
-                还原
-              </button>
-            </div>
-          </div>
-        </template>
       </div>
 
-      <footer class="px-6 py-4 border-t border-line flex items-center gap-2">
-        <span class="text-[11px] text-faint">只动内容目录里的文件，不改 vdf</span>
-        <div class="flex-1" />
-        <button class="btn" @click="dismissSteamStrip">关闭</button>
-        <button class="btn btn-primary" :disabled="!canApply" @click="applySteamStrip">
-          {{ s.busy ? '剥离中…' : '开始剥离' }}
+      <!-- 内容 -->
+      <div class="px-5 py-4 flex flex-col gap-3.5 max-h-[62vh] overflow-y-auto scroll-thin">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="w-[64px] shrink-0 text-[12px] text-faint">原文件夹</span>
+          <PathLink :path="inspect.root" />
+        </div>
+        <div class="flex items-center gap-2 min-w-0 text-[12px] text-muted">
+          <span class="w-[64px] shrink-0 text-faint">文件</span>
+          <span>
+            <span class="num text-ink">{{ fmtInt(inspect.totalFiles) }}</span> 个 ·
+            <span class="num text-ink">{{ fmtSize(inspect.totalBytes) }}</span>
+          </span>
+        </div>
+
+        <!-- 副本里要去掉的文件 -->
+        <div class="card-flat px-3.5 py-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-semibold tracking-wider text-faint uppercase">
+              副本里去掉
+            </span>
+            <span class="text-[11px] text-faint">
+              共 <span class="num text-ink">{{ stripCount }}</span> 个
+            </span>
+          </div>
+          <div v-if="native.length" class="flex flex-col">
+            <div
+              v-for="f in native"
+              :key="f.rel"
+              class="flex items-center gap-2 text-[12px] py-0.5 min-w-0"
+            >
+              <X :size="12" :stroke-width="2" class="shrink-0 text-danger" />
+              <span class="font-mono truncate text-muted">{{ f.rel }}</span>
+              <span class="ml-auto num shrink-0 text-faint">{{ fmtSize(f.size) }}</span>
+            </div>
+          </div>
+          <div v-else class="text-[12px] text-faint">
+            这个文件夹里没找到原生 Steam 运行库，复制后内容会和原文件夹一样。
+          </div>
+          <label
+            v-if="config.length"
+            class="mt-2 flex items-start gap-2 cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              class="mt-0.5 accent-[#66c0f4]"
+              :checked="removeConfig"
+              :disabled="busy"
+              @change="setStripRemoveConfig($event.target.checked)"
+            />
+            <span class="text-[12px] text-muted leading-relaxed">
+              也去掉 <span class="font-mono">steam_appid.txt</span>（{{ config.length }} 个）
+              —— 有它时启动会拿写死的 AppID 绑 Steam
+            </span>
+          </label>
+        </div>
+
+        <!-- 托管 DLL -->
+        <div
+          v-if="managed.length"
+          class="flex items-start gap-2 text-[11.5px] leading-relaxed text-faint"
+        >
+          <span class="w-[64px] shrink-0">托管 DLL</span>
+          <span class="min-w-0">
+            保留
+            <span class="font-mono text-muted">{{ managed.map((f) => f.name).join('、') }}</span>
+            ：游戏程序集还引用它们，删了会直接启动报错。
+          </span>
+        </div>
+
+        <!-- 副本位置 -->
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="w-[64px] shrink-0 text-[12px] text-faint">副本位置</span>
+          <input
+            class="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-[#0f1620] border border-[#27405c] text-[12px] font-mono text-ink outline-none focus:border-[#4d90c4] disabled:opacity-60"
+            :value="s.dest"
+            :disabled="busy"
+            spellcheck="false"
+            @input="setStripDest($event.target.value)"
+          />
+          <button class="btn shrink-0 h-8 px-3 text-[12px]" :disabled="busy" @click="pickStripDest">
+            选择…
+          </button>
+        </div>
+        <div class="text-[11px] text-faint pl-[72px]">
+          「选择…」选一个父文件夹，副本自动命名成
+          <span class="font-mono">{{ inspect.name }}{{ inspect.destSuffix || '_NoSteam' }}</span>
+          ；重名会加 -2、-3。
+        </div>
+
+        <!-- 说明 -->
+        <div class="flex items-start gap-2 text-[11.5px] leading-relaxed text-muted">
+          <TriangleAlert :size="14" class="shrink-0 mt-0.5 text-amber" />
+          <span>
+            原文件夹不会改动。确认后开始复制
+            <span class="num text-ink">{{ fmtInt(copyFiles) }}</span> 个文件（
+            <span class="num text-ink">{{ fmtSize(copyBytes) }}</span>），体积约等于原文件夹。
+          </span>
+        </div>
+
+        <!-- 进度 -->
+        <div v-if="busy" class="flex flex-col gap-2">
+          <div class="flex items-center gap-2 text-[12px] text-muted">
+            <Copy :size="14" :stroke-width="1.8" class="text-accent" />
+            正在复制并剥离…
+            <span class="ml-auto num">{{ Math.round(pct) }}%</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-[#101824] overflow-hidden">
+            <div
+              class="h-full rounded-full bg-accent transition-[width] duration-200"
+              :style="{ width: pct + '%' }"
+            />
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-faint">
+            <span class="num"
+              >{{ fmtInt(s.progress?.copiedFiles || 0) }} /
+              {{ fmtInt(s.progress?.totalFiles || 0) }} 个文件</span
+            >
+            <span class="num"
+              >{{ fmtSize(s.progress?.copiedBytes || 0) }} /
+              {{ fmtSize(s.progress?.totalBytes || 0) }}</span
+            >
+          </div>
+        </div>
+
+        <!-- 错误 -->
+        <div v-if="s.error" class="text-[12px] text-[#ff8a8a] break-all">{{ s.error }}</div>
+      </div>
+
+      <!-- 底栏 -->
+      <div
+        class="flex items-center gap-2 px-5 py-3.5 border-t border-line-soft bg-[rgba(9,15,23,.35)]"
+      >
+        <span class="text-[11px] text-faint">只复制内容目录，不改 vdf</span>
+        <button class="btn ml-auto" :disabled="busy" @click="closeStripConfirm">取消</button>
+        <button
+          class="btn btn-primary"
+          :disabled="busy || !s.dest.trim()"
+          @click="confirmStripCopy"
+        >
+          <Copy :size="15" :stroke-width="1.8" />
+          开始剥离
         </button>
-      </footer>
+      </div>
     </div>
   </div>
 </template>

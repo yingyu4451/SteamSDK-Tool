@@ -1,12 +1,21 @@
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
-import { boot, state, wireEvents, loadHistory, setDropOver, dropAnalyze } from './store.js'
+import {
+  boot,
+  state,
+  wireEvents,
+  loadHistory,
+  setDropOver,
+  dropAnalyze,
+  inspectStripFolder
+} from './store.js'
 import { reducedMotion } from './motion.js'
 
 import TitleBar from './components/TitleBar.vue'
 import Sidebar from './components/Sidebar.vue'
 import WorkbenchView from './components/WorkbenchView.vue'
+import SteamStripView from './components/SteamStripView.vue'
 import HistoryView from './components/HistoryView.vue'
 import SettingsView from './components/SettingsView.vue'
 import ManualView from './components/ManualView.vue'
@@ -21,7 +30,13 @@ import OnboardGuide from './components/OnboardGuide.vue'
 import SteamStripDialog from './components/SteamStripDialog.vue'
 import { Upload } from '@lucide/vue'
 
-const views = { workbench: WorkbenchView, history: HistoryView, settings: SettingsView, manual: ManualView }
+const views = {
+  workbench: WorkbenchView,
+  strip: SteamStripView,
+  history: HistoryView,
+  settings: SettingsView,
+  manual: ManualView
+}
 const current = computed(() => views[state.view] || WorkbenchView)
 
 /* 拖文件夹/压缩包进来。
@@ -65,7 +80,9 @@ function onDrop(e) {
     setDropOver(false)
     return
   }
-  dropAnalyze(p)
+  // 剥离 Steam 页只认文件夹：拖进来直接检查它，不走上传内容的分析流程
+  if (state.view === 'strip') inspectStripFolder(p)
+  else dropAnalyze(p)
 }
 
 onMounted(async () => {
@@ -168,8 +185,12 @@ function onLeave(el, done) {
         <div class="absolute inset-3 rounded-[16px] border-2 border-dashed border-[rgba(102,192,244,.5)] bg-[rgba(11,15,22,.72)] backdrop-blur-sm" />
         <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
           <Upload :size="32" :stroke-width="1.8" />
-          <div class="text-[13px] font-semibold">松手就分析</div>
-          <div class="text-[12px] text-muted">文件夹，或者 .zip</div>
+          <div class="text-[13px] font-semibold">
+            {{ state.view === 'strip' ? '松手就检查' : '松手就分析' }}
+          </div>
+          <div class="text-[12px] text-muted">
+            {{ state.view === 'strip' ? '把游戏文件夹拖进来' : '文件夹，或者 .zip' }}
+          </div>
         </div>
       </div>
     </Transition>

@@ -96,14 +96,14 @@ const api = {
 
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),
 
-  /** 剥离 Steam 运行库：把内容目录里的 steam_api64.dll 之类挪到目录外的备份文件夹 */
+  /** 剥离 Steam（独立功能）：复制一个游戏文件夹，副本里去掉 Steam 运行库 */
   strip: {
-    scan: (dirName, depotFile) => ipcRenderer.invoke('strip:scan', { dirName, depotFile }),
-    apply: (dirName, depotFile, removeConfig = true) =>
-      ipcRenderer.invoke('strip:apply', { dirName, depotFile, removeConfig }),
-    backups: (dirName, depotFile) => ipcRenderer.invoke('strip:backups', { dirName, depotFile }),
-    restore: (backupDir) => ipcRenderer.invoke('strip:restore', { backupDir }),
-    readBackup: (backupDir) => ipcRenderer.invoke('strip:readBackup', { backupDir })
+    pickFolder: (current) => ipcRenderer.invoke('strip:pickFolder', { current }),
+    inspect: (target) => ipcRenderer.invoke('strip:inspect', { target }),
+    copy: (src, dest, removeConfig = true) =>
+      ipcRenderer.invoke('strip:copy', { src, dest, removeConfig }),
+    pickDest: (current, name) => ipcRenderer.invoke('strip:pickDest', { current, name }),
+    onProgress: (h) => subscribe('strip:progress', h)
   },
 
   /** 拖进来的文件/文件夹：Electron 32 之后 File.path 没了，只能走 webUtils */
