@@ -96,6 +96,16 @@ const api = {
 
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),
 
+  /** 剥离 Steam 运行库：把内容目录里的 steam_api64.dll 之类挪到目录外的备份文件夹 */
+  strip: {
+    scan: (dirName, depotFile) => ipcRenderer.invoke('strip:scan', { dirName, depotFile }),
+    apply: (dirName, depotFile, removeConfig = true) =>
+      ipcRenderer.invoke('strip:apply', { dirName, depotFile, removeConfig }),
+    backups: (dirName, depotFile) => ipcRenderer.invoke('strip:backups', { dirName, depotFile }),
+    restore: (backupDir) => ipcRenderer.invoke('strip:restore', { backupDir }),
+    readBackup: (backupDir) => ipcRenderer.invoke('strip:readBackup', { backupDir })
+  },
+
   /** 拖进来的文件/文件夹：Electron 32 之后 File.path 没了，只能走 webUtils */
   drop: {
     pathFor: (file) => {

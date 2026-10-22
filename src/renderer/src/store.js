@@ -149,6 +149,17 @@ export const state = reactive({
     // 拖放窗口里的「读后台」：后台有、本地还没配的 Depot
     backend: { busy: false, done: false, error: '', needsCreds: false, appName: '', via: '', depots: [] }
   },
+  // 剥离 Steam 运行库：{ open, busy, depot, root, scan, removeConfig, result, error }
+  strip: {
+    open: false,
+    busy: false,
+    depot: null,
+    root: '',
+    scan: null,
+    removeConfig: true,
+    result: null,
+    error: null
+  },
   // 工具自身的更新（GitHub Releases）
   update: {
     current: '',
@@ -1435,6 +1446,115 @@ export async function openVdf(depotFile) {
   const res = await api.app.openVdf(state.selectedDir, depotFile)
   if (!res.ok) toast(res.error, 'bad')
 }
+
+/* ------------------------------------------------------------------ *
+ *  剥离 Steam 运行库
+ *  把内容目录里的 steam_api64.dll 之类挪到目录外的备份文件夹，
+ *  游戏启动就不再绑定 Steam；随时能还原。
+ * ------------------------------------------------------------------ */
+
+export function openSteamStrip(depot) {
+  if (!depot || !state.selectedDir) return
+  state.strip = {
+    open: true,
+    busy: true,
+    depot: { id: depot.id, file: depot.file, platform: depot.platform },
+    root: depot.contentRoot || '',
+    scan: null,
+    removeConfig: true,
+    result: null,
+    error: null
+  }
+  scanSteamStrip()
+}
+
+export function closeSteamStrip() {
+  if (state.strip.busy) return
+  state.strip.open = false
+}
+
+/** 取消时立刻把弹窗藏掉 —— 不让用户等扫描结束 */
+export function dismissSteamStrip() {
+  state.strip.open = false
+  state.strip.busy = false
+}
+
+export function setStripRemoveConfig(v) {
+  if (!state.strip.open) return
+  state.strip.removeConfig = !!v
+}
+
+export async function scanSteamStrip() {
+  const s = state.strip
+  if (!s || !s.open || !state.selectedDir) return
+  s.busy = true
+  s.error = null
+  const res = await window.api.strip.scan(state.selectedDir, s.depot?.file)
+  if (state.strip !== s || !s.open) return
+  s.busy = false
+  if (!res.ok) {
+    s.error = res.error || '读取失败'
+    return
+  }
+  s.scan = res
+  s.root = res.root || s.root
+}
+
+export async function applySteamStrip() {
+  const s = state.strip
+  if (!s || !s.open || s.busy || !state.selectedDir) return
+  s.busy = true
+  s.error = null
+  const res = await window.api.strip.apply(state.selectedDir, s.depot?.file, s.removeConfig)
+  if (state.strip !== s || !s.open) return
+  if (!res.ok) {
+    s.busy = false
+    s.error = res.error || '剥离失败'
+    return
+  }
+  s.result = res
+  const scan = await window.api.strip.scan(state.selectedDir, s.depot?.file)
+  if (state.strip !== s || !s.open) return
+  s.busy = false
+  if (scan.ok) s.scan = scan
+  await reloadDetail()
+  toast(
+    res.moved?.length
+      ? `已剥离 ${res.moved.length} 个 Steam 文件，备份在内容目录旁边`
+      : res.message || '没有需要剥离的文件'
+  )
+}
+
+export async function restoreSteamStrip(backupDir) {
+  const s = state.strip
+  if (!s || !s.open || s.busy || !state.selectedDir) return
+  s.busy = true
+  s.error = null
+  const res = await window.api.strip.restore(backupDir)
+  if (state.strip !== s || !s.open) return
+  if (!res.ok) {
+    s.busy = false
+    s.error = res.error || '还原失败'
+    return
+  }
+  if (res.conflicts?.length || res.failed?.length) {
+    const parts = []
+    if (res.conflicts?.length) {
+      parts.push(`原位置已有 ${res.conflicts.length} 个同名文件（${res.conflicts.slice(0, 2).join('、')}${res.conflicts.length > 2 ? ' …' : ''}）`)
+    }
+    if (res.failed?.length) parts.push(`${res.failed.length} 个文件没能还原（${res.failed[0].error}）`)
+    s.error = parts.join('；') + '，备份还留着'
+  } else {
+    s.result = null
+  }
+  const scan = await window.api.strip.scan(state.selectedDir, s.depot?.file)
+  if (state.strip !== s || !s.open) return
+  s.busy = false
+  if (scan.ok) s.scan = scan
+  await reloadDetail()
+  if (!s.error) toast(`已还原 ${res.restored} 个文件`)
+}
+
 
 /* ------------------------------------------------------------------ *
  *  删除 App

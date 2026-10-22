@@ -18,6 +18,7 @@ import AdoptOrphansDialog from './components/AdoptOrphansDialog.vue'
 import ForgetDialog from './components/ForgetDialog.vue'
 import DropDialog from './components/DropDialog.vue'
 import OnboardGuide from './components/OnboardGuide.vue'
+import SteamStripDialog from './components/SteamStripDialog.vue'
 import { Upload } from '@lucide/vue'
 
 const views = { workbench: WorkbenchView, history: HistoryView, settings: SettingsView, manual: ManualView }
@@ -151,6 +152,7 @@ function onLeave(el, done) {
     <ForgetDialog />
     <DropDialog />
     <OnboardGuide />
+    <SteamStripDialog />
 
     <!-- 拖着东西悬在窗口上 -->
     <Transition
