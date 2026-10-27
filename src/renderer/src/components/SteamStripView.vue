@@ -62,7 +62,7 @@ const pct = computed(() => {
     <!-- 错误 -->
     <div
       v-if="strip.error && !strip.confirmOpen"
-      class="card-flat px-4 py-3 flex items-start gap-2 text-label text-[#ff8a8a]"
+      class="card-flat px-4 py-3 flex items-start gap-2 text-label text-danger"
     >
       <TriangleAlert :size="15" :stroke-width="1.9" class="shrink-0 mt-0.5" />
       <div class="min-w-0 break-all">{{ strip.error }}</div>
@@ -75,7 +75,7 @@ const pct = computed(() => {
         正在复制并剥离…
         <span class="ml-auto num text-label text-muted">{{ Math.round(pct) }}%</span>
       </div>
-      <div class="h-1.5 rounded-full bg-[#101824] overflow-hidden">
+      <div class="h-1.5 rounded-full bg-black/40 overflow-hidden">
         <div
           class="h-full rounded-full bg-accent transition-[width] duration-200"
           :style="{ width: pct + '%' }"
@@ -91,7 +91,7 @@ const pct = computed(() => {
           {{ fmtSize(strip.progress?.totalBytes || 0) }}</span
         >
       </div>
-      <div class="font-mono text-micro text-faint truncate">
+      <div class="font-mono text-micro text-faint break-all">
         {{ strip.progress?.rel || '' }}
       </div>
     </div>
@@ -152,7 +152,7 @@ const pct = computed(() => {
           class="flex items-center gap-2 text-label py-0.5"
         >
           <X :size="12" :stroke-width="2" class="shrink-0 text-danger" />
-          <span class="font-mono truncate text-muted">{{ f.rel }}</span>
+          <span class="font-mono break-all text-muted">{{ f.rel }}</span>
           <span class="ml-auto num shrink-0 text-faint">{{ fmtSize(f.size) }}</span>
         </div>
       </div>

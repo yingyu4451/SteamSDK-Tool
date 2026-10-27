@@ -97,7 +97,7 @@ onUnmounted(disarm)
               清之前整份备份在这里，后悔了把里面的文件拷回去就行：
             </div>
             <div class="mt-1.5 flex items-center gap-2 min-w-0">
-              <code class="font-mono text-micro text-accent truncate">{{ result.backupDir }}</code>
+              <code class="font-mono text-micro text-accent break-all min-w-0">{{ result.backupDir }}</code>
               <button class="btn btn-sm px-2.5  shrink-0" @click="openBackup">
                 <FolderOpen :size="12" />
                 打开
@@ -120,7 +120,7 @@ onUnmounted(disarm)
               <component :is="it.present ? ShieldOff : Check" :size="14" class="shrink-0 mt-0.5" :class="it.present ? 'text-warn' : 'text-faint'" />
               <div class="min-w-0 flex-1">
                 <div class="text-label" :class="it.present ? 'text-ink' : 'text-faint'">{{ it.label }}</div>
-                <div class="text-micro font-mono text-faint truncate" :title="it.where">{{ it.detail }}</div>
+                <div class="text-micro font-mono text-faint break-all">{{ it.detail }}</div>
               </div>
             </div>
           </div>

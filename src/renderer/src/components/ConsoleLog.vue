@@ -274,7 +274,7 @@ const exitTone = computed(() => {
 
     <div
       ref="bodyEl"
-      class="flex-1 min-h-0 overflow-y-auto scroll-thin px-5 py-3 bg-[#080b10] select-text"
+      class="flex-1 min-h-0 overflow-y-auto scroll-thin px-5 py-3 bg-surface-2 select-text"
       role="log"
       aria-label="构建输出"
       @scroll="onScroll"

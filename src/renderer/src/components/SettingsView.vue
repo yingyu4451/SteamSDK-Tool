@@ -259,10 +259,10 @@ function openExternal(url) {
           </div>
 
           <div class="mt-4 grid grid-cols-1 gap-1.5">
-            <div v-for="c in checks" :key="c.label" class="flex items-center gap-2.5 text-label">
-              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="c.ok ? 'bg-success' : 'bg-danger'" />
-              <span class="w-[110px] shrink-0" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
-              <span class="font-mono text-faint truncate" :title="c.path">{{ c.path }}</span>
+            <div v-for="c in checks" :key="c.label" class="flex items-start gap-2.5 text-label">
+              <span class="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" :class="c.ok ? 'bg-success' : 'bg-danger'" />
+              <span class="w-[110px] shrink-0 pt-0.5" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
+              <span class="font-mono text-faint break-all min-w-0 flex-1">{{ c.path }}</span>
             </div>
           </div>
 
@@ -407,7 +407,7 @@ function openExternal(url) {
             v-if="u.data?.hasUpdate"
             class="mt-3 rounded-card border border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.06)] p-3"
           >
-            <div class="text-label text-[#d7c3a0]">
+            <div class="text-label text-muted">
               新版本 <b>v{{ u.data.latest }}</b>（当前 v{{ u.current }}）<template v-if="u.data.publishedAt">
                 · {{ fmtDate(u.data.publishedAt) }}</template
               >

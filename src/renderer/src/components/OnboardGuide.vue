@@ -400,12 +400,12 @@ function skip() {
               :class="
                 same(o.manual, c.root)
                   ? 'border-[rgba(102,192,244,.5)] bg-[rgba(102,192,244,.08)]'
-                  : 'border-line bg-surface hover:border-[#4a7ba6]'
+                  : 'border-line bg-surface hover:border-rule'
               "
               @click="useCandidate(c)"
             >
               <Check v-if="same(o.manual, c.root)" :size="14" class="shrink-0 text-accent" />
-              <span class="font-mono text-label text-ink truncate">{{ c.root }}</span>
+              <span class="font-mono text-label text-ink break-all text-left">{{ c.root }}</span>
               <span v-if="c.hasSteamcmd" class="pill pill-ok ml-auto shrink-0">有 steamcmd</span>
               <span v-else class="pill pill-warn ml-auto shrink-0">缺 steamcmd</span>
             </button>

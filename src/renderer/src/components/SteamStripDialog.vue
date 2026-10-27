@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
               class="flex items-center gap-2 text-label py-0.5 min-w-0"
             >
               <X :size="12" :stroke-width="2" class="shrink-0 text-danger" />
-              <span class="font-mono truncate text-muted">{{ f.rel }}</span>
+              <span class="font-mono break-all text-muted">{{ f.rel }}</span>
               <span class="ml-auto num shrink-0 text-faint">{{ fmtSize(f.size) }}</span>
             </div>
           </div>
@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
         <div class="flex items-center gap-2 min-w-0">
           <span class="w-[64px] shrink-0 text-label text-faint">副本位置</span>
           <input
-            class="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-[#0f1620] border border-[#27405c] text-label font-mono text-ink outline-none focus:border-[#4d90c4] disabled:opacity-60"
+            class="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-surface-2 border border-line text-label font-mono text-ink outline-none focus:border-accent disabled:opacity-60"
             :value="s.dest"
             :disabled="busy"
             spellcheck="false"
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
             正在复制并剥离…
             <span class="ml-auto num">{{ Math.round(pct) }}%</span>
           </div>
-          <div class="h-1.5 rounded-full bg-[#101824] overflow-hidden">
+          <div class="h-1.5 rounded-full bg-black/40 overflow-hidden">
             <div
               class="h-full rounded-full bg-accent transition-[width] duration-200"
               :style="{ width: pct + '%' }"
@@ -227,7 +227,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- 错误 -->
-        <div v-if="s.error" class="text-label text-[#ff8a8a] break-all">{{ s.error }}</div>
+        <div v-if="s.error" class="text-label text-danger break-all">{{ s.error }}</div>
       </div>
 
       <!-- 底栏 -->

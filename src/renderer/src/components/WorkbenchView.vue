@@ -63,7 +63,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
             <div
               v-for="o in state.orphans"
               :key="o.file"
-              class="font-mono text-micro text-muted truncate"
+              class="font-mono text-micro text-muted break-all"
             >
               {{ o.file }}
               <span class="text-faint">
@@ -159,7 +159,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       <!-- 加载中 -->
       <div v-else key="__loading" class="card p-10 grid place-items-center text-muted text-body">
         <div class="flex items-center gap-3">
-          <div class="w-5 h-5 rounded-full border-2 border-[#23303d] border-t-[#66c0f4] animate-spin" />
+          <div class="w-5 h-5 rounded-full border-2 border-line border-t-accent animate-spin" />
           正在读取 {{ state.selectedDir }}…
         </div>
       </div>

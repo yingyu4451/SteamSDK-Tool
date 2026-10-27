@@ -81,7 +81,7 @@ function healthTitle(app) {
 </script>
 
 <template>
-  <aside class="w-[268px] shrink-0 border-r border-line bg-[#171a21]/70 flex flex-col min-h-0">
+  <aside class="w-[236px] shrink-0 border-r border-line bg-surface-2 flex flex-col min-h-0">
     <!-- 视图切换 -->
     <nav class="p-3 flex flex-col gap-1" v-stagger="{ each: 0.04 }">
       <button
@@ -91,7 +91,7 @@ function healthTitle(app) {
         :class="
           state.view === n.id
             ? 'bg-surface-3 text-ink font-medium'
-            : 'bg-transparent text-muted hover:text-ink hover:bg-surface-2'
+            : 'bg-transparent text-muted hover:text-ink hover:bg-surface-3/60'
         "
         @click="state.view = n.id"
       >
@@ -157,8 +157,8 @@ function healthTitle(app) {
         class="text-left rounded-card border px-3 py-2.5 transition-colors cursor-pointer"
         :class="
           state.selectedDir === app.dirName
-            ? 'border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.06)]'
-            : 'border-line bg-surface hover:bg-surface-2'
+            ? 'border-[rgba(102,192,244,.5)] bg-[rgba(102,192,244,.08)]'
+            : 'border-line bg-surface hover:bg-surface-3/45'
         "
         :aria-current="state.selectedDir === app.dirName ? 'true' : undefined"
         @click="selectApp(app.dirName)"
@@ -198,7 +198,7 @@ function healthTitle(app) {
         <div
           v-for="(e, i) in state.scanErrors"
           :key="i"
-          class="text-micro text-danger/80 bg-[rgba(255,92,108,.07)] border border-[rgba(255,92,108,.2)] rounded-lg px-2.5 py-2"
+          class="text-micro text-danger/80 bg-[rgba(255,92,108,.07)] border border-[rgba(255,92,108,.2)] rounded-btn px-2.5 py-2"
         >
           {{ e.error }}
         </div>

@@ -35,7 +35,7 @@ const win = window.api.win
 
 <template>
   <header
-    class="drag h-11 shrink-0 flex items-center gap-3 pl-4 border-b border-line bg-[#0a0d13]/85 backdrop-blur"
+    class="drag min-h-11 shrink-0 flex items-center gap-3 pl-4 border-b border-line bg-surface-2"
   >
     <!-- 标记：和 scripts/make-icon.mjs 画的是同一个图形，几何常量一一对应
          （背景 #2f516e→#121a24、立方体顶 #8fd4fa / 左 #3f92c9 / 右 #245c8c、箭头 #eaf6ff；
@@ -57,15 +57,14 @@ const win = window.api.win
         <polygon points="70,152 128,186 128,236 70,202" fill="#3f92c9" />
         <polygon points="186,152 128,186 128,236 186,202" fill="#245c8c" />
       </svg>
-      <span class="text-body font-semibold tracking-tight">SteamSDK 上传工作台</span>
+      <span class="text-label font-bold uppercase tracking-[0.09em] text-ink whitespace-nowrap">SteamSDK 上传工作台</span>
     </div>
 
     <div class="h-4 w-px bg-line" />
 
-    <!-- SDK 路径可能很长（比如下载后解压到 Downloads 里），这里必须能收窄，
-         否则会把右边的状态胶囊和窗口按钮挤出窗口。 -->
-    <div class="flex items-center gap-2 text-label text-faint no-drag min-w-0">
-      <span class="font-mono truncate" :title="state.sdk?.sdkRoot">{{ state.sdk?.sdkRoot || '—' }}</span>
+    <!-- SDK 路径完整显示：换行而不是省略号。顶栏高 44px 起、可自动长高 -->
+    <div class="flex items-center gap-2 text-micro text-faint no-drag min-w-0">
+      <span class="font-mono whitespace-normal break-all leading-[1.35]">{{ state.sdk?.sdkRoot || '—' }}</span>
     </div>
 
     <div class="ml-auto flex items-center gap-2 no-drag">
@@ -78,7 +77,7 @@ const win = window.api.win
       >
         <div
           v-if="state.running"
-          class="flex items-center gap-2 h-6 px-2.5 rounded-full bg-[rgba(102,192,244,.1)] border border-[rgba(102,192,244,.28)]"
+          class="flex items-center gap-2 h-6 px-2 rounded-tag bg-[rgba(102,192,244,.1)] border border-[rgba(102,192,244,.28)]"
         >
           <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
           <span class="text-label text-accent font-medium">
@@ -101,12 +100,12 @@ const win = window.api.win
 
     <!-- 窗口按钮：和顶栏同高（h-11 = 44px），hover 自己控 -->
     <div class="self-stretch flex items-stretch no-drag">
-      <button :class="WBTN" class="hover:bg-[#21344a] hover:text-ink" title="最小化" @click="win.minimize()">
+      <button :class="WBTN" class="hover:bg-surface-3 hover:text-ink" title="最小化" @click="win.minimize()">
         <Minus :size="15" />
       </button>
       <button
         :class="WBTN"
-        class="hover:bg-[#21344a] hover:text-ink"
+        class="hover:bg-surface-3 hover:text-ink"
         :title="maximized ? '向下还原' : '最大化'"
         @click="win.maximize()"
       >

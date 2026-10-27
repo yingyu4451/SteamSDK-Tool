@@ -46,7 +46,7 @@ const dup = computed(() => {
     <div class="flex items-start gap-4 flex-wrap min-w-0">
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-          <h1 class="text-display font-semibold tracking-tight m-0 truncate min-w-0 max-w-[420px]">{{ app.dirName }}</h1>
+          <h1 class="text-display font-semibold tracking-tight m-0 break-words min-w-0">{{ app.dirName }}</h1>
           <span class="pill" :class="status.tone">{{ status.text }}</span>
           <span v-if="app.setLive" class="pill pill-warn">SetLive · {{ app.setLive }}</span>
           <button class="btn btn-sm no-drag" title="改 AppID / 描述 / 项目文件夹 / 构建缓存目录" @click="openDrawer('app')">
@@ -66,13 +66,13 @@ const dup = computed(() => {
         </div>
 
         <div class="mt-3 flex flex-col gap-1.5 min-w-0">
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="shrink-0 w-[64px] text-label text-faint whitespace-nowrap">项目文件夹</span>
+          <div class="flex items-start gap-3 min-w-0">
+            <span class="shrink-0 w-[64px] pt-1 text-label text-faint whitespace-nowrap">项目文件夹</span>
             <PathLink :path="app.contentRoot" kind="folder" class="min-w-0" />
           </div>
 
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="shrink-0 w-[64px] text-label text-faint whitespace-nowrap tracking-[0.3em]">构建脚本</span>
+          <div class="flex items-start gap-3 min-w-0">
+            <span class="shrink-0 w-[64px] pt-1 text-label text-faint whitespace-nowrap">构建脚本</span>
             <PathLink :path="app.appPath" kind="file" class="min-w-0" />
           </div>
         </div>
@@ -85,7 +85,7 @@ const dup = computed(() => {
       class="fade-in-up mt-4 rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] p-3"
     >
       <div class="text-label font-semibold text-danger mb-1.5">AppID 冲突</div>
-      <div class="text-label text-[#ffb0b8] leading-relaxed">
+      <div class="text-label text-muted leading-relaxed">
         AppID <span class="num font-semibold">{{ dup.appId }}</span> 同时被这些本地 App 使用：
         <span class="font-mono">{{ dup.apps.join('、') }}</span>。<br />
         给其中一个跑构建，内容会传到<strong>同一个 Steam App</strong> 上。请到 Steamworks
@@ -108,7 +108,7 @@ const dup = computed(() => {
 
       <div class="flex flex-col gap-1">
         <div v-for="(r, i) in activeRows" :key="i" class="flex items-start gap-2 group">
-          <span class="text-label leading-relaxed min-w-0 flex-1 text-[#d7c3a0]">{{ r.text }}</span>
+          <span class="text-label leading-relaxed min-w-0 flex-1 text-muted">{{ r.text }}</span>
 
           <button
             class="link-btn shrink-0"
@@ -129,8 +129,8 @@ const dup = computed(() => {
     </div>
   </div>
 
-  <div v-else-if="app?.error" class="card p-5 border-[#4a2a2a]">
-    <div class="text-copy font-semibold text-[#ff8a8a]">读取 App 失败</div>
+  <div v-else-if="app?.error" class="card p-5 border-[rgba(226,75,75,.35)]">
+    <div class="text-copy font-semibold text-danger">读取 App 失败</div>
     <div class="text-body text-muted mt-1.5">{{ app.error }}</div>
   </div>
 </template>

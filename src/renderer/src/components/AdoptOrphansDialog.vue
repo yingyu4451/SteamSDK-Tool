@@ -67,7 +67,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
           <div
             v-for="o in apps"
             :key="o.file"
-            class="font-mono text-label text-accent py-0.5 truncate"
+            class="font-mono text-label text-accent py-0.5 break-all"
           >
             <span class="text-faint">app　</span>{{ o.file }}
             <span class="text-faint"> → app_{{ o.appId || 'unknown' }}.vdf</span>
@@ -75,7 +75,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
           <div
             v-for="o in depots"
             :key="o.file"
-            class="font-mono text-label text-accent py-0.5 truncate"
+            class="font-mono text-label text-accent py-0.5 break-all"
           >
             <span class="text-faint">depot</span> {{ o.file }}
           </div>

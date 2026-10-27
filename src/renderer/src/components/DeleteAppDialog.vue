@@ -91,13 +91,13 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
       aria-modal="true"
       aria-labelledby="delete-app-title"
       class="relative card w-full max-w-[560px] max-h-[88vh] overflow-y-auto scroll-thin transition-colors duration-200"
-      :class="armed ? 'border-[#e24b4b]' : 'border-[#4a2a2a]'"
+      :class="armed ? 'border-danger' : 'border-[rgba(226,75,75,.35)]'"
     >
       <header class="px-6 pt-5 pb-4 border-b border-line">
-        <h2 id="delete-app-title" class="text-lead font-semibold m-0 text-[#ff8a8a]">
+        <h2 id="delete-app-title" class="text-lead font-semibold m-0 text-danger">
           删除 App「{{ d.dirName }}」
         </h2>
-        <p class="mt-1.5 mb-0 text-label text-[#ff8a8a]">不可撤销。Steam 上已传的构建不受影响。</p>
+        <p class="mt-1.5 mb-0 text-label text-danger">不可撤销。Steam 上已传的构建不受影响。</p>
       </header>
 
       <div v-if="d.loading" class="p-6 text-body text-muted">正在统计要删的东西…</div>
@@ -114,7 +114,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
               {{ d.info.scripts.files }} 个文件 · {{ fmtSize(d.info.scripts.bytes) }}
             </span>
           </div>
-          <div class="mt-2 font-mono text-label text-[#ffb0b8] break-all">{{ d.info.scripts.path }}</div>
+          <div class="mt-2 font-mono text-label text-danger/80 break-all">{{ d.info.scripts.path }}</div>
           <div class="mt-1.5 text-micro text-faint">
             包含 app_{{ d.info.appId }}.vdf 和所有 depot 脚本。以后再想要这个版本，得重新建一遍。
           </div>
@@ -144,7 +144,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
           <div class="mt-2.5 flex flex-col gap-1.5">
             <div v-for="c in d.info.content" :key="c.depotId" class="flex items-center gap-2 text-label">
               <span class="num text-faint shrink-0 w-14">{{ c.depotId }}</span>
-              <span class="font-mono truncate flex-1" :class="c.exists ? 'text-muted' : 'text-faint line-through'">
+              <span class="font-mono break-all flex-1" :class="c.exists ? 'text-muted' : 'text-faint line-through'">
                 {{ c.path }}
               </span>
               <span v-if="!c.exists" class="text-faint shrink-0">不存在</span>
@@ -167,7 +167,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
         <!-- 上膛后的提示条 -->
         <div
           v-if="armed"
-          class="rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] px-3.5 py-2.5 text-label text-[#ff8a8a]"
+          class="rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] px-3.5 py-2.5 text-label text-danger"
         >
           再点一次底下那个红色按钮才会真的删。改勾选或关掉窗口都会取消。
         </div>

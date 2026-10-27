@@ -149,17 +149,17 @@ function openLogDir() {
           <span class="text-body font-medium truncate">
             {{ selected?.name || '选一个日志' }}
           </span>
-          <span v-if="selected" class="text-micro text-faint font-mono truncate ml-auto" :title="selected.file">
+          <span v-if="selected" class="text-micro text-faint font-mono break-all ml-auto" :title="selected.file">
             {{ selected.file }}
           </span>
         </header>
-        <div class="flex-1 min-h-0 overflow-auto scroll-thin bg-[#080b10] p-4">
+        <div class="flex-1 min-h-0 overflow-auto scroll-thin bg-surface-2 p-4">
           <Transition name="fade-fast" mode="out-in">
             <div v-if="loading" key="loading" class="text-label text-faint">读取中…</div>
             <pre
               v-else-if="content"
               key="content"
-              class="m-0 text-label leading-[1.7] font-mono text-[#c6d4df] whitespace-pre-wrap break-all"
+              class="m-0 text-label leading-[1.7] font-mono text-muted whitespace-pre-wrap break-all"
               >{{ content }}</pre
             >
             <div v-else key="empty" class="h-full grid place-items-center">

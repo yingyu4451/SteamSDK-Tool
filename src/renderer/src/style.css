@@ -1,54 +1,79 @@
 @import 'tailwindcss';
 
 /* ==================================================================
-   主题：照着 Steam 客户端的调子 —— 深蓝底 + 浅蓝信号色 + 绿色主按钮。
-   取色参考 Steam 自己的配色：底 #171a21、面板 #1b2838、抬升 #2a475e、
-   文字 #c6d4df / #8f98a0、链接蓝 #66c0f4、Play 按钮绿 #75b022→#588a1b。
+   主题：Steam 商店（store.steampowered.com）的设计语言。
+
+   取自 Steam DESIGN.md 的四级深蓝阶梯 + 双电压按钮语法：
+     页面 canvas  #1b2838
+     结构 rail    #141f2c（标题栏 / 侧边栏）
+     卡片 tile    #283645
+     内嵌/次要    #384959
+     分隔 hairline #4c6c8c
+     正文 #c6d4df / 次要 #9dabb8 / 白光 #eaf2f8
+     链接蓝 #66c0f4，CTA 蓝 #2881a7 / #06bfff
+     提交动作（上传）用 Steam 的绿：橄榄底 + #beee11 高光线
+
+   refactoring-ui 约束（Workflow C，改前先定，不临时发挥）：
+   - 层级：每屏一个主操作（正式上传），其余用次级/文本级按钮。
+   - 字号只用下面 8 档；颜色只有 ink/muted/faint 三档正文色 + 语义色。
+   - 卡片是「平面 + 一档亮度差」，浮层才有投影（Steam 的 elevation 是阶梯不是阴影）。
+   - 圆角 2px 为主（Steam 的锐角签名），没有全胶囊。
+   - 正文对比度全部过 WCAG 4.5:1；颜色不单独承载状态。
    ================================================================== */
 @theme {
-  --color-base: #171a21;
-  --color-surface: #1b2838;
-  --color-surface-2: #21344a;
-  --color-surface-3: #2a475e;
-  --color-line: #2a3f5a;
-  --color-line-soft: #22334a;
+  --color-base: #1b2838;
+  --color-surface: #283645;
+  --color-surface-2: #141f2c;
+  --color-surface-3: #384959;
+  --color-line: #33465a;
+  --color-line-soft: #26374a;
 
-  --color-ink: #dbe6ef;
-  /* 中性三档都必须过 WCAG 4.5:1（在最亮的那层 surface-3 上也要过）。
-     原来 muted #8f98a0 在 surface-2 上只有 4.33、faint #66707a 全都在 2.9–3.5，
-     两档都是「灰到看不清」。现在的实测（surface / base / surface-2）：
-       ink   #dbe6ef  11.78 / 13.74 / 10.02
-       muted #a8b5c2   7.13 /  8.32 /  6.06
-       faint #909dab   5.40 /  6.30 /  4.59   */
-  --color-muted: #a8b5c2;
-  --color-faint: #909dab;
+  --color-ink: #eaf2f8;
+  /* 三档正文色的实测对比度（surface #283645 / base #1b2838 / surface-2 #141f2c）：
+       ink   #eaf2f8  12.5 / 14.8 / 15.7
+       muted #c6d4df   8.3 /  9.8 / 10.4
+       faint #9dabb8   4.8 /  5.7 /  6.0  */
+  --color-muted: #c6d4df;
+  --color-faint: #9dabb8;
 
-  /* 分隔符（· / |）专用。它属于结构线不属于文字，故意低于正文对比度 */
-  --color-rule: #3d5a7a;
+  /* 结构分隔符（· / | 与细线）专用，低于正文对比度 */
+  --color-rule: #4c6c8c;
 
   --color-accent: #66c0f4;
-  --color-accent-dim: #2f7dad;
+  --color-accent-dim: #2881a7;
   --color-amber: #f0a92e;
-  --color-danger: #e24b4b;
-  --color-success: #8bc53f;
+  --color-danger: #ff7d7d;
+  --color-success: #a4d007;
 
+  /* Steam 双电压：绿=提交动作，青蓝=导航动作 */
+  --color-cta-top: #a4d007;
+  --color-cta-bottom: #799905;
+  --color-cta-highlight: #beee11;
+  --color-cta-cyan: #06bfff;
+  --color-cta-cyan-mid: #2881a7;
+  --color-cta-blue: #2d73ff;
+
+  --font-sans:
+    'Motiva Sans', 'Inter', 'MiSans', 'MiSans Normal', 'Microsoft YaHei UI',
+    'Microsoft YaHei', Arial, sans-serif;
   --font-mono:
     'JetBrains Mono', 'Cascadia Mono', 'SF Mono', ui-monospace, 'Consolas', monospace;
 
-  /* 圆角只用三档：卡片 10 / 输入框 8 / 按钮与内嵌小块 6。徽标和胶囊是 999。 */
-  --radius-card: 10px;
-  --radius-input: 8px;
-  --radius-btn: 6px;
+  /* 圆角：Steam 的 2px 锐角。卡片/浮层 4，输入框与按钮 2，徽标 2。 */
+  --radius-card: 4px;
+  --radius-input: 2px;
+  --radius-btn: 2px;
+  --radius-tag: 2px;
 
-  /* 字号阶梯：全项目只用这几档（模板里用 text-micro / text-label / text-body /
-     text-copy / text-lead / text-title / text-display / text-stat） */
+  /* 字号阶梯（对齐 Steam DESIGN.md 的 11–26px 类型档）：
+     micro 11 / label 12 / body 13 / copy 14 / lead 15 / title 16 / display 21 / stat 26 */
   --text-micro: 11px;
   --text-label: 12px;
   --text-body: 13px;
   --text-copy: 14px;
   --text-lead: 15px;
-  --text-title: 17px;
-  --text-display: 19px;
+  --text-title: 16px;
+  --text-display: 21px;
   --text-stat: 26px;
 }
 
@@ -65,29 +90,25 @@ body,
 
 body {
   background: var(--color-base);
-  color: var(--color-ink);
-  /* 中文 MiSans、西文 JetBrains Mono。
-     Mono 排在前面：它只有西文和数字字形，遇到汉字会自动落到 MiSans，
-     所以不用做 unicode-range 切分，浏览器自己就分好了。 */
-  font-family:
-    'JetBrains Mono', 'MiSans', 'MiSans Normal', 'Microsoft YaHei UI', 'Microsoft YaHei',
-    sans-serif;
-  font-size: var(--text-copy);
+  color: var(--color-muted);
+  /* Steam 商店正文字体：Motiva Sans（不可得时用 Inter / MiSans / 雅黑兜底）。
+     路径、日志、数字用 --font-mono 单独指定。 */
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
 }
 
-/* 背景：Steam 那种从深蓝到近黑的纵向渐变，左上角一盏冷光 */
+/* 背景：Steam 商店那层深蓝画布 + 顶部一点冷光，不是纯色也不是大渐变 */
 #app::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(1200px 680px at 16% -14%, rgba(102, 192, 244, 0.13), transparent 62%),
-    radial-gradient(900px 520px at 102% -6%, rgba(42, 71, 94, 0.6), transparent 58%),
-    linear-gradient(180deg, #1b2838 0%, #171a21 46%, #13161c 100%);
+    radial-gradient(1100px 620px at 14% -16%, rgba(102, 192, 244, 0.1), transparent 60%),
+    linear-gradient(180deg, #1f3045 0%, #1b2838 42%, #16202b 100%);
   z-index: 0;
 }
 
@@ -96,9 +117,7 @@ textarea {
   user-select: text;
 }
 
-/* ---------- 键盘焦点 ----------
-   鼠标点击不显示焦点环，键盘 Tab 才显示（:focus-visible）。
-   以前全项目只有输入框有 focus:border 变色，按钮 Tab 过去完全看不出来。 */
+/* ---------- 键盘焦点 ---------- */
 :where(button, input, select, textarea, a[href], [tabindex]):focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -112,25 +131,23 @@ textarea {
   -webkit-app-region: no-drag;
 }
 
-/* ---------- 卡片 ---------- */
-/* Steam 的面板：深蓝底 + 自上而下一道很淡的高光边 */
-/* 卡片刻意压暗、压低对比：按钮要能一眼从卡片上跳出来。
-   之前卡片顶色 #21344a 和按钮底色 #2a475e 只差一档，看着像同一层。 */
+/* ---------- 卡片 ----------
+   Steam 的 elevation 是「换一档底色」，不是投影：
+   tile #283645 比 canvas 亮一档，1px hairline 收边，不压阴影。 */
 .card {
   position: relative;
-  background: linear-gradient(180deg, #1b2735 0%, #172230 58%, #15202c 100%);
-  border: 1px solid #24384f;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
 }
 
 .card-flat {
-  background: rgba(9, 15, 23, 0.62);
-  border: 1px solid #223650;
+  background: rgba(20, 31, 44, 0.62);
+  border: 1px solid var(--color-line-soft);
   border-radius: var(--radius-btn);
 }
 
-/* ---------- 切换 App 的过渡 ----------
-   只动 opacity 和 transform：这两样不参与布局计算，切 App 时页面不会跳。 */
+/* ---------- 切换 App 的过渡 ---------- */
 .appswitch-enter-active {
   transition:
     opacity 0.2s ease,
@@ -150,8 +167,7 @@ textarea {
   transform: translateY(-4px);
 }
 
-/* ---------- 侧边栏（新建 Depot）进出场 ----------
-   遮罩淡入淡出，面板横向滑入滑出。 */
+/* ---------- 侧边栏（新建 Depot）进出场 ---------- */
 .slideover-enter-active,
 .slideover-leave-active {
   transition: opacity 0.2s ease;
@@ -172,86 +188,87 @@ textarea {
 }
 
 /* ---------- 按钮 ----------
-   两层就够：卡片是暗的平面，按钮是「抬起来」的亮色块。
-   按钮用纯色底 + 描边区分层级，不再叠加渐变 + 内高光 + 投影三件套
-   （和卡片放一起时那种「到处都是立体感」的观感就是这么来的）。 */
+   Steam 的次要按钮是「平涂 #384959」，主按钮才是绿色提交电压。
+   主按钮取 Steam 绿（橄榄底 + #beee11 高光边），白字过 4.5:1。 */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 14px;
-  height: 36px;
+  gap: 7px;
+  padding: 0 12px;
+  height: 34px;
   border-radius: var(--radius-btn);
-  border: 1px solid #3d6588;
+  border: 1px solid rgba(76, 108, 140, 0.35);
   background: var(--color-surface-3);
   color: var(--color-ink);
+  font-family: var(--font-sans);
   font-size: var(--text-body);
   font-weight: 500;
+  letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
   transition:
-    background 0.16s ease,
-    border-color 0.16s ease,
-    color 0.16s ease,
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease,
     transform 0.08s ease;
 }
 .btn:hover:not(:disabled) {
-  background: #3b5f7f;
-  border-color: #5d93bd;
+  background: #4c6c8c;
+  border-color: rgba(102, 192, 244, 0.45);
 }
 .btn:active:not(:disabled) {
   transform: translateY(1px);
 }
 .btn:disabled {
-  opacity: 0.42;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-/* 小号按钮：表格行 / 面板里的小动作。高度 28，与 36 拉开层级。 */
+/* 小号按钮：面板行 / 浮层里的小动作。高度 26。 */
 .btn-sm {
-  height: 28px;
-  padding: 0 10px;
+  height: 26px;
+  padding: 0 8px;
   font-size: var(--text-label);
-  gap: 6px;
+  gap: 5px;
 }
 
-/* 大号按钮：新手引导 / 大弹窗底部的主操作。高度 44。 */
+/* 大号按钮：引导页 / 大弹窗底部的主操作。高度 40。 */
 .btn-lg {
-  height: 44px;
-  padding: 0 20px;
+  height: 40px;
+  padding: 0 18px;
   font-size: var(--text-copy);
 }
 
-/* 主按钮 = Steam 那个绿色 Play 按钮。
-   旧配色的浅黄字 #d2e885 落在绿底上只有 1.96–3.08，白字在旧渐变上也才 2.63；
-   现在用深一档的绿 + 白字（实测 5.10 / 6.90），既保留 Steam 的绿，也过 4.5。 */
+/* 主按钮 = Steam 的绿色提交动作（正式上传）。
+   #beee11 只出现在 1px 高光线里 —— Steam 的 lime 是「边缘光」，不是大面积底。 */
 .btn-primary {
-  background: linear-gradient(180deg, #4e7a14, #3f6410);
-  border-color: #3f6410;
-  color: #ffffff;
-  font-weight: 600;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  background: linear-gradient(180deg, var(--color-cta-top), var(--color-cta-bottom));
+  border-color: rgba(190, 238, 17, 0.65);
+  color: var(--color-base);
+  font-weight: 700;
+  text-shadow: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #556f12, #466f12);
-  border-color: #5d8a1c;
-  color: #ffffff;
+  background: linear-gradient(180deg, #b6e51a, #86a908);
+  border-color: rgba(190, 238, 17, 0.85);
+  color: var(--color-base);
 }
 
-/* 危险动作：平时只是描边红的低调样式，不跟主按钮抢 */
+/* 危险动作：低调描边红，不跟主按钮抢 */
 .btn-danger {
   border-color: rgba(226, 75, 75, 0.38);
   background: rgba(226, 75, 75, 0.1);
   color: #ff9a9a;
 }
 .btn-danger:hover:not(:disabled) {
-  background: rgba(226, 75, 75, 0.16);
+  background: rgba(226, 75, 75, 0.18);
   border-color: rgba(226, 75, 75, 0.55);
   color: #ffb0b0;
 }
 
-/* 「上膛」状态：实心红，跟未上膛的低调红明确区分（白字实测 5.85） */
+/* 「上膛」状态：实心红（白字实测 5.85） */
 .btn-danger-solid {
   background: linear-gradient(180deg, #b53838, #9c2f2f);
   border-color: #b53838;
@@ -264,18 +281,16 @@ textarea {
   color: #ffffff;
 }
 
-/*
- * 面板里的「不抢戏」文字按钮。
- * 蓝色厚按钮（.btn）放在警告底色上会打架 —— 那是个提示条，不该有东西比提示本身还显眼。
- */
+/* 面板里的「不抢戏」文字按钮：Steam 的链接蓝 */
 .link-btn {
   background: transparent;
   border: 0;
   padding: 1px 5px;
   border-radius: var(--radius-btn);
+  font-family: var(--font-sans);
   font-size: var(--text-label);
   line-height: 1.5;
-  color: var(--color-faint);
+  color: var(--color-accent);
   cursor: pointer;
   white-space: nowrap;
   transition:
@@ -283,30 +298,35 @@ textarea {
     background-color 0.15s;
 }
 .link-btn:hover {
-  color: var(--color-accent);
+  color: #a8d8f0;
   background: rgba(102, 192, 244, 0.12);
 }
-.link-btn.is-danger:hover {
+.link-btn.is-danger {
   color: #ff9a9a;
+}
+.link-btn.is-danger:hover {
+  color: #ffb0b0;
   background: rgba(226, 75, 75, 0.14);
 }
 
-/* ---------- 徽标 / 药丸 ---------- */
+/* ---------- 徽标 / 标签 ----------
+   Steam 没有全胶囊：标签也是 2px 锐角小方牌。 */
 .pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  border-radius: 999px;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: var(--radius-tag);
+  font-family: var(--font-sans);
   font-size: var(--text-label);
   font-weight: 600;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
 }
 .pill-ok {
-  background: rgba(139, 197, 63, 0.1);
+  background: rgba(164, 208, 7, 0.1);
   color: var(--color-success);
-  border-color: rgba(139, 197, 63, 0.24);
+  border-color: rgba(164, 208, 7, 0.26);
 }
 .pill-warn {
   background: rgba(240, 169, 46, 0.1);
@@ -319,18 +339,20 @@ textarea {
   border-color: rgba(226, 75, 75, 0.26);
 }
 .pill-idle {
-  background: rgba(143, 152, 160, 0.1);
+  background: rgba(157, 171, 184, 0.09);
   color: var(--color-muted);
-  border-color: rgba(143, 152, 160, 0.22);
+  border-color: rgba(157, 171, 184, 0.22);
 }
 
-/* ---------- 筛选胶囊（构建历史：全部 / 每个 App） ---------- */
+/* ---------- 筛选标签（构建历史） ----------
+   Steam 的分类筛选：未选是平涂，选中换成 CTA 蓝底 + 白字。 */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 11px;
-  border-radius: 999px;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-tag);
+  font-family: var(--font-sans);
   font-size: var(--text-label);
   font-weight: 500;
   cursor: pointer;
@@ -344,29 +366,32 @@ textarea {
 }
 .chip:hover {
   color: var(--color-ink);
-  border-color: rgba(102, 192, 244, 0.28);
+  border-color: rgba(102, 192, 244, 0.35);
 }
 .chip-on {
-  background: rgba(102, 192, 244, 0.1);
-  color: var(--color-accent);
-  border-color: rgba(102, 192, 244, 0.4);
+  background: var(--color-cta-cyan-mid);
+  color: #ffffff;
+  border-color: var(--color-cta-cyan);
 }
 
-/* ---------- 目录 / 文件路径：显眼 + 可点开 ---------- */
+/* ---------- 目录 / 文件路径 ----------
+   要求：**完整路径**。路径在这里是「数据」，不是可省略的标签，
+   所以不裁切、不省略号；长路径换行显示，行高略松，避免读串行。 */
 .path-link {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  align-items: flex-start;
   gap: 6px;
   max-width: 100%;
   min-width: 0;
-  padding: 2.5px 9px 2.5px 7px;
-  border-radius: var(--radius-btn);
+  padding: 3px 8px;
+  border-radius: var(--radius-input);
   border: 1px solid rgba(102, 192, 244, 0.2);
-  background: rgba(102, 192, 244, 0.055);
+  background: rgba(20, 31, 44, 0.5);
   color: #a8d8f0;
   font-family: var(--font-mono);
   font-size: var(--text-label);
-  line-height: 1.5;
+  line-height: 1.6;
+  text-align: left;
   cursor: pointer;
   transition:
     background 0.14s,
@@ -375,17 +400,18 @@ textarea {
 }
 .path-link:hover {
   background: rgba(102, 192, 244, 0.13);
-  border-color: rgba(102, 192, 244, 0.46);
+  border-color: rgba(102, 192, 244, 0.5);
   color: #d3ecfa;
 }
 .path-link:active {
   background: rgba(102, 192, 244, 0.2);
 }
 .path-link .path-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   min-width: 0;
+  flex: 1 1 auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 /* ---------- 日志 ---------- */
@@ -398,8 +424,6 @@ textarea {
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-all;
-  /* body 上默认 user-select: none（免得点哪儿都是选中的蓝块），
-     但日志是要拿去搜/贴的，这里单独放开 */
   user-select: text;
   cursor: text;
 }
@@ -408,7 +432,7 @@ textarea {
   flex: 0 0 auto;
 }
 .log-stdout {
-  color: #c6d4df;
+  color: var(--color-muted);
 }
 .log-stderr {
   color: #ff8a8a;
@@ -420,20 +444,20 @@ textarea {
 /* ---------- 滚动条 ---------- */
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: #2a3f5a transparent;
+  scrollbar-color: #4c6c8c transparent;
 }
 .scroll-thin::-webkit-scrollbar {
   width: 9px;
   height: 9px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: #2a3f5a;
-  border-radius: 6px;
+  background: #4c6c8c;
+  border-radius: 2px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
-  background: #3d5a7a;
+  background: #66c0f4;
   background-clip: content-box;
 }
 .scroll-thin::-webkit-scrollbar-track {
@@ -447,9 +471,7 @@ textarea {
   letter-spacing: -0.01em;
 }
 
-/* ---------- 空状态 / 错误状态 ----------
-   空态不是「空白」，要说明现在是什么状态、下一步能做什么。
-   多个面板共用这一个组件（EmptyState.vue）。 */
+/* ---------- 空状态 / 错误状态 ---------- */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -469,15 +491,14 @@ textarea {
   width: 38px;
   height: 38px;
   margin-bottom: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(102, 192, 244, 0.18);
-  background: rgba(102, 192, 244, 0.08);
+  border-radius: var(--radius-input);
+  border: 1px solid rgba(102, 192, 244, 0.22);
+  background: rgba(20, 31, 44, 0.55);
   color: var(--color-accent);
 }
 .empty-state-compact .empty-icon {
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-input);
 }
 .empty-icon-danger {
   border-color: rgba(226, 75, 75, 0.24);
@@ -536,7 +557,7 @@ textarea {
   }
 }
 
-/* 平台行拖拽排序：靠 <TransitionGroup> 做 FLIP，不然换位是瞬间跳的，看不出来 */
+/* 平台行拖拽排序 */
 .plat-move {
   transition: transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -549,15 +570,8 @@ textarea {
   opacity: 0;
 }
 
-/*
- * 工具条下面那些面板（同步 Depot / 检查文件 / 本地服务器 / 密码行）。
- * 原来它们是条内流式块，一展开就把下面所有内容顶下去 —— 看起来像“按钮弹了个 div”。
- * 改成绝对定位的浮层，完全不占布局。
- *
- * 宽度也改了：原来是 left:0 right:0，一个按钮弹出一整条横贯窗口的面板，
- * 跟点哪儿没关系，看着很怪。现在收成一个 620px 的下拉，挂在按钮那一侧
- * （左边按钮用 .bar-pop-left，右边按钮用 .bar-pop-right）。
- */
+/* ---------- 工具条浮层 ----------
+   绝对定位、不占布局；Steam 的下拉是深色 tile + 细边 + 一道投影。 */
 .bar-pop {
   position: absolute;
   top: calc(100% + 10px);
@@ -569,26 +583,23 @@ textarea {
   scrollbar-width: thin;
   border-radius: var(--radius-card);
   border: 1px solid var(--color-line);
-  background: #22374d;
+  background: #22303f;
   box-shadow:
-    0 26px 56px -18px rgba(0, 0, 0, 0.86),
-    0 3px 10px -3px rgba(0, 0, 0, 0.6);
+    0 18px 40px -16px rgba(0, 0, 0, 0.85),
+    0 2px 6px -2px rgba(0, 0, 0, 0.6);
 }
 
-/* 内容多的面板（同步 Depot / 检查文件 / 本地服务器）宽一点，不然 depot 行会挤成两行 */
 .bar-pop-wide {
   width: min(880px, calc(100vw - 48px));
 }
-
 .bar-pop-left {
   left: 0;
 }
-
 .bar-pop-right {
   right: 0;
 }
 
-/* 大包解压/统计时的加载圈：主进程那几分钟是忙的，界面得自己转起来 */
+/* 大包解压/统计时的加载圈 */
 .drop-spinner {
   width: 34px;
   height: 34px;
@@ -597,27 +608,19 @@ textarea {
   border-top-color: var(--color-accent);
   animation: drop-spin 0.75s linear infinite;
 }
-
 @keyframes drop-spin {
   to {
     transform: rotate(360deg);
   }
 }
-
-/* 引导第三步那个「正在检查登录状态」的小转圈，转得慢一点，别抢戏 */
 .drop-spin-slow {
   animation: drop-spin 1.6s linear infinite;
 }
-
-/* 按钮里、状态行里的小转圈（lucide 的 LoaderCircle 配这个） */
 .drop-spin {
   animation: drop-spin 0.75s linear infinite;
 }
 
-/* ---------- 交互过渡：补齐 hover / focus 的瞬跳 ----------
-   .btn / .chip / .link-btn / .path-link 各自带 transition；
-   这里兜住输入框、标题栏窗口按钮、tab、拖拽手柄这些零散控件。
-   放进 @layer base：Tailwind 工具类（transition-transform 等）仍然优先。 */
+/* ---------- 交互过渡 ---------- */
 @layer base {
   :where(input, select, textarea) {
     transition:
@@ -636,9 +639,7 @@ textarea {
   }
 }
 
-/* ---------- 浮层进出场：遮罩淡入淡出 + 面板轻微上浮 ----------
-   以前弹窗只有进场（组件 onMounted 里 gsap），关的时候是瞬间消失；
-   现在统一走 <Transition name="overlay">，进出都有。 */
+/* ---------- 浮层进出场 ---------- */
 .overlay-enter-active,
 .overlay-leave-active {
   transition: opacity 0.2s ease;
@@ -658,13 +659,13 @@ textarea {
   transform: translateY(14px) scale(0.985);
 }
 
-/* 右侧抽屉（编辑 App / Depot）：横向滑入滑出，而不是往上浮 */
+/* 右侧抽屉（编辑 App / Depot）：横向滑入滑出 */
 .overlay-enter-from .overlay-drawer,
 .overlay-leave-to .overlay-drawer {
   transform: translateX(36px);
 }
 
-/* ---------- 局部内容切换：tab / 步骤 / 详情 / 诊断阶段 ---------- */
+/* ---------- 局部内容切换 ---------- */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.16s ease;
@@ -693,7 +694,7 @@ textarea {
   transform: translateY(-4px);
 }
 
-/* 新出现的提示条 / 警告卡：淡入 + 轻微上移，别直接蹦出来 */
+/* 新出现的提示条 / 警告卡 */
 .fade-in-up {
   animation: fade-in-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -708,8 +709,7 @@ textarea {
   }
 }
 
-/* 可折叠区域（可疑文件 / 被 Exclusions 挡下的文件）：
-   高度平滑展开收起，别在点箭头时整块瞬间张合。 */
+/* 可折叠区域：高度平滑展开收起 */
 .collapsible {
   display: grid;
   grid-template-rows: 0fr;
@@ -721,9 +721,8 @@ textarea {
 .collapsible > * {
   overflow: hidden;
 }
-/* ---------- 减少动态效果 ----------
-   系统开了「减少动画」时，把 CSS 动画/过渡全部压掉；
-   JS 侧的 GSAP 动画在 motion.js 里判断 prefers-reduced-motion。 */
+
+/* ---------- 减少动态效果 ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

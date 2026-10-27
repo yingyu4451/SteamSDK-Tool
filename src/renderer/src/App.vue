@@ -128,8 +128,8 @@ function onLeave(el, done) {
       <main class="flex-1 min-w-0 min-h-0 relative">
         <!-- 启动失败 -->
         <div v-if="state.booted && state.bootError" class="p-8">
-          <div class="card p-6 border-[#4a2a2a]">
-            <div class="text-lead font-semibold text-[#ff8a8a] mb-2">启动失败</div>
+          <div class="card p-6 border-[rgba(226,75,75,.35)]">
+            <div class="text-lead font-semibold text-danger mb-2">启动失败</div>
             <div class="text-body text-muted">{{ state.bootError }}</div>
           </div>
         </div>
@@ -138,7 +138,7 @@ function onLeave(el, done) {
         <div v-else-if="!state.booted" class="h-full grid place-items-center">
           <div class="flex flex-col items-center gap-3 text-muted text-body">
             <div
-              class="w-7 h-7 rounded-full border-2 border-[#23303d] border-t-[#66c0f4] animate-spin"
+              class="w-7 h-7 rounded-full border-2 border-line border-t-accent animate-spin"
             />
             正在读取 SDK…
           </div>
@@ -206,8 +206,8 @@ function onLeave(el, done) {
         class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-card border text-body shadow-2xl max-w-[80vw] truncate"
         :class="
           state.toast.tone === 'bad'
-            ? 'border-[rgba(255,92,108,.3)] bg-[#221a1a] text-[#ff8a8a]'
-            : 'border-[rgba(102,192,244,.3)] bg-[#16202d] text-accent'
+            ? 'border-[rgba(255,92,108,.3)] bg-[rgba(226,75,75,.12)] text-danger'
+            : 'border-[rgba(102,192,244,.3)] bg-surface-2 text-accent'
         "
       >
         {{ state.toast.text }}

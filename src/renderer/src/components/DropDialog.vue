@@ -202,7 +202,7 @@ async function doApply() {
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
         <div class="min-w-0">
           <h2 id="drop-dialog-title" class="text-lead font-semibold m-0">文件导入</h2>
-          <p class="mt-1 mb-0 text-label text-faint font-mono truncate" :title="d.target">
+          <p class="mt-1 mb-0 text-label text-faint font-mono break-all" :title="d.target">
             {{ d.target }}
           </p>
         </div>
@@ -293,7 +293,7 @@ async function doApply() {
                 :class="
                   target === dep.file
                     ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]'
-                    : 'border-line hover:border-[#2a3644]'
+                    : 'border-line hover:border-rule'
                 "
               >
                 <input type="radio" value="" :checked="target === dep.file" class="accent-[#66c0f4]" @change="newPick = false; target = dep.file; backendPick = null" />
@@ -305,7 +305,7 @@ async function doApply() {
                 >
                   平台一致
                 </span>
-                <span class="ml-auto font-mono text-micro text-faint truncate max-w-[240px]" :title="dep.contentRoot">
+                <span class="ml-auto font-mono text-micro text-faint break-all max-w-[240px] text-right" :title="dep.contentRoot">
                   {{ dep.contentRoot || '（没有内容目录）' }}
                 </span>
               </label>
@@ -318,7 +318,7 @@ async function doApply() {
                 :class="
                   effPick?.depotId === row.depotId
                     ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]'
-                    : 'border-line hover:border-[#2a3644]'
+                    : 'border-line hover:border-rule'
                 "
               >
                 <input
@@ -337,7 +337,7 @@ async function doApply() {
               <label
                 class="flex items-center gap-2.5 px-3 py-2 rounded-card border cursor-pointer transition-colors"
                 :class="
-                  !target && !effPick ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]' : 'border-line hover:border-[#2a3644]'
+                  !target && !effPick ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]' : 'border-line hover:border-rule'
                 "
               >
                 <input type="radio" :checked="!target && !effPick" class="accent-[#66c0f4]" @change="newPick = true; target = ''; backendPick = null" />

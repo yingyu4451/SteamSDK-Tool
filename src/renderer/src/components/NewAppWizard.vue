@@ -229,7 +229,7 @@ const descTab = ref('desc')
               list="known-apps"
               placeholder="例如 1234560"
               class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border text-body num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
-              :class="w.appId && !appIdOk ? 'border-[#6d3030]' : 'border-line'"
+              :class="w.appId && !appIdOk ? 'border-[rgba(226,75,75,.55)]' : 'border-line'"
               @input="wizardAppIdChanged($event.target.value)"
               @blur="onAppIdBlur"
               @keyup.enter="doLookup"
@@ -502,7 +502,7 @@ const descTab = ref('desc')
                   <div
                     v-for="(f, i) in grp.rows"
                     :key="grp.name + i"
-                    class="font-mono text-label text-accent py-0.5 truncate"
+                    class="font-mono text-label text-accent py-0.5 break-all"
                   >
                     <span class="text-faint">{{ grp.icon }}</span>{{ f }}
                   </div>

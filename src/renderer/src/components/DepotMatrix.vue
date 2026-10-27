@@ -193,8 +193,8 @@ async function openPath(p) {
         </div>
 
         <div class="mt-2.5 flex flex-col gap-1">
-          <div class="flex items-center gap-2 text-label min-w-0">
-            <span class="shrink-0 w-[64px] text-faint">内容目录</span>
+          <div class="flex items-start gap-2 text-label min-w-0">
+            <span class="shrink-0 w-[64px] pt-1 text-faint">内容目录</span>
             <PathLink
               v-if="a?.contentRoot"
               :path="a.contentRoot"
@@ -204,8 +204,8 @@ async function openPath(p) {
             />
             <span v-else class="text-faint">未设置</span>
           </div>
-          <div class="flex items-center gap-2 text-label min-w-0">
-            <span class="shrink-0 w-[64px] text-faint">脚本</span>
+          <div class="flex items-start gap-2 text-label min-w-0">
+            <span class="shrink-0 w-[64px] pt-1 text-faint">脚本</span>
             <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
           </div>
           <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-label min-w-0">
@@ -244,7 +244,7 @@ async function openPath(p) {
                 :key="i"
                 class="flex items-center gap-3 py-1.5 border-b border-line-soft last:border-b-0"
               >
-                <span class="font-mono text-label text-[#ffb0b8] truncate flex-1 min-w-0" :title="f.rel">{{ f.rel }}</span>
+                <span class="font-mono text-label text-danger/80 break-all flex-1 min-w-0" :title="f.rel">{{ f.rel }}</span>
                 <span class="num text-micro text-faint shrink-0">{{ fmtSize(f.size) }}</span>
               </div>
             </div>
@@ -280,7 +280,7 @@ async function openPath(p) {
                 <div
                   v-for="(f, i) in files.slice(0, 30)"
                   :key="i"
-                  class="font-mono text-micro text-faint truncate pl-1 py-0.5"
+                  class="font-mono text-micro text-faint break-all pl-1 py-0.5"
                   :title="f.rel"
                 >
                   {{ f.rel }}

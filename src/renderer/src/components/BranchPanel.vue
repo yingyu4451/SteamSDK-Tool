@@ -68,7 +68,7 @@ function openExternal(url) {
           :class="
             b === current
               ? 'border-[rgba(255,180,84,.35)] text-amber'
-              : 'border-line text-muted hover:text-ink hover:border-[#3d5a7a]'
+              : 'border-line text-muted hover:text-ink hover:border-rule'
           "
           @click="draft = b"
         >

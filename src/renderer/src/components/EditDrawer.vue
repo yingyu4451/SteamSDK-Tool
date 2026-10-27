@@ -308,19 +308,19 @@ onUnmounted(depotDisarm)
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-drawer-title"
-      class="overlay-drawer relative w-[500px] max-w-[92vw] h-full bg-[#0c1016] border-l border-line flex flex-col min-h-0"
+      class="overlay-drawer relative w-[500px] max-w-[92vw] h-full bg-surface border-l border-line shadow-[-18px_0_44px_-24px_rgba(0,0,0,.85)] flex flex-col min-h-0"
     >
       <header class="px-5 py-4 border-b border-line flex items-center gap-3 shrink-0">
         <div>
           <h2 id="edit-drawer-title" class="text-copy font-semibold m-0">
             {{ isDepot ? `编辑 Depot ${depot?.id ?? ''}` : '编辑 App' }}
           </h2>
-          <div class="mt-1 text-micro font-mono text-faint truncate max-w-[360px]">
+          <div class="mt-1 text-micro font-mono text-faint break-all max-w-[360px]">
             {{ isDepot ? drawer.depotFile : detail?.appFile }}
           </div>
         </div>
         <button
-          class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
+          class="ml-auto w-7 h-7 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 transition-colors bg-transparent border-0 cursor-pointer"
           @click="closeDrawer"
         >
           <X :size="16" :stroke-width="2" />
@@ -371,8 +371,8 @@ onUnmounted(depotDisarm)
                 <span class="w-[88px] shrink-0 text-label text-faint">{{ row.label }}</span>
                 <template v-if="editing !== row.key">
                   <span
-                    class="min-w-0 flex-1 text-body truncate"
-                    :class="[row.mono ? 'font-mono' : '', row.value ? 'text-ink' : 'text-faint']"
+                    class="min-w-0 flex-1 text-body"
+                    :class="[row.mono ? 'font-mono break-all' : '', row.value ? 'text-ink' : 'text-faint']"
                     :title="row.value || ''"
                     >{{ row.value || row.empty }}</span
                   >
@@ -593,7 +593,7 @@ onUnmounted(depotDisarm)
               {{ depotArmed ? `确认删除 Depot（${depotLeft}）` : '删除这个 Depot' }}
             </button>
           </div>
-          <div v-if="depotArmed" class="mt-2 text-micro text-[#ff8a8a] leading-relaxed">
+          <div v-if="depotArmed" class="mt-2 text-micro text-danger leading-relaxed">
             会删掉文件 {{ drawer.depotFile }}，并从 app 脚本里移除引用。
             Steam 上已经传过的 depot 不受影响。5 秒内再点一次才真删。
           </div>

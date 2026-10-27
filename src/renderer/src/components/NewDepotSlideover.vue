@@ -64,19 +64,20 @@ const willCreate = computed(() => {
 <template>
   <Transition name="slideover">
     <div v-if="s" class="fixed inset-0 z-50 flex justify-end">
-      <div class="absolute inset-0 bg-[rgba(9,13,19,.82)]" @click="closeDepotSlide" />
+      <!-- 遮罩不压暗页面：侧边栏直接浮在内容上，靠面板自己的底色和左侧投影分层 -->
+      <div class="absolute inset-0" @click="closeDepotSlide" />
 
       <aside
         ref="el"
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-depot-title"
-        class="slideover-panel relative h-full w-[460px] max-w-[92vw] bg-panel border-l border-line flex flex-col no-drag"
+        class="slideover-panel relative h-full w-[460px] max-w-[92vw] bg-surface border-l border-line shadow-[-18px_0_44px_-24px_rgba(0,0,0,.85)] flex flex-col no-drag"
       >
         <header class="px-5 h-14 shrink-0 border-b border-line flex items-center gap-3">
           <h2 id="new-depot-title" class="text-copy font-semibold m-0">新建 Depot</h2>
           <button
-            class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
+            class="ml-auto w-7 h-7 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 transition-colors bg-transparent border-0 cursor-pointer"
             @click="closeDepotSlide"
           >
             <X :size="16" :stroke-width="2" />
@@ -84,18 +85,13 @@ const willCreate = computed(() => {
         </header>
 
         <div class="flex-1 overflow-y-auto scroll-thin px-5 py-4 flex flex-col gap-4">
-          <!-- 这个 Depot 属于哪个 App —— 填表时一直看得见 -->
-          <div class="card-flat px-3.5 py-2.5 flex items-center gap-2.5">
-            <div class="min-w-0">
-              <div class="text-micro font-semibold tracking-wider text-faint uppercase">属于这个 App</div>
-              <div class="mt-1 flex items-baseline gap-2 min-w-0">
-                <span class="num text-body text-ink shrink-0">{{ s.appId || '—' }}</span>
-                <span class="text-body text-muted truncate">{{ s.appName || '（还不知道名字）' }}</span>
-              </div>
-              <div class="mt-0.5 text-micro text-faint truncate">scripts\{{ state.detail?.dirName }}</div>
-            </div>
+          <div v-if="s.lookupError" class="text-micro text-amber">{{ s.lookupError }}</div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-micro font-semibold tracking-wider text-faint uppercase">Steamworks 后台</span>
+            <span class="text-micro text-faint">只在本地记录，不会写进 vdf</span>
             <button
-              class="ml-auto btn btn-sm px-2.5  no-drag shrink-0"
+              class="ml-auto btn btn-sm px-2.5 no-drag shrink-0"
               :disabled="s.lookupBusy"
               title="用 steamcmd + 已保存的 Steam 账号读后台这个 App 的 Depot 列表"
               @click="slideLookupBackend"
@@ -103,13 +99,6 @@ const willCreate = computed(() => {
               <RefreshCw :size="13" :stroke-width="2" :class="s.lookupBusy ? 'animate-spin' : ''" />
               {{ s.lookupBusy ? '读取中…' : '读后台' }}
             </button>
-          </div>
-
-          <div v-if="s.lookupError" class="text-micro text-amber -mt-2">{{ s.lookupError }}</div>
-
-          <div class="flex items-baseline gap-2">
-            <span class="text-micro font-semibold tracking-wider text-faint uppercase">Steamworks 后台</span>
-            <span class="text-micro text-faint">只在本地记录，不会写进 vdf</span>
           </div>
 
           <label class="flex flex-col gap-1.5">
@@ -129,7 +118,7 @@ const willCreate = computed(() => {
               :value="s.depotId"
               placeholder="例如 1234561"
               class="h-9 px-3 rounded-input bg-surface border text-body num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
-              :class="s.depotId && !/^\d+$/.test(String(s.depotId).trim()) ? 'border-[#6d3030]' : 'border-line'"
+              :class="s.depotId && !/^\d+$/.test(String(s.depotId).trim()) ? 'border-[rgba(226,75,75,.55)]' : 'border-line'"
               @input="s.depotId = $event.target.value"
             />
             <span class="text-micro text-faint">后台新建时如果留空，Steam 会自动分配一个</span>
@@ -206,10 +195,10 @@ const willCreate = computed(() => {
 
           <div class="card-flat p-3.5">
             <div class="text-micro font-semibold tracking-wider text-faint uppercase mb-2">会写出什么</div>
-            <div class="font-mono text-label text-accent py-0.5 truncate">
+            <div class="font-mono text-label text-accent py-0.5 break-all">
               <span class="text-faint">＋ 脚本　</span>{{ willCreate.file }}
             </div>
-            <div class="font-mono text-label text-accent py-0.5 truncate">
+            <div class="font-mono text-label text-accent py-0.5 break-all">
               <span class="text-faint">＋ 目录　</span>{{ willCreate.dir || '（未填）' }}
             </div>
           </div>
