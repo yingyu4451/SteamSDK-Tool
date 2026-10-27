@@ -92,7 +92,8 @@ const api = {
     keyState: () => ipcRenderer.invoke('api:keyState'),
     testKey: () => ipcRenderer.invoke('api:testKey'),
     verifyApp: (dirName, via) => ipcRenderer.invoke('api:verifyApp', { dirName, via }),
-    appDepots: (appId, via) => ipcRenderer.invoke('api:appDepots', { appId, via })
+    appDepots: (appId, via) => ipcRenderer.invoke('api:appDepots', { appId, via }),
+    builds: (appId, via) => ipcRenderer.invoke('api:builds', { appId, via })
   },
 
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),

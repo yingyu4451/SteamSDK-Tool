@@ -7,6 +7,7 @@ import StatCard from './StatCard.vue'
 import DepotMatrix from './DepotMatrix.vue'
 import BranchPanel from './BranchPanel.vue'
 import ConsoleLog from './ConsoleLog.vue'
+import BuildPanel from './BuildPanel.vue'
 import EmptyState from './EmptyState.vue'
 import { MousePointerClick, TriangleAlert } from '@lucide/vue'
 
@@ -136,22 +137,19 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
         />
       </div>
 
-      <!-- 左边 Depot（下面挂分支），右边构建输出。
-           右列用「absolute 包裹层 + 卡片 h-full」：包裹层不参与行高计算，
-           行高完全由左列（Depot + 分支）决定 —— 构建输出底边永远跟分支齐平，
-           日志再长也只在框里滚，不会把这一行撑高。
+      <!-- 左边 Depot（下面挂分支），右边「构建输出 + 后台构建」。
+           右列是 flex 列：构建输出 flex-1 吃掉剩余高度（日志再长也只在框里滚），
+           后台构建面板按内容取高；这一行的高度仍由较高的那一列决定。
            注意：不能直接给卡片加 absolute —— style.css 里的 .card 是**无层**样式，
-           `position: relative` 会盖掉 Tailwind 分层里的 .absolute。
-           min-h 只是兜底：万一左列特别矮，别让控制台缩成一条缝。 -->
+           `position: relative` 会盖掉 Tailwind 分层里的 .absolute。 -->
       <div class="grid grid-cols-2 gap-4 min-w-0">
         <div class="flex flex-col gap-4 min-w-0">
           <DepotMatrix :depots="detail.depots || []" />
           <BranchPanel />
         </div>
-        <div class="relative min-w-0 min-h-[360px]">
-          <div class="absolute inset-0">
-            <ConsoleLog class="h-full" />
-          </div>
+        <div class="flex flex-col gap-4 min-w-0">
+          <ConsoleLog class="flex-1 min-h-[300px]" />
+          <BuildPanel />
         </div>
       </div>
       </div>

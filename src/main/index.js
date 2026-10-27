@@ -82,9 +82,11 @@ import {
   getAppDepotVersions,
   getAppBetas,
   getAppBuilds,
+  enrichDepotsWithBuilds,
   diffDepots,
   diffBranches,
-  summarizeAppDepots
+  summarizeAppDepots,
+  PLATFORM_LABEL
 } from './steamapi.js'
 import { fetchAppDepotsViaSteamcmd } from './steamcmdinfo.js'
 import { runScript, killRun, sendInput, listRuns } from './runner.js'
@@ -96,6 +98,27 @@ import {
 } from './scripts.js'
 
 let mainWindow = null
+
+/**
+ * `GetPartnerAppListForWebAPIKey` 是一次 20–40 KB 的网络请求，命中 10 分钟缓存。
+ * 向导 / 同步 Depot / 密钥校验都要它 —— 每次点都现拉会让「新建 App」感觉卡住。
+ */
+let partnerAppsCache = { key: '', at: 0, apps: [] }
+const PARTNER_APPS_TTL_MS = 10 * 60 * 1000
+
+function invalidatePartnerAppsCache() {
+  partnerAppsCache = { key: '', at: 0, apps: [] }
+}
+
+async function cachedPartnerApps(key) {
+  if (!key) return []
+  if (partnerAppsCache.key === key && Date.now() - partnerAppsCache.at < PARTNER_APPS_TTL_MS) {
+    return partnerAppsCache.apps
+  }
+  const apps = await getPartnerApps(key)
+  partnerAppsCache = { key, at: Date.now(), apps }
+  return apps
+}
 
 /**
  * 用 steamcmd 的 app_info_print 读某个 App 的 depot 列表。
@@ -382,8 +405,15 @@ function registerIpc() {
   ipcMain.handle('settings:onboarded', (_e, on) => setOnboarded(on))
 
   /* ---- Steamworks Web API ---- */
-  ipcMain.handle('api:setKey', async (_e, key) => saveApiKey(key))
-  ipcMain.handle('api:clearKey', () => clearApiKey())
+  ipcMain.handle('api:setKey', async (_e, key) => {
+    const res = await saveApiKey(key)
+    invalidatePartnerAppsCache()
+    return res
+  })
+  ipcMain.handle('api:clearKey', () => {
+    invalidatePartnerAppsCache()
+    return clearApiKey()
+  })
   ipcMain.handle('api:keyState', async () => {
     const s = loadSettings()
     const k = await readApiKey()
@@ -394,6 +424,8 @@ function registerIpc() {
     if (!k) return { ok: false, error: '还没有配置 Web API 密钥' }
     try {
       const r = await testKey(k)
+      // 顺手暖上缓存：向导打开时就不用再等一次网络
+      partnerAppsCache = { key: k, at: Date.now(), apps: r.apps }
       return { ok: true, count: r.count, sample: r.apps.slice(0, 40) }
     } catch (e) {
       return { ok: false, error: e.message, status: e.status || 0 }
@@ -420,10 +452,14 @@ function registerIpc() {
 
     if (useWeb) {
       try {
-        const [depots, partnerApps] = await Promise.all([
+        const [depotRes, buildsRes, betasRes, partnerApps] = await Promise.all([
           getAppDepotVersions(key, id),
-          getPartnerApps(key)
+          getAppBuilds(key, id, 5),
+          getAppBetas(key, id),
+          cachedPartnerApps(key)
         ])
+        // GetAppDepotVersions 对 publisher 密钥常只回 DepotID，Manifest 得从构建记录补
+        const depots = enrichDepotsWithBuilds(depotRes, buildsRes, betasRes)
         const known = partnerApps.find((a) => a.appid === id)
         return {
           ok: true,
@@ -431,7 +467,9 @@ function registerIpc() {
           appId: id,
           appIdKnown: !!known,
           appName: known ? known.name : '',
-          depots: summarizeAppDepots(depots.depots)
+          depots: summarizeAppDepots(depots.depots),
+          builds: buildsRes.builds,
+          betas: betasRes.betas
         }
       } catch (e) {
         // 密钥被拒（403）不该直接失败 —— 退回 steamcmd 再试一次
@@ -476,14 +514,23 @@ function registerIpc() {
 
     if (useWeb) {
       try {
-        const [depots, betas, builds, partnerApps] = await Promise.all([
+        const [depotRes, betasRes, buildsRes, partnerApps] = await Promise.all([
           getAppDepotVersions(key, app.appId),
           getAppBetas(key, app.appId),
           getAppBuilds(key, app.appId, 5),
-          getPartnerApps(key)
+          cachedPartnerApps(key)
         ])
-
+        // 同上：publisher 密钥拿到的 depot 只有 ID，Manifest 从构建记录回填
+        const depots = enrichDepotsWithBuilds(depotRes, buildsRes, betasRes)
         const known = partnerApps.find((a) => a.appid === String(app.appId))
+        // 平台：GetAppDepotVersions 不告诉平台，用本地 vdf 里已配的 depot 平台补上
+        const localPlatform = {}
+        for (const d of app.depots || []) localPlatform[String(d.id)] = d.platform || ''
+        const steamDepots = summarizeAppDepots(depots.depots).map((d) => {
+          if (d.platform) return d
+          const plat = localPlatform[String(d.depotId)] || ''
+          return { ...d, platform: plat, platformLabel: plat ? PLATFORM_LABEL[plat] || plat : '' }
+        })
 
         return {
           ok: true,
@@ -492,11 +539,11 @@ function registerIpc() {
           appName: known ? known.name : '',
           appIdKnown: !!known,
           partnerAppCount: partnerApps.length,
-          steamDepots: summarizeAppDepots(depots.depots),
-          betas: betas.betas,
-          builds: builds.builds,
+          steamDepots,
+          betas: betasRes.betas,
+          builds: buildsRes.builds,
           depotDiff: diffDepots(app, depots),
-          branchDiff: diffBranches((s.branches || {})[String(app.appId)] || [], betas)
+          branchDiff: diffBranches((s.branches || {})[String(app.appId)] || [], betasRes)
         }
       } catch (e) {
         // 密钥被拒（403）不该直接失败 —— 退回 steamcmd 再试一次
@@ -509,6 +556,65 @@ function registerIpc() {
     const steamy = await viaSteamcmd(app.appId, s)
     if (!steamy.ok) return steamy
     return buildSteamVerify(app, steamy, s)
+  })
+
+  /**
+   * 「后台构建 / 分支」面板：最近的构建记录 + 每个分支现在指向的 BuildID。
+   * 有 Web API 密钥走密钥；没有（或密钥被拒）退回 steamcmd —— 只能读到分支，没有构建历史。
+   */
+  ipcMain.handle('api:builds', async (_e, { appId: rawId, via } = {}) => {
+    const id = String(rawId ?? '').trim()
+    if (!/^\d+$/.test(id)) return { ok: false, error: 'AppID 必须是数字' }
+
+    const s = loadSettings()
+    const key = await readApiKey()
+    const useWeb = via === 'steamcmd' ? false : !!key
+
+    if (useWeb) {
+      try {
+        const [buildsRes, betasRes, depotRes] = await Promise.all([
+          getAppBuilds(key, id, 8),
+          getAppBetas(key, id),
+          getAppDepotVersions(key, id)
+        ])
+        const depots = enrichDepotsWithBuilds(depotRes, buildsRes, betasRes)
+        return {
+          ok: true,
+          via: 'webapi',
+          appId: id,
+          builds: buildsRes.builds,
+          betas: betasRes.betas,
+          steamDepots: summarizeAppDepots(depots.depots)
+        }
+      } catch (e) {
+        const steamy = await viaSteamcmd(id, s)
+        if (steamy.ok) {
+          return {
+            ok: true,
+            via: 'steamcmd',
+            appId: id,
+            builds: [],
+            buildsUnavailable: true,
+            betas: steamy.betas || [],
+            steamDepots: summarizeAppDepots(steamy.depots || []),
+            webError: e.message
+          }
+        }
+        return { ok: false, error: e.message, status: e.status || 0, via: 'webapi' }
+      }
+    }
+
+    const steamy = await viaSteamcmd(id, s)
+    if (!steamy.ok) return steamy
+    return {
+      ok: true,
+      via: 'steamcmd',
+      appId: id,
+      builds: [],
+      buildsUnavailable: true,
+      betas: steamy.betas || [],
+      steamDepots: summarizeAppDepots(steamy.depots || [])
+    }
   })
 
   ipcMain.handle('cred:set', async (_e, password) => savePassword(String(password ?? '')))
@@ -668,7 +774,7 @@ function registerIpc() {
     const key = await readApiKey()
     if (key) {
       try {
-        const list = await getPartnerApps(key)
+        const list = await cachedPartnerApps(key)
         partnerCount = list.length
         for (const a of list) {
           const appId = String(a.appid || '').trim()

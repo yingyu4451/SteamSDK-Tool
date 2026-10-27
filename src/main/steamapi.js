@@ -84,17 +84,100 @@ async function partnerGet(pathname, params, key) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Valve 的列表字段包法五花八门：有时是数组，有时是 { app: [...] } / { apps: [...] } / { build: [...] }，
- * 偶尔还是以数字为键的对象。统一摊平成数组，避免在字符串/对象上直接 .map 崩掉。
+ * Valve 的 partner 接口列表字段有两种包法，两种都得认：
+ *   ① 文档示例：数组，或 { app: [...] } / { builds: [...] } 这种带名字的数组
+ *   ② 实际响应（2026-10 实测）：**以 ID 为键的对象**
+ *        depots → { "2670431": {}, "2670433": {} }
+ *        betas  → { public: { BuildID, Description, ReqPassword }, qatest: … }
+ *        builds → { "26236948": { BuildID, CreationTime, depots: { "2670431": {…} } } }
+ * 所以先摊平成数组，map 的键塞进 `__key`，解析时再回填。
  */
 function asArray(value) {
   if (Array.isArray(value)) return value
   if (!value || typeof value !== 'object') return []
-  for (const key of ['app', 'apps', 'beta', 'betas', 'build', 'builds', 'depot', 'depots', 'manifest', 'manifests']) {
+  for (const key of [
+    'app',
+    'apps',
+    'beta',
+    'betas',
+    'build',
+    'builds',
+    'depot',
+    'depots',
+    'manifest',
+    'manifests',
+    'version',
+    'versions'
+  ]) {
     if (Array.isArray(value[key])) return value[key]
   }
-  const values = Object.values(value)
-  return values.length && values.every((v) => v && typeof v === 'object' && !Array.isArray(v)) ? values : []
+  const entries = Object.entries(value).filter(([, v]) => v && typeof v === 'object' && !Array.isArray(v))
+  if (!entries.length || entries.length !== Object.keys(value).length) return []
+  return entries.map(([k, v]) => ({ ...v, __key: k }))
+}
+
+const str = (v) => (v === null || v === undefined ? '' : String(v))
+const num = (v) => {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
+}
+
+/** Steam 的时间戳有秒级 Unix 和 ISO 字符串两种，统一成 ISO 字符串（渲染层直接 new Date）。 */
+function toIsoTime(v) {
+  if (v === null || v === undefined || v === '') return null
+  if (typeof v === 'number' || /^\d{9,11}$/.test(String(v))) {
+    const n = Number(v)
+    return Number.isFinite(n) && n > 0 ? new Date(n * 1000).toISOString() : null
+  }
+  return String(v)
+}
+
+function parseManifest(m) {
+  return {
+    manifestid: str(m.manifestid ?? m.ManifestID ?? m.gid ?? m.GID ?? m.DepotVersionGID),
+    buildid: str(m.buildid ?? m.BuildID),
+    branch: m.branch || m.Branch || '',
+    os: m.os || m.OS || '',
+    osarch: str(m.osarch ?? m.OSArch),
+    size: num(m.size ?? m.Size ?? m.TotalOriginalBytes),
+    downloadsize: num(m.downloadsize ?? m.DownloadSize ?? m.TotalCompressedBytes),
+    timeupdated: toIsoTime(m.timeupdated ?? m.TimeUpdated ?? m.timeupdated_unix)
+  }
+}
+
+function parseDepot(d) {
+  return {
+    depotid: str(d.depotid ?? d.DepotID ?? d.depotId ?? d.__key),
+    name: d.name || d.Name || '',
+    maxsize: num(d.maxsize ?? d.MaxSize ?? d.size),
+    oslist: Array.isArray(d.oslist) ? d.oslist : typeof d.oslist === 'string' ? d.oslist.split(',') : [],
+    manifests: asArray(d.manifests ?? d.manifest ?? d.versions ?? d.version).map(parseManifest)
+  }
+}
+
+function parseBeta(b) {
+  return {
+    betakey: str(b.betakey ?? b.BetaKey ?? b.__key),
+    description: b.description || b.Description || '',
+    buildid: str(b.buildid ?? b.BuildID),
+    timeupdated: toIsoTime(b.timeupdated ?? b.TimeUpdated),
+    reqpassword: !!(b.reqpassword ?? b.ReqPassword ?? b.ReqPasswordRequired)
+  }
+}
+
+function parseBuild(b) {
+  return {
+    buildid: str(b.buildid ?? b.BuildID ?? b.__key),
+    timeupdated: toIsoTime(b.timeupdated ?? b.TimeUpdated ?? b.CreationTime),
+    description: b.description || b.Description || '',
+    depots: asArray(b.depots ?? b.depot).map((d) => ({
+      depotid: str(d.depotid ?? d.DepotID ?? d.__key),
+      manifestid: str(d.manifestid ?? d.ManifestID ?? d.DepotVersionGID),
+      size: num(d.size ?? d.Size ?? d.TotalOriginalBytes),
+      downloadsize: num(d.downloadsize ?? d.DownloadSize ?? d.TotalCompressedBytes),
+      platform: d.platform || d.Platform || ''
+    }))
+  }
 }
 
 /** 这个密钥有权限的所有 App。用来校验 AppID 到底存不存在。 */
@@ -111,34 +194,17 @@ export async function getPartnerApps(key) {
 /** 某个 App 下后台真实存在的 Depot 列表（含每个 Depot 当前的 Manifest）。 */
 export async function getAppDepotVersions(key, appid) {
   const r = await partnerGet('/ISteamApps/GetAppDepotVersions/v1/', { appid }, key)
-  const depots = asArray(r?.depots ?? r?.depot).map((d) => ({
-    depotid: String(d.depotid ?? ''),
-    name: d.name || '',
-    maxsize: Number(d.maxsize || 0),
-    manifests: asArray(d.manifests ?? d.manifest).map((m) => ({
-      manifestid: String(m.manifestid ?? ''),
-      buildid: String(m.buildid ?? ''),
-      branch: m.branch || '',
-      os: m.os || '',
-      osarch: m.osarch || '',
-      size: Number(m.size || 0),
-      downloadsize: Number(m.downloadsize || 0),
-      timeupdated: m.timeupdated || null
-    }))
-  }))
-  return { appid: String(r?.appid ?? appid), depots: depots.filter((d) => d.depotid) }
+  // 有些密钥只拿得到 DepotID（对象值为空），manifest 细节要靠 GetAppBuilds 补；
+  // 所以这里不丢空对象，enrichDepotsWithBuilds() 之后会把构建里的 Manifest 挂回去。
+  const depots = asArray(r?.depots ?? r?.depot).map(parseDepot)
+  return { appid: str(r?.appid ?? appid), depots: depots.filter((d) => d.depotid) }
 }
 
 /** 某个 App 的所有分支。 */
 export async function getAppBetas(key, appid) {
   const r = await partnerGet('/ISteamApps/GetAppBetas/v1/', { appid }, key)
-  const betas = asArray(r?.betas ?? r?.beta).map((b) => ({
-    betakey: b.betakey || '',
-    description: b.description || '',
-    buildid: b.buildid != null ? String(b.buildid) : '',
-    timeupdated: b.timeupdated || null
-  }))
-  return { appid: String(r?.appid ?? appid), betas: betas.filter((b) => b.betakey) }
+  const betas = asArray(r?.betas ?? r?.beta).map(parseBeta)
+  return { appid: str(r?.appid ?? appid), betas: betas.filter((b) => b.betakey) }
 }
 
 /** 最近几次构建。 */
@@ -148,17 +214,56 @@ export async function getAppBuilds(key, appid, count = 5) {
     { appid, count, depot_details: 1 },
     key
   )
-  const builds = asArray(r?.builds ?? r?.build).map((b) => ({
-    buildid: b.buildid != null ? String(b.buildid) : '',
-    timeupdated: b.timeupdated || null,
-    depots: asArray(b.depots ?? b.depot).map((d) => ({
-      depotid: String(d.depotid ?? ''),
-      manifestid: String(d.manifestid ?? ''),
-      size: Number(d.size || 0),
-      platform: d.platform || ''
-    }))
-  }))
-  return { appid: String(r?.appid ?? appid), builds: builds.filter((b) => b.buildid) }
+  const builds = asArray(r?.builds ?? r?.build).map(parseBuild)
+  return { appid: str(r?.appid ?? appid), builds: builds.filter((b) => b.buildid) }
+}
+
+/**
+ * 把 GetAppBuilds 里的 Manifest 信息挂回 GetAppDepotVersions 的 Depot 上。
+ *
+ * 实测 GetAppDepotVersions 对 publisher 密钥只返回 `{ depotid: {} }`（没有 manifest 细节），
+ * 而 GetAppBuilds 的 depot 里有 DepotVersionGID（就是 ManifestID）+ 体积。没有这一步，
+ * 「同步 Depot」会把后台明明有内容的 Depot 当成「从没传过内容」。
+ *
+ * 同时用 GetAppBetas 反查这个 Manifest 属于哪个分支（public 优先）。
+ */
+export function enrichDepotsWithBuilds(depotsResult, buildsResult, betasResult) {
+  const depots = (depotsResult?.depots || []).map((d) => ({ ...d, manifests: [...(d.manifests || [])] }))
+  const builds = [...(buildsResult?.builds || [])].sort((a, b) => Number(b.buildid) - Number(a.buildid))
+  const betas = betasResult?.betas || []
+
+  const branchOf = (buildid) => {
+    const id = str(buildid)
+    if (!id) return ''
+    const keys = betas.filter((b) => str(b.buildid) === id).map((b) => b.betakey)
+    return keys.includes('public') ? 'public' : keys[0] || ''
+  }
+
+  for (const d of depots) {
+    if (d.manifests.length) {
+      for (const m of d.manifests) {
+        if (!m.branch && m.buildid) m.branch = branchOf(m.buildid)
+      }
+      continue
+    }
+    for (const b of builds) {
+      const hit = (b.depots || []).find((x) => str(x.depotid) === str(d.depotid))
+      if (!hit) continue
+      d.manifests.push({
+        manifestid: hit.manifestid || '',
+        buildid: b.buildid,
+        branch: branchOf(b.buildid),
+        os: '',
+        osarch: '',
+        size: hit.size || 0,
+        downloadsize: hit.downloadsize || 0,
+        timeupdated: b.timeupdated || null
+      })
+      break
+    }
+  }
+
+  return { appid: depotsResult?.appid || '', depots }
 }
 
 /** 「测试密钥」用：拉一次 App 列表，顺便返回数量。 */

@@ -21,7 +21,7 @@ import {
   selectedPicks,
   publicName
 } from '../store.js'
-import { ExternalLink, GripVertical, ListFilter, X } from '@lucide/vue'
+import { ExternalLink, GripVertical, ListFilter, X, ChevronDown } from '@lucide/vue'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
 
 const el = ref(null)
@@ -81,11 +81,73 @@ function openPartner() {
   window.api.shell.openExternal(url)
 }
 
-function pickKnown(e) {
-  const id = e.target.value
-  if (!id) return
-  wizardAppIdChanged(id)
+/* ---- AppID 搜索下拉：密钥权限内 + 用过的 App，输入即筛 ---- */
+
+const appIdRef = ref(null)
+const appPick = ref({ open: false, active: -1 })
+
+const filteredKnownApps = computed(() => {
+  const q = String(w.value?.appId || '').trim().toLowerCase()
+  const list = knownApps.value
+  if (!q || !appPick.value.open) return list
+  return list.filter(
+    (a) => String(a.appId).includes(q) || String(a.name || '').toLowerCase().includes(q)
+  )
+})
+
+const knownStatus = computed(() => {
+  if (state.knownAppsLoading) return '正在从密钥拉取权限内的 App…'
+  if (state.hasApiKey && state.partnerAppCount) return `已拉取 ${state.partnerAppCount} 个 App（Web API 密钥）`
+  if (knownApps.value.length) return `用过的 App ${knownApps.value.length} 个`
+  return '还没有记录'
+})
+
+const appIdKnown = computed(() => {
+  const id = String(w.value?.appId || '').trim()
+  return !id || knownApps.value.some((a) => String(a.appId) === id)
+})
+
+function pickKnownApp(a) {
+  wizardAppIdChanged(String(a.appId ?? ''))
+  closeAppPick()
   resolveName()
+  maybeLookup()
+}
+
+function onAppIdInput(value) {
+  wizardAppIdChanged(value)
+  appPick.value = { open: true, active: -1 }
+}
+
+function onAppIdFocus() {
+  appPick.value = { open: true, active: -1 }
+}
+
+function closeAppPick() {
+  appPick.value = { open: false, active: -1 }
+}
+
+function onAppIdKey(e) {
+  const list = filteredKnownApps.value
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault()
+    appPick.value.open = true
+    const delta = e.key === 'ArrowDown' ? 1 : -1
+    appPick.value.active = list.length ? (appPick.value.active + delta + list.length) % list.length : -1
+    return
+  }
+  if (e.key === 'Enter') {
+    if (appPick.value.open && appPick.value.active >= 0 && list[appPick.value.active]) {
+      e.preventDefault()
+      pickKnownApp(list[appPick.value.active])
+      return
+    }
+    return
+  }
+  if (e.key === 'Escape' && appPick.value.open) {
+    e.stopPropagation()
+    closeAppPick()
+  }
 }
 
 /** store.steampowered.com 的名称查询不需要密钥，用来确认没填错 AppID */
@@ -104,8 +166,19 @@ async function resolveName() {
 const lk = computed(() => w.value?.lookup || null)
 
 function onAppIdBlur() {
+  // 点下拉选项时先 blur：延迟关，保证 mousedown 能选中
+  setTimeout(closeAppPick, 150)
   const id = String(w.value?.appId || '').trim()
   resolveName()
+  if (!appIdOk.value || !(state.hasApiKey || state.hasPassword)) return
+  if (lookedUp.value === id) return
+  lookedUp.value = id
+  wizardLookup()
+}
+
+/** AppID 定了（输入完 / 从下拉里选）就顺手读一次后台，省一次点击 */
+function maybeLookup() {
+  const id = String(w.value?.appId || '').trim()
   if (!appIdOk.value || !(state.hasApiKey || state.hasPassword)) return
   if (lookedUp.value === id) return
   lookedUp.value = id
@@ -223,44 +296,73 @@ const descTab = ref('desc')
         <!-- AppID -->
         <div class="flex flex-col gap-1.5">
           <span class="text-label text-muted">AppID</span>
-          <div class="flex items-center gap-2">
-            <input
-              :value="w.appId"
-              list="known-apps"
-              placeholder="例如 1234560"
-              class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border text-body num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
-              :class="w.appId && !appIdOk ? 'border-[rgba(226,75,75,.55)]' : 'border-line'"
-              @input="wizardAppIdChanged($event.target.value)"
-              @blur="onAppIdBlur"
-              @keyup.enter="doLookup"
-            />
-            <datalist id="known-apps">
-              <option v-for="a in knownApps" :key="a.appId" :value="a.appId">
-                {{ a.name }}{{ a.local ? '（本地已有）' : '' }}
-              </option>
-            </datalist>
-            <select
-              class="h-9 px-2 rounded-input bg-surface border border-line text-label outline-none max-w-[190px] disabled:opacity-45"
-              :disabled="!knownApps.length"
-              :title="
-                state.partnerAppCount
-                  ? `Web API 密钥权限内的 ${state.partnerAppCount} 个 App，外加你用过的`
-                  : knownApps.length
-                    ? '你用过的 App 里，能从 Steam 查到产品名的那些。要列出账号能发布的全部 App，需要 Publisher 级别的 Web API 密钥'
-                    : '还没有记录 —— 填一个 AppID，读到名字之后就会记在这里'
-              "
-              @change="pickKnown($event); $event.target.value = ''"
+          <div class="relative">
+            <div class="flex items-center gap-2">
+              <input
+                ref="appIdRef"
+                :value="w.appId"
+                placeholder="例如 1234560；输入可搜索已知 App"
+                role="combobox"
+                aria-autocomplete="list"
+                :aria-expanded="appPick.open"
+                aria-controls="app-pick-list"
+                class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border text-body num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                :class="w.appId && !appIdOk ? 'border-[rgba(226,75,75,.55)]' : 'border-line'"
+                @input="onAppIdInput($event.target.value)"
+                @focus="onAppIdFocus"
+                @blur="onAppIdBlur"
+                @keydown="onAppIdKey"
+                @keyup.enter="doLookup"
+              />
+              <button
+                class="btn btn-sm px-2 h-9 shrink-0"
+                title="展开已知 App 列表"
+                @mousedown.prevent
+                @click="onAppIdFocus()"
+              >
+                <ChevronDown :size="14" :stroke-width="2" />
+              </button>
+              <button class="btn btn-sm px-3 h-9 shrink-0" @click="openPartner">
+                <ExternalLink :size="14" :stroke-width="2" class="mr-1.5" />
+                后台
+              </button>
+            </div>
+
+            <div
+              v-if="appPick.open"
+              id="app-pick-list"
+              role="listbox"
+              aria-label="已知 App"
+              class="absolute left-0 right-0 top-full mt-1 z-30 max-h-[240px] overflow-y-auto scroll-thin rounded-card border border-line bg-surface-2 py-1 shadow-[0_16px_40px_rgba(0,0,0,.5)]"
             >
-              <option value="">
-                {{ knownApps.length ? (state.partnerAppCount ? '密钥权限内的 App…' : '用过的 App…') : '还没有记录' }}
-              </option>
-              <option v-for="a in knownApps" :key="'s' + a.appId" :value="a.appId">
-                {{ a.appId }} · {{ a.name }}
-              </option>
-            </select>
+              <div v-if="!filteredKnownApps.length" class="px-3 py-2 text-label text-faint">
+                没有匹配的 App —— 可以继续手填 AppID
+              </div>
+              <button
+                v-for="(a, i) in filteredKnownApps"
+                :key="a.appId"
+                type="button"
+                role="option"
+                :aria-selected="i === appPick.active"
+                class="w-full px-3 py-1.5 text-left flex items-center gap-2 min-w-0 border-0 bg-transparent cursor-pointer"
+                :class="i === appPick.active ? 'bg-surface-3' : 'hover:bg-surface-3/60'"
+                @mousedown.prevent="pickKnownApp(a)"
+              >
+                <span class="num text-label text-accent shrink-0">{{ a.appId }}</span>
+                <span class="text-label text-muted truncate">{{ a.name || '（没有名字）' }}</span>
+                <span v-if="a.local" class="ml-auto shrink-0 text-micro text-faint">本地已有</span>
+              </button>
+              <div class="px-3 py-1.5 mt-1 border-t border-line-soft text-micro text-faint">
+                {{ knownStatus }} · ↑↓ 选择，Enter 填入
+              </div>
+            </div>
           </div>
+
           <span v-if="resolvedName === '查询中…'" class="text-micro text-faint">查询中…</span>
           <span v-else-if="resolvedName" class="text-label text-accent">{{ resolvedName }}</span>
+          <span v-else-if="appIdOk && !appIdKnown" class="text-micro text-amber">
+            AppID 不在密钥权限内 —— 还能继续建，但「读后台 Depot」「同步 Depot」会 403。
+          </span>
 
           <div
             v-if="appIdConflict.length"
@@ -351,11 +453,14 @@ const descTab = ref('desc')
                 <option value="">平台…</option>
                 <option v-for="p in w.platforms" :key="p.id" :value="p.id">{{ p.label }}</option>
               </select>
-              <span v-else class="text-micro text-accent shrink-0">{{ platLabel(d.appliedAs) }}</span>
+              <span v-else class="text-micro text-accent shrink-0">已加入</span>
 
               <span class="font-mono num text-label shrink-0">{{ d.depotId }}</span>
               <span v-if="d.platform" class="text-label shrink-0" :class="d.on ? 'text-accent' : 'text-muted'">
                 {{ d.platformLabel }}
+              </span>
+              <span v-else-if="d.on && d.appliedAs" class="text-label text-accent shrink-0">
+                {{ platLabel(d.appliedAs) }}
               </span>
               <span v-else class="text-micro text-faint shrink-0">平台未知</span>
 

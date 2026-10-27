@@ -85,6 +85,10 @@ export const state = reactive({
   deleteDialog: null,
   // 同步 Depot 的结果（有 Web API 密钥走密钥，没有就走 steamcmd + 已保存账号）
   verify: { busy: false, error: null, needsKey: false, data: null },
+  // 「后台构建 / 分支」面板：最近构建 + 各分支当前 BuildID
+  buildPanel: { busy: false, error: null, data: null, appId: '' },
+  // 上传后自动核对后台 BuildID 的结果：{ appId, buildId, latest, ok, at }
+  lastBuildCheck: null,
   /**
    * 「本次忽略」的待处理项 —— 按 App 目录名分组，只存在内存里。
    * 重开应用就清空，所以它和永久忽略是两件事。
@@ -97,9 +101,11 @@ export const state = reactive({
   depotSlide: null,
   // Depot 矩阵当前选中的 tab
   activeDepot: null,
-  // 新建 App 向导的 AppID 下拉框数据
+// 新建 App 向导的 AppID 下拉框数据
   knownApps: [],
   partnerAppCount: 0,
+  // 密钥权限内的 App 列表还在后台加载（向导不能等它 —— 先把弹窗打开，列表后补）
+  knownAppsLoading: false,
   // Steamworks 新建 Depot 的选项（系统 / 架构 / 语言）
   depotOptions: { os: [], arch: [], archByOs: {}, languages: [] },
   // scripts 根目录下游离的 vdf（不属于任何 App 文件夹）
@@ -210,6 +216,8 @@ export async function boot() {
     state.encryptionAvailable = s.encryptionAvailable
     state.sdk = status
     await rescan()
+    const ks = await api.steam.keyState().catch(() => ({ has: false }))
+    state.hasApiKey = !!ks?.has
     if (!state.selectedDir && state.apps.length) {
       await selectApp(state.apps[0].dirName)
     }
@@ -561,6 +569,7 @@ export async function selectApp(dirName) {
   // 「同步 Depot」「检查文件」这些面板的内容是上一个 App 的，跟着切过来会张冠李戴
   clearVerify()
   clearPreflight()
+  clearBuildPanel()
   state.detailLoading = true
   try {
     state.detail = await api.sdk.app(dirName)
@@ -569,6 +578,8 @@ export async function selectApp(dirName) {
   } finally {
     state.detailLoading = false
   }
+  // 后台构建 / 分支面板：有密钥才自动拉（没密钥会白等一次 steamcmd）
+  if (state.hasApiKey) void loadBuildPanel()
 }
 
 /** 待处理里某一条「永久忽略 / 恢复提示」—— 写进 settings，重开还在 */
@@ -657,31 +668,78 @@ export function toast(text, tone = 'ok') {
  *  新建 App 向导
  * ------------------------------------------------------------------ */
 
-export async function openWizard() {
-  const [d, ks, ka] = await Promise.all([
-    api.app.defaults({ platform: 'win64' }),
-    api.steam.keyState().catch(() => ({ has: false })),
-    api.app.knownApps().catch(() => null)
-  ])
-  state.hasApiKey = !!ks.has
-  // AppID 下拉框用的候选：用过的 AppID +（有发布商密钥时）密钥权限内的全部 App
-  state.knownApps = Array.isArray(ka) ? ka : ka?.apps || []
-  state.partnerAppCount = ka?.partnerCount || 0
+/**
+ * 打开向导：**先把弹窗放出来**，数据后面补。
+ * 以前这里 await 了 api.app.knownApps() —— 那一次要拉 Web API 的 App 列表，
+ * 密钥慢的时候点「＋」要等十秒才弹窗，看起来像没响应。
+ */
+const WIZARD_PLATFORMS_FALLBACK = [
+  { id: 'win64', label: 'Windows 64' },
+  { id: 'win32', label: 'Windows 32' },
+  { id: 'macos', label: 'macOS' },
+  { id: 'linux', label: 'Linux' },
+  { id: 'linuxarm64', label: 'Linux ARM64' }
+]
+
+export function openWizard() {
+  if (state.wizard) return
   const picks = {}
-  for (const p of d.platforms) {
-    picks[p.id] = { on: p.id === 'win64', depotId: '', contentRoot: '', autoDepot: true, autoRoot: true, fromSteam: false }
+  for (const p of WIZARD_PLATFORMS_FALLBACK) {
+    picks[p.id] = {
+      on: p.id === 'win64',
+      depotId: '',
+      contentRoot: '',
+      autoDepot: true,
+      autoRoot: true,
+      fromSteam: false
+    }
   }
   state.wizard = {
-    platforms: d.platforms,
-    buildsRoot: d.buildsRoot,
+    platforms: WIZARD_PLATFORMS_FALLBACK.map((p) => ({ ...p })),
+    buildsRoot: state.settings?.buildsRoot || '',
     name: '',
     appId: '',
     desc: '',
     picks,
     lookup: emptyLookup(),
     busy: false,
-    error: null
+    error: null,
+    loading: true
   }
+
+  // 本地默认值（平台表 / buildsRoot / 排除规则）—— IPC 很快，弹窗已经出来了
+  api.app
+    .defaults({ platform: 'win64' })
+    .then((d) => {
+      const w = state.wizard
+      if (!w) return
+      w.platforms = d.platforms || w.platforms
+      w.buildsRoot = d.buildsRoot || w.buildsRoot
+      for (const p of w.platforms) {
+        if (!w.picks[p.id]) {
+          w.picks[p.id] = {
+            on: false,
+            depotId: '',
+            contentRoot: '',
+            autoDepot: true,
+            autoRoot: true,
+            fromSteam: false
+          }
+        }
+      }
+      w.loading = false
+      autoAssign(w)
+    })
+    .catch(() => {
+      if (state.wizard) state.wizard.loading = false
+    })
+
+  // 密钥状态是本地读；App 列表要拉网络，单独放后台，不挡弹窗
+  api.steam
+    .keyState()
+    .then((ks) => (state.hasApiKey = !!ks.has))
+    .catch(() => {})
+  void loadKnownApps()
 }
 
 export function closeWizard() {
@@ -860,24 +918,17 @@ export async function wizardLookup(via) {
     depots: (res.depots || []).map((d) => ({ ...d, on: false, appliedAs: '' }))
   }
 
-  // 读回来就全部勾上：后台认不出平台的那些也找一个空着的平台填进去，
-  // 用户要的是「读完就都在」，不想要的自己取消勾。
+  // 后台认得出平台的，读回来就勾上；认不出的（Web API 只给 DepotID）留给用户在行里选平台，
+  // 不能瞎猜 —— 猜错了平台行会和后台 DepotID 撞车。
   const used = new Set(
     Object.entries(cur.picks)
       .filter(([, k]) => k.on)
       .map(([id]) => id)
   )
   for (const d of cur.lookup.depots) {
-    if (d.platform) {
-      applySteamDepot(cur, d)
-      used.add(d.platform)
-      continue
-    }
-    const free = cur.platforms.find((p) => !used.has(p.id))
-    if (free) {
-      applySteamDepot(cur, d, free.id)
-      used.add(free.id)
-    }
+    if (!d.platform) continue
+    applySteamDepot(cur, d)
+    used.add(d.platform)
   }
   autoAssign(cur)
 }
@@ -1000,6 +1051,89 @@ export async function renameApp(dirName, newName) {
   await rescan()
   await selectApp(res.dirName)
   return res
+}
+
+/* ------------------------------------------------------------------ *
+ *  后台构建 / 分支面板
+ * ------------------------------------------------------------------ */
+
+export async function loadBuildPanel(force = false) {
+  const appId = String(state.detail?.appId || '')
+  if (!appId) return { ok: false }
+  const cur = state.buildPanel
+  if (!force && cur.data && cur.appId === appId) return { ok: true }
+  if (cur.busy && cur.appId === appId) return { ok: false }
+
+  const forDir = state.selectedDir
+  state.buildPanel = { busy: true, error: null, data: null, appId }
+  try {
+    const res = await api.steam.builds(appId)
+    if (state.selectedDir !== forDir) return { ok: false, stale: true }
+    if (!res?.ok) {
+      state.buildPanel = { busy: false, error: res?.error || '读取失败', data: null, appId }
+      return res
+    }
+    state.buildPanel = { busy: false, error: null, data: res, appId }
+    return res
+  } catch (e) {
+    if (state.selectedDir === forDir) {
+      state.buildPanel = { busy: false, error: e.message, data: null, appId }
+    }
+    return { ok: false, error: e.message }
+  }
+}
+
+export function clearBuildPanel() {
+  state.buildPanel = { busy: false, error: null, data: null, appId: '' }
+}
+
+/* ------------------------------------------------------------------ *
+ *  上传后自动核对：日志里的 BuildID 是否真的成了后台最新构建
+ *  「steamcmd 说 Successfully finished」和「后台真有这个 BuildID」是两件事。
+ * ------------------------------------------------------------------ */
+
+export async function verifyUploadedBuild(appId, logs) {
+  const id = String(appId || '')
+  if (!id) return
+  const text = (Array.isArray(logs) ? logs : []).join('\n')
+  const hits = [...text.matchAll(/\(BuildID\s+(\d+)\)/g)]
+  const buildId = hits.length ? hits[hits.length - 1][1] : ''
+  if (!buildId) {
+    pushLog('system', '这次日志里没有 BuildID —— 不是正式上传（Preview / 本地构建都不带 BuildID）')
+    return
+  }
+  if (!state.hasApiKey) {
+    pushLog('system', `本次构建 BuildID ${buildId}（没有 Web API 密钥，跳过后台核对）`)
+    return
+  }
+
+  pushLog('system', `正在核对后台：BuildID ${buildId}…`)
+  try {
+    const res = await api.steam.builds(id)
+    if (!res?.ok) {
+      pushLog('stderr', `后台核对失败：${res?.error || '未知错误'}`)
+      return
+    }
+    const latest = (res.builds || [])[0] || null
+    const ok = !!latest && String(latest.buildid) === String(buildId)
+    state.lastBuildCheck = { appId: id, buildId, latest: latest ? latest.buildid : '', ok, at: Date.now() }
+    if (ok) {
+      pushLog('system', `✔ 后台最新构建就是 BuildID ${buildId} —— 内容已经进 Steam 后台`)
+      toast(`已上传，后台确认 BuildID ${buildId}`)
+    } else if (!latest) {
+      pushLog('system', `后台还没列出构建记录（BuildID ${buildId}），可能还在处理 —— 稍后点「同步 Depot」再看一次`)
+      toast('上传完成，但后台构建列表还没刷新出来', 'bad')
+    } else {
+      pushLog(
+        'stderr',
+        `⚠ BuildID ${buildId} 已经上传，但后台最新构建是 ${latest.buildid} —— 可能之前的构建比它新，或这次没生效`
+      )
+      toast(`注意：后台最新构建是 ${latest.buildid}，不是 ${buildId}`, 'bad')
+    }
+    void loadBuildPanel(true)
+  } catch (e) {
+    pushLog('stderr', `后台核对失败：${e.message}`)
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -1320,6 +1454,7 @@ export async function pickDepotRoot() {
  * ------------------------------------------------------------------ */
 
 export async function loadKnownApps() {
+  state.knownAppsLoading = true
   try {
     const r = await api.app.knownApps()
     state.knownApps = Array.isArray(r) ? r : r?.apps || []
@@ -1327,6 +1462,8 @@ export async function loadKnownApps() {
   } catch {
     state.knownApps = []
     state.partnerAppCount = 0
+  } finally {
+    state.knownAppsLoading = false
   }
   return state.knownApps
 }
@@ -1911,6 +2048,11 @@ export function wireEvents() {
     // 本地服务器构建不算上传 —— 一个字节都没到 Steam
     if (code === 0 && kind === 'build' && !wasPreview && !wasLocal) {
       state.uploaded = { appId: state.detail?.appId || '', at: Date.now() }
+      // 「steamcmd 说成功」≠「后台真有这个 BuildID」——有密钥就再核一遍
+      void verifyUploadedBuild(
+        String(state.detail?.appId || ''),
+        (state.logs || []).map((l) => l.line)
+      )
     }
 
     // 系统通知：不用盯着窗口看
