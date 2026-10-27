@@ -308,7 +308,7 @@ onUnmounted(depotDisarm)
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-drawer-title"
-      class="overlay-drawer relative w-[500px] max-w-[92vw] h-full bg-surface border-l border-line shadow-[-18px_0_44px_-24px_rgba(0,0,0,.85)] flex flex-col min-h-0"
+      class="overlay-drawer relative w-[500px] max-w-[92vw] h-full bg-surface border-l border-line flex flex-col min-h-0"
     >
       <header class="px-5 py-4 border-b border-line flex items-center gap-3 shrink-0">
         <div>

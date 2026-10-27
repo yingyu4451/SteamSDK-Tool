@@ -665,6 +665,11 @@ textarea {
   transform: translateX(36px);
 }
 
+/* 抽屉/滑层浮在页面上：左侧一道方向性投影，代替压暗遮罩 */
+.overlay-drawer {
+  box-shadow: -18px 0 44px -24px rgba(0, 0, 0, 0.85);
+}
+
 /* ---------- 局部内容切换 ---------- */
 .fade-enter-active,
 .fade-leave-active {
