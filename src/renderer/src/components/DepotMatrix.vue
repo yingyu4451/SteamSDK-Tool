@@ -236,14 +236,18 @@ async function openPath(p) {
           <span class="num text-label text-faint">{{ a.suspicious.length }}</span>
           <span class="ml-auto text-micro text-faint">这些应该加进 FileExclusion</span>
         </button>
-        <div v-show="showSuspicious" class="px-5 pb-3 max-h-[200px] overflow-y-auto scroll-thin">
-          <div
-            v-for="(f, i) in a.suspicious"
-            :key="i"
-            class="flex items-center gap-3 py-1.5 border-b border-line-soft last:border-b-0"
-          >
-            <span class="font-mono text-label text-[#ffb0b8] truncate flex-1 min-w-0" :title="f.rel">{{ f.rel }}</span>
-            <span class="num text-micro text-faint shrink-0">{{ fmtSize(f.size) }}</span>
+        <div class="collapsible" :class="{ 'is-open': showSuspicious }">
+          <div>
+            <div class="px-5 pb-3 max-h-[200px] overflow-y-auto scroll-thin">
+              <div
+                v-for="(f, i) in a.suspicious"
+                :key="i"
+                class="flex items-center gap-3 py-1.5 border-b border-line-soft last:border-b-0"
+              >
+                <span class="font-mono text-label text-[#ffb0b8] truncate flex-1 min-w-0" :title="f.rel">{{ f.rel }}</span>
+                <span class="num text-micro text-faint shrink-0">{{ fmtSize(f.size) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -263,28 +267,32 @@ async function openPath(p) {
           <span class="num text-label text-faint">{{ a?.excludedCount || 0 }}</span>
           <span class="ml-auto text-micro text-faint">只不上传，本地都还在</span>
         </button>
-        <div v-show="showExcluded" class="px-5 pb-3 max-h-[240px] overflow-y-auto scroll-thin">
-          <div v-for="[rule, files] in excludedByRule" :key="rule" class="mb-2.5 last:mb-0">
-            <div class="flex items-center gap-2 mb-1">
-              <code class="text-micro text-accent bg-[rgba(102,192,244,.07)] border border-[rgba(102,192,244,.18)] rounded px-1.5 py-0.5">
-                {{ rule }}
-              </code>
-              <span class="num text-micro text-faint">{{ files.length }} 个</span>
+        <div class="collapsible" :class="{ 'is-open': showExcluded }">
+          <div>
+            <div class="px-5 pb-3 max-h-[240px] overflow-y-auto scroll-thin">
+              <div v-for="[rule, files] in excludedByRule" :key="rule" class="mb-2.5 last:mb-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <code class="text-micro text-accent bg-[rgba(102,192,244,.07)] border border-[rgba(102,192,244,.18)] rounded px-1.5 py-0.5">
+                    {{ rule }}
+                  </code>
+                  <span class="num text-micro text-faint">{{ files.length }} 个</span>
+                </div>
+                <div
+                  v-for="(f, i) in files.slice(0, 30)"
+                  :key="i"
+                  class="font-mono text-micro text-faint truncate pl-1 py-0.5"
+                  :title="f.rel"
+                >
+                  {{ f.rel }}
+                </div>
+                <div v-if="files.length > 30" class="text-micro text-faint pl-1">
+                  … 还有 {{ files.length - 30 }} 个
+                </div>
+              </div>
+              <div v-if="!excludedByRule.length" class="text-label text-faint py-1">
+                没有文件被排除。
+              </div>
             </div>
-            <div
-              v-for="(f, i) in files.slice(0, 30)"
-              :key="i"
-              class="font-mono text-micro text-faint truncate pl-1 py-0.5"
-              :title="f.rel"
-            >
-              {{ f.rel }}
-            </div>
-            <div v-if="files.length > 30" class="text-micro text-faint pl-1">
-              … 还有 {{ files.length - 30 }} 个
-            </div>
-          </div>
-          <div v-if="!excludedByRule.length" class="text-label text-faint py-1">
-            没有文件被排除。
           </div>
         </div>
       </div>

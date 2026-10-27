@@ -68,7 +68,7 @@ onMounted(async () => {
     gsap.fromTo(
       el.value,
       { opacity: 0, y: 20, scale: 0.985 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.36, ease: 'power3.out' }
+      { opacity: 1, y: 0, scale: 1, duration: 0.36, ease: 'power3.out', clearProps: 'transform,opacity' }
     )
   }
   await nextTick()
@@ -281,6 +281,7 @@ function skip() {
 </script>
 
 <template>
+  <Transition name="overlay">
   <div v-if="o.open" class="fixed inset-0 z-[70] grid place-items-center p-6 no-drag">
     <div class="absolute inset-0 bg-[rgba(9,13,19,.82)] backdrop-blur-sm" />
 
@@ -621,4 +622,5 @@ function skip() {
       </footer>
     </div>
   </div>
+  </Transition>
 </template>

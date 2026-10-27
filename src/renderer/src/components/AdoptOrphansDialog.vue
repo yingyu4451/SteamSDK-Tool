@@ -13,7 +13,7 @@ onMounted(() => {
     gsap.fromTo(
       el.value,
       { opacity: 0, y: 18, scale: 0.985 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power3.out' }
+      { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power3.out', clearProps: 'transform,opacity' }
     )
   }
   nextTick(() => input.value?.focus())
@@ -30,6 +30,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
 </script>
 
 <template>
+  <Transition name="overlay">
   <div v-if="d" class="fixed inset-0 z-50 grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeOrphanDialog" />
 
@@ -98,4 +99,5 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
       </footer>
     </div>
   </div>
+  </Transition>
 </template>

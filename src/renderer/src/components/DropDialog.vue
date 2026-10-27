@@ -30,7 +30,7 @@ const phaseText = computed(() => {
 
 onMounted(() => {
   if (el.value) {
-    gsap.fromTo(el.value, { opacity: 0, y: 16, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power3.out' })
+    gsap.fromTo(el.value, { opacity: 0, y: 16, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power3.out', clearProps: 'transform,opacity' })
   }
   tick = setInterval(() => {
     elapsed.value = Math.floor((Date.now() - (state.drop.startedAt || Date.now())) / 1000)
@@ -194,6 +194,7 @@ async function doApply() {
 </script>
 
 <template>
+  <Transition name="overlay">
   <div v-if="d" class="fixed inset-0 z-[55] grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeDrop" />
 
@@ -216,18 +217,20 @@ async function doApply() {
       <div class="p-5 flex flex-col gap-4">
         <!-- 压缩包要先解开、大文件夹要数一遍，这些都得好几分钟。
              主进程那会儿是忙的，所以这里必须自己动起来 —— 不然用户只会以为卡死了。 -->
-        <div v-if="d.pending" class="flex flex-col items-center gap-3 py-10">
-          <span class="drop-spinner" />
-          <div class="text-body text-ink num">{{ phaseText }}</div>
-          <div class="text-label text-faint text-center leading-relaxed max-w-[360px]">
-            压缩包会先在这里解开再数一遍。包大的话要等几分钟 —— 别关窗口，也别再拖一次。
+        <Transition name="fade-fast">
+          <div v-if="d.pending" class="flex flex-col items-center gap-3 py-10">
+            <span class="drop-spinner" />
+            <div class="text-body text-ink num">{{ phaseText }}</div>
+            <div class="text-label text-faint text-center leading-relaxed max-w-[360px]">
+              压缩包会先在这里解开再数一遍。包大的话要等几分钟 —— 别关窗口，也别再拖一次。
+            </div>
           </div>
-        </div>
+        </Transition>
 
         <!-- 看错了就直接说 -->
         <div
           v-if="state.drop.error"
-          class="rounded-card border border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)] px-3.5 py-2.5 text-label text-danger whitespace-pre-wrap"
+          class="fade-in-up rounded-card border border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)] px-3.5 py-2.5 text-label text-danger whitespace-pre-wrap"
         >
           {{ state.drop.error }}
         </div>
@@ -409,4 +412,5 @@ async function doApply() {
       </footer>
     </div>
   </div>
+  </Transition>
 </template>

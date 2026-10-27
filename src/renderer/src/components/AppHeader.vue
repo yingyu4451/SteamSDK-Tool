@@ -82,7 +82,7 @@ const dup = computed(() => {
     <!-- AppID 跨 App 冲突 -->
     <div
       v-if="dup"
-      class="mt-4 rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] p-3"
+      class="fade-in-up mt-4 rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] p-3"
     >
       <div class="text-label font-semibold text-danger mb-1.5">AppID 冲突</div>
       <div class="text-label text-[#ffb0b8] leading-relaxed">
@@ -96,7 +96,7 @@ const dup = computed(() => {
     <!-- 问题清单：只列还没被忽略的。全忽略完这块整个消失，不留空壳 -->
     <div
       v-if="activeRows.length"
-      class="mt-4 rounded-card border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
+      class="fade-in-up mt-4 rounded-card border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
     >
       <div class="flex items-center gap-2 mb-1.5">
         <span class="text-label font-semibold text-amber">待处理</span>

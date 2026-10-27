@@ -53,13 +53,14 @@ async function openBackup() {
 onMounted(async () => {
   await nextTick()
   if (el.value) {
-    gsap.fromTo(el.value, { opacity: 0, y: 16, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out' })
+    gsap.fromTo(el.value, { opacity: 0, y: 16, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out', clearProps: 'transform,opacity' })
   }
 })
 onUnmounted(disarm)
 </script>
 
 <template>
+  <Transition name="overlay">
   <div v-if="f.open" class="fixed inset-0 z-[60] grid place-items-center p-6 no-drag">
     <div class="absolute inset-0 bg-[rgba(9,13,19,.82)] backdrop-blur-sm" @click="closeForget" />
 
@@ -156,4 +157,5 @@ onUnmounted(disarm)
       </footer>
     </div>
   </div>
+  </Transition>
 </template>

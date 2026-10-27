@@ -614,6 +614,113 @@ textarea {
   animation: drop-spin 0.75s linear infinite;
 }
 
+/* ---------- 交互过渡：补齐 hover / focus 的瞬跳 ----------
+   .btn / .chip / .link-btn / .path-link 各自带 transition；
+   这里兜住输入框、标题栏窗口按钮、tab、拖拽手柄这些零散控件。
+   放进 @layer base：Tailwind 工具类（transition-transform 等）仍然优先。 */
+@layer base {
+  :where(input, select, textarea) {
+    transition:
+      border-color 0.16s ease,
+      background-color 0.16s ease,
+      box-shadow 0.16s ease,
+      color 0.16s ease;
+  }
+  :where(button, [role='button'], summary, a[href]) {
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      color 0.16s ease,
+      box-shadow 0.16s ease,
+      opacity 0.16s ease;
+  }
+}
+
+/* ---------- 浮层进出场：遮罩淡入淡出 + 面板轻微上浮 ----------
+   以前弹窗只有进场（组件 onMounted 里 gsap），关的时候是瞬间消失；
+   现在统一走 <Transition name="overlay">，进出都有。 */
+.overlay-enter-active,
+.overlay-leave-active {
+  transition: opacity 0.2s ease;
+}
+.overlay-enter-active [role='dialog'],
+.overlay-leave-active [role='dialog'] {
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease;
+}
+.overlay-enter-from,
+.overlay-leave-to {
+  opacity: 0;
+}
+.overlay-enter-from [role='dialog'],
+.overlay-leave-to [role='dialog'] {
+  transform: translateY(14px) scale(0.985);
+}
+
+/* 右侧抽屉（编辑 App / Depot）：横向滑入滑出，而不是往上浮 */
+.overlay-enter-from .overlay-drawer,
+.overlay-leave-to .overlay-drawer {
+  transform: translateX(36px);
+}
+
+/* ---------- 局部内容切换：tab / 步骤 / 详情 / 诊断阶段 ---------- */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.16s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+.fade-fast-enter-active,
+.fade-fast-leave-active {
+  transition: opacity 0.12s ease;
+}
+.fade-fast-enter-from,
+.fade-fast-leave-to {
+  opacity: 0;
+}
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* 新出现的提示条 / 警告卡：淡入 + 轻微上移，别直接蹦出来 */
+.fade-in-up {
+  animation: fade-in-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 可折叠区域（可疑文件 / 被 Exclusions 挡下的文件）：
+   高度平滑展开收起，别在点箭头时整块瞬间张合。 */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.collapsible.is-open {
+  grid-template-rows: 1fr;
+}
+.collapsible > * {
+  overflow: hidden;
+}
 /* ---------- 减少动态效果 ----------
    系统开了「减少动画」时，把 CSS 动画/过渡全部压掉；
    JS 侧的 GSAP 动画在 motion.js 里判断 prefers-reduced-motion。 */

@@ -31,7 +31,7 @@ const resolvedName = ref('')
 
 onMounted(() => {
   if (!el.value) return
-  gsap.fromTo(el.value, { opacity: 0, y: 18, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: 'power3.out' })
+  gsap.fromTo(el.value, { opacity: 0, y: 18, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: 'power3.out', clearProps: 'transform,opacity' })
   nextTick(() => nameInput.value?.focus())
 })
 
@@ -192,6 +192,7 @@ const descTab = ref('desc')
 </script>
 
 <template>
+  <Transition name="overlay">
   <div v-if="w" class="fixed inset-0 z-50 grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeWizard" />
 
@@ -468,9 +469,11 @@ const descTab = ref('desc')
           </div>
 
           <div class="border-t border-line pt-3.5">
+            <Transition name="fade-fast" mode="out-in">
             <!-- 描述 -->
             <input
               v-if="descTab === 'desc'"
+              key="desc"
               :value="w.desc"
               placeholder="例如 MyGame 正式版"
               class="w-full h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
@@ -478,7 +481,7 @@ const descTab = ref('desc')
             />
 
             <!-- 会创建 -->
-            <div v-else class="flex flex-col gap-1">
+            <div v-else key="will" class="flex flex-col gap-1">
               <details
                 v-for="grp in [
                   { name: '脚本', icon: '＋ 脚本　', rows: willCreate.scripts },
@@ -506,6 +509,7 @@ const descTab = ref('desc')
                 </div>
               </details>
             </div>
+            </Transition>
           </div>
         </div>
 
@@ -530,4 +534,5 @@ const descTab = ref('desc')
       </footer>
     </div>
   </div>
+  </Transition>
 </template>

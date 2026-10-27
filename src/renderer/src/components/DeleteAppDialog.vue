@@ -59,7 +59,7 @@ watch(
 
 onMounted(async () => {
   if (el.value) {
-    gsap.fromTo(el.value, { opacity: 0, y: 16, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out' })
+    gsap.fromTo(el.value, { opacity: 0, y: 16, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out', clearProps: 'transform,opacity' })
   }
   await nextTick()
 })
@@ -81,6 +81,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
 </script>
 
 <template>
+  <Transition name="overlay">
   <div v-if="d" class="fixed inset-0 z-[55] grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/65 backdrop-blur-sm" @click="closeDeleteDialog" />
 
@@ -190,4 +191,5 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
       </footer>
     </div>
   </div>
+  </Transition>
 </template>

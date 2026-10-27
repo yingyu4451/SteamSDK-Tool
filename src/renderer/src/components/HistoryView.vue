@@ -154,19 +154,22 @@ function openLogDir() {
           </span>
         </header>
         <div class="flex-1 min-h-0 overflow-auto scroll-thin bg-[#080b10] p-4">
-          <div v-if="loading" class="text-label text-faint">读取中…</div>
-          <pre
-            v-else-if="content"
-            class="m-0 text-label leading-[1.7] font-mono text-[#c6d4df] whitespace-pre-wrap break-all"
-            >{{ content }}</pre
-          >
-          <div v-else class="h-full grid place-items-center">
-            <EmptyState
-              :icon="FileSearch"
-              title="选一个日志看内容"
-              hint="左边列表里点一下文件名；这里会显示明文，可以全选复制。"
-            />
-          </div>
+          <Transition name="fade-fast" mode="out-in">
+            <div v-if="loading" key="loading" class="text-label text-faint">读取中…</div>
+            <pre
+              v-else-if="content"
+              key="content"
+              class="m-0 text-label leading-[1.7] font-mono text-[#c6d4df] whitespace-pre-wrap break-all"
+              >{{ content }}</pre
+            >
+            <div v-else key="empty" class="h-full grid place-items-center">
+              <EmptyState
+                :icon="FileSearch"
+                title="选一个日志看内容"
+                hint="左边列表里点一下文件名；这里会显示明文，可以全选复制。"
+              />
+            </div>
+          </Transition>
         </div>
       </div>
     </div>

@@ -172,7 +172,7 @@ onMounted(async () => {
   defaults.value = d.allDefaultExclusions
   sync()
   if (el.value) {
-    gsap.fromTo(el.value, { x: 40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.32, ease: 'power3.out' })
+    gsap.fromTo(el.value, { x: 40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.32, ease: 'power3.out', clearProps: 'transform,opacity' })
   }
 })
 
@@ -299,6 +299,7 @@ onUnmounted(depotDisarm)
 </script>
 
 <template>
+  <Transition name="overlay">
   <div v-if="drawer" class="fixed inset-0 z-40 flex justify-end">
     <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="closeDrawer" />
 
@@ -307,7 +308,7 @@ onUnmounted(depotDisarm)
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-drawer-title"
-      class="relative w-[500px] max-w-[92vw] h-full bg-[#0c1016] border-l border-line flex flex-col min-h-0"
+      class="overlay-drawer relative w-[500px] max-w-[92vw] h-full bg-[#0c1016] border-l border-line flex flex-col min-h-0"
     >
       <header class="px-5 py-4 border-b border-line flex items-center gap-3 shrink-0">
         <div>
@@ -611,4 +612,5 @@ onUnmounted(depotDisarm)
       </footer>
     </aside>
   </div>
+  </Transition>
 </template>

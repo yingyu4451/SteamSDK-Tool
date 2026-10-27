@@ -48,7 +48,7 @@ function animateIn() {
   gsap.fromTo(
     el.value,
     { opacity: 0, y: 16, scale: 0.985 },
-    { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out' }
+    { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out', clearProps: 'transform,opacity' }
   )
 }
 
@@ -72,6 +72,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <Transition name="overlay">
   <div
     v-if="open"
     class="fixed inset-0 z-[62] grid place-items-center bg-[rgba(6,9,14,.62)] backdrop-blur-[2px] px-6"
@@ -246,4 +247,5 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
+  </Transition>
 </template>
