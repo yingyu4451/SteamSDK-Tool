@@ -49,6 +49,60 @@ $appDir   = Join-Path $CB "scripts\$App"
 
 function Fail($msg) { Write-Host "ERROR: $msg" -ForegroundColor Red; exit 1 }
 
+# ---- steamcmd 输出与失败诊断 ------------------------------------------------
+# 退出码说不清原因：本机实测 0=成功、5=登录失败、6=构建失败，而构建失败的原因
+# （AppID/DepotID 不匹配、Access Denied、ContentRoot 不存在……）只在输出文本里。
+# 所以把 steamcmd 输出完整留一份，失败时按关键词翻成一句人话。
+$script:consoleLines = New-Object System.Collections.Generic.List[string]
+
+function Write-SteamcmdLine($line) {
+    $s = [string]$line
+    [void]$script:consoleLines.Add($s)
+    Write-Host $s
+}
+
+function Get-FailureReasons([string]$text) {
+    $rules = @(
+        @{ Re = 'App build file does not exist';                              Reason = 'app 构建脚本不存在（路径写错，或文件被改名/移动）' },
+        @{ Re = 'Depot config file does not exist';                           Reason = 'depot 构建脚本不存在（Depots 里写的文件名要相对 app 脚本目录）' },
+        @{ Re = 'Content root folder does not exist';                         Reason = '内容目录不存在（先构建游戏内容，或检查 Depot/App 的 ContentRoot）' },
+        @{ Re = 'has invalid format|KeyValues Error';                         Reason = 'app/depot 的 vdf 格式坏了（语法被改坏，或编码不对）' },
+        @{ Re = 'Failed to initialize build on server \(Access Denied\)';     Reason = '没有该 App 的构建权限，或 AppID 与 DepotID 不属于同一个 App' },
+        @{ Re = 'Failed to initialize build on server \(Invalid Parameter\)'; Reason = 'AppID / DepotID 无效或不匹配（核对 Steamworks 后台的 ID）' },
+        @{ Re = 'Not logged on';                                              Reason = '没登录成功（账号 / 密码 / 令牌）' },
+        @{ Re = 'Invalid Password|two-factor|Steam Guard|Password check';     Reason = '登录失败：密码或 Steam Guard 令牌不对' },
+        @{ Re = 'Rate Limit|rate limit';                                      Reason = '被 Steam 限流（登录/上传太频繁），等几分钟再试' },
+        @{ Re = 'No subscription';                                            Reason = '登录账号没有这个 App 的授权' },
+        @{ Re = 'No space|disk space|disk quota';                             Reason = '磁盘空间不足' },
+        @{ Re = 'No connection|handshake|timed out|Failed to upload|Upload failed|0x402|0x606'; Reason = '网络/连接 Steam 失败（或上传中断）：重试，并检查代理和防火墙' }
+    )
+    $reasons = @()
+    foreach ($r in $rules) {
+        if ($text -and ($text -match $r.Re)) { $reasons += $r.Reason }
+    }
+    return $reasons
+}
+
+function Write-FailureDiagnosis([string]$text, $exitCode, [string]$consoleLogPath) {
+    $reasons = @(Get-FailureReasons -text $text)
+    Write-Host "--- 失败诊断 ---" -ForegroundColor Red
+    if ($reasons.Count -gt 0) {
+        foreach ($r in $reasons) { Write-Host "  原因: $r" -ForegroundColor Red }
+    } else {
+        Write-Host "  原因: 没能自动识别（看原始输出或下面的完整日志）" -ForegroundColor Red
+    }
+    if ($text) {
+        $rawLines = @(($text -split "`r?`n") |
+            Where-Object { $_ -match 'ERROR!|failed : Failure|Invalid Password|Not logged on|KeyValues Error|Content root|Depot config|App build file' } |
+            Select-Object -Last 4 | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        foreach ($l in $rawLines) { Write-Host "  原文: $l" -ForegroundColor DarkGray }
+    }
+    if ($null -ne $exitCode) { Write-Host "  steamcmd exit code: $exitCode" -ForegroundColor DarkGray }
+    if ($consoleLogPath -and (Test-Path -LiteralPath $consoleLogPath)) {
+        Write-Host "  完整 steamcmd 输出: $consoleLogPath" -ForegroundColor DarkGray
+    }
+}
+
 if (-not (Test-Path $steamcmd)) { Fail "steamcmd not found: $steamcmd" }
 if (-not (Test-Path $appDir))   { Fail "app folder not found: $appDir" }
 if (-not $User) { Fail "no -User given: pass the Steam account name, e.g. -User your_login" }
@@ -213,6 +267,11 @@ $logCandidates += (Join-Path $appDir ("buildoutput\app_build_{0}.log" -f $appId)
 $logCandidates += $logFile
 $logCandidates = @($logCandidates | Select-Object -Unique)
 
+$consoleDir = if ($buildOutput) { $buildOutput } else { Join-Path $appDir 'buildoutput' }
+if (-not (Test-Path $consoleDir)) { New-Item -ItemType Directory -Path $consoleDir -Force | Out-Null }
+$consoleLogPath = Join-Path $consoleDir ("app_build_{0}_console.log" -f $appId)
+$exit = $null
+
 try {
     Write-Host ""
     Write-Host "> steamcmd +login $User +run_app_build $runVdf +quit" -ForegroundColor DarkGray
@@ -234,15 +293,19 @@ try {
         Write-Host "Using password from STEAMSDK_BUILD_PASSWORD." -ForegroundColor DarkGray
         if ($guard) {
             Write-Host "Using Steam Guard code from STEAMSDK_GUARD_CODE." -ForegroundColor DarkGray
-            "$pw`n$guard" | & $steamcmd @cmdArgs
+            "$pw`n$guard" | & $steamcmd @cmdArgs 2>&1 | ForEach-Object { Write-SteamcmdLine $_ }
         } else {
-            $pw | & $steamcmd @cmdArgs
+            $pw | & $steamcmd @cmdArgs 2>&1 | ForEach-Object { Write-SteamcmdLine $_ }
+        }
+        $exit = $LASTEXITCODE
+        if ($script:consoleLines.Count -gt 0) {
+            try { [IO.File]::WriteAllLines($consoleLogPath, $script:consoleLines, (New-Object Text.UTF8Encoding($false))) } catch { }
         }
     } else {
         Write-Host "No STEAMSDK_BUILD_PASSWORD set; steamcmd will prompt." -ForegroundColor DarkGray
         & $steamcmd @cmdArgs
+        $exit = $LASTEXITCODE
     }
-    $exit = $LASTEXITCODE
 
     $logFile = $null
     foreach ($candidate in $logCandidates) {
@@ -266,6 +329,8 @@ try {
             }
         } else {
             Write-Host "FAILED: no 'Successfully finished' in the log." -ForegroundColor Red
+            $diag = (($script:consoleLines -join "`n") + "`n" + $logText)
+            Write-FailureDiagnosis -text $diag -exitCode $exit -consoleLogPath $consoleLogPath
             exit 1
         }
     } else {
@@ -274,11 +339,13 @@ try {
         $hint = "steamcmd's log location depends on BuildOutput in the app vdf;"
         $hint += " if the build really succeeded, check the Steamworks build page."
         Write-Host $hint -ForegroundColor Yellow
+        Write-FailureDiagnosis -text ($script:consoleLines -join "`n") -exitCode $exit -consoleLogPath $consoleLogPath
         exit 1
     }
 
     if ($exit -ne 0) {
         Write-Host "steamcmd exit code: $exit" -ForegroundColor Red
+        if (Test-Path -LiteralPath $consoleLogPath) { Write-Host "  完整 steamcmd 输出: $consoleLogPath" -ForegroundColor DarkGray }
         exit $exit
     }
 }
