@@ -428,7 +428,7 @@ ${contentRootBlock}
 \t// 构建缓存和日志。别删，删了下次要整包重算。
 \t"BuildOutput"\t${q(buildOutput)}
 
-\t// 发布到哪个 beta 分支；留空 = 默认分支。
+\t// 发布到哪个 beta 分支；留空 = 不设分支（构建只生成，不自动上任何分支）。
 ${setLiveLine}
 
 \t// 取消下面这行的注释 = 传进本地内容服务器，不上传 Steam。

@@ -127,10 +127,10 @@ const appRows = computed(() => {
       key: 'setLive',
       label: 'SetLive',
       value: d.setLive || '',
-      empty: '默认分支',
+      empty: '未设置',
       btn: '修改',
       mono: true,
-      placeholder: 'qa / internal（留空 = 默认分支）'
+      placeholder: 'qa / internal（留空 = 不设分支，构建只生成）'
     }
   ]
 })

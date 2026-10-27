@@ -139,7 +139,7 @@ function depotSize(d) {
 
         <div class="flex flex-col gap-1.5">
           <span class="text-micro font-semibold uppercase tracking-wider text-faint">分支指向</span>
-          <div v-if="!betas.length" class="text-micro text-faint">只有默认分支。</div>
+          <div v-if="!betas.length" class="text-micro text-faint">后台没有 beta 分支。</div>
           <div v-for="bt in betas" :key="bt.betakey" class="flex items-center gap-2 flex-wrap min-w-0">
             <span class="pill pill-idle">{{ bt.betakey || '默认' }}</span>
             <span class="num text-label text-muted">{{ bt.buildid || '—' }}</span>
@@ -160,7 +160,7 @@ function depotSize(d) {
           <span class="pill pill-idle">{{ bt.betakey || '默认' }}</span>
           <span class="num text-label text-muted">{{ bt.buildid || '—' }}</span>
         </div>
-        <div v-if="!betas.length" class="text-micro text-faint">只有默认分支。</div>
+        <div v-if="!betas.length" class="text-micro text-faint">后台没有 beta 分支。</div>
       </div>
     </div>
 

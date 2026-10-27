@@ -103,9 +103,12 @@ const SECTIONS = [
     blocks: [
       {
         t: 'p',
-        v: '分支必须先在 Steamworks 后台建好，本地读不到列表。vdf 里的 SetLive 写哪个分支名，那次构建就进哪个分支。'
+        v: '分支列表现在直接从 Steamworks 后台读（需要 Web API 密钥）；没密钥时只显示本机写过的分支。vdf 里的 SetLive 写哪个分支名，那次构建就进哪个分支。'
       },
-      { t: 'note', v: 'SetLive 不能写 default —— default 分支要在后台网页上手动设 live。' }
+      {
+        t: 'note',
+        v: 'SetLive 留空 = 不设分支：构建只生成，不会自动上任何分支（包括 default）。default 分支要在后台网页上手动设 live。'
+      }
     ]
   }
 ]

@@ -88,7 +88,7 @@ async function apply(branch) {
     } else {
       message.value = {
         tone: 'ok',
-        text: branch ? `SetLive 已切成 "${branch}"` : '已发到默认分支（注释掉 SetLive）'
+        text: branch ? `SetLive 已切成 "${branch}"` : '已清空 SetLive：构建只生成，不自动设到任何分支'
       }
       creating.value = false
       draft.value = ''
@@ -119,8 +119,12 @@ watch(appId, () => {
   <section class="card p-5 flex flex-col min-w-0" v-reveal="{ delay: 0.05 }">
     <header class="flex items-center gap-2 flex-wrap">
       <h2 class="text-body font-semibold tracking-tight m-0">分支 / SetLive</h2>
-      <span class="pill" :class="current ? 'pill-warn' : 'pill-idle'">
-        {{ current || '默认分支' }}
+      <span
+        class="pill"
+        :class="current ? 'pill-warn' : 'pill-idle'"
+        :title="current ? `SetLive = ${current}` : 'SetLive 为空：构建只生成，不会自动切到任何分支'"
+      >
+        {{ current || '未设置' }}
       </span>
       <span v-if="hasKey" class="ml-auto flex items-center gap-1.5">
         <span class="text-micro text-faint">
@@ -162,10 +166,10 @@ watch(appId, () => {
         class="btn btn-sm no-drag"
         :class="!current ? 'btn-primary' : ''"
         :disabled="busy"
-        title="注释掉 SetLive，构建发到默认分支"
+        title="清空 SetLive：构建只生成，不自动设到任何分支（default 分支要在后台网页手动设 live）"
         @click="apply('')"
       >
-        默认分支
+        不设分支
       </button>
     </div>
 

@@ -431,7 +431,7 @@ export function diffBranches(localBranches, steam) {
     items.push({
       level: 'ok',
       title: `分支 ${b} 存在`,
-      text: b === 'public' ? '默认分支' : '测试分支'
+      text: 'Steamworks 后台的 beta 分支'
     })
   }
   return items

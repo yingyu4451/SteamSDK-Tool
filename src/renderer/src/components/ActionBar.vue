@@ -385,15 +385,10 @@ watch(
               <span
                 v-for="b in branchList"
                 :key="b.key"
-                class="px-2 py-[3px] rounded-full text-micro border"
-                :class="
-                  b.key === 'public' || b.key === 'default'
-                    ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
-                    : 'text-muted border-line'
-                "
+                class="px-2 py-[3px] rounded-full text-micro border text-muted border-line"
                 :title="b.description || ''"
               >
-                {{ b.key === 'public' || b.key === 'default' ? '默认分支 public' : b.key }}
+                {{ b.key }}
               </span>
             </div>
           </div>
