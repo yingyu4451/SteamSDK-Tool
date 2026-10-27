@@ -19,7 +19,7 @@ const SECTIONS = [
         t: 'dl',
         v: [
           ['游戏包拖进来', '窗口任意位置拖入文件夹或 zip。自动认出平台（看 UnityPlayer.dll / .app / .so），告诉你该导入哪个 Depot；同一个平台还没 Depot，就现场建一个。'],
-          ['读后台 Depot', '向导里填 AppID，点「读取后台 Depot」，拿回后台真实的 DepotID 和体积，不用照着 AppID+1 猜。'],
+          ['读后台 Depot', '向导里填 AppID，点「读后台 Depot」，拿回后台真实的 DepotID 和体积，不用照着 AppID+1 猜。'],
           ['同步 Depot', '后台建好、本地还没配的 Depot，勾上一次性补进 scripts。'],
           ['一个 App 管多平台', 'win64 / macOS / linux 各建一个 Depot，一次构建全传。不用为了多平台拆成好几个 App。'],
           ['界面里改 vdf', 'AppID、项目文件夹、构建缓存目录、排除规则、存档保护，都在抽屉里改。写走的是行级替换，你手写的注释不会被动。'],
@@ -131,13 +131,13 @@ function openRepo() {
     <div class="card p-4 flex items-center gap-3" v-reveal>
       <BookOpen :size="20" :stroke-width="1.8" class="text-accent shrink-0" />
       <div class="min-w-0">
-        <h1 class="text-[15px] font-semibold m-0">使用手册</h1>
-        <p class="mt-1 mb-0 text-[12px] text-faint">每个按钮是干什么的、怎么开始。</p>
+        <h1 class="text-lead font-semibold m-0">使用手册</h1>
+        <p class="mt-1 mb-0 text-label text-faint">每个按钮是干什么的、怎么开始。</p>
       </div>
       <input
         v-model="q"
         placeholder="搜…"
-        class="ml-auto w-[180px] h-8 px-3 rounded-[9px] bg-surface border border-line text-[12px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+        class="ml-auto w-[180px] h-9 px-3 rounded-input bg-surface border border-line text-label outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
       />
       <button class="btn no-drag shrink-0" title="从头走一遍设置流程" @click="startOnboard">
         <GraduationCap :size="14" :stroke-width="1.9" />
@@ -151,49 +151,49 @@ function openRepo() {
       class="card px-5 py-4"
       v-reveal="{ delay: Math.min(i * 0.03, 0.18) }"
     >
-      <h2 class="text-[14px] font-semibold m-0 mb-3.5">{{ sec.title }}</h2>
+      <h2 class="text-copy font-semibold m-0 mb-3.5">{{ sec.title }}</h2>
 
       <template v-for="(b, j) in sec.blocks" :key="j">
-        <p v-if="b.t === 'p'" class="m-0 mb-3 text-[13px] text-muted leading-[1.75]">
+        <p v-if="b.t === 'p'" class="m-0 mb-3 text-body text-muted leading-[1.75]">
           {{ b.v }}
         </p>
 
         <ul v-else-if="b.t === 'ul'" class="m-0 mb-3 pl-5 flex flex-col gap-2.5">
-          <li v-for="(x, k) in b.v" :key="k" class="text-[13px] text-muted leading-[1.75]">
+          <li v-for="(x, k) in b.v" :key="k" class="text-body text-muted leading-[1.75]">
             {{ x }}
           </li>
         </ul>
 
         <ol v-else-if="b.t === 'ol'" class="m-0 mb-3 pl-5 flex flex-col gap-3 list-decimal">
-          <li v-for="(x, k) in b.v" :key="k" class="text-[13px] text-muted leading-[1.75] pl-1">
+          <li v-for="(x, k) in b.v" :key="k" class="text-body text-muted leading-[1.75] pl-1">
             {{ x }}
           </li>
         </ol>
 
         <div v-else-if="b.t === 'dl'" class="m-0 mb-3 flex flex-col gap-3.5">
           <div v-for="(pair, k) in b.v" :key="k" class="grid grid-cols-[110px_1fr] gap-x-5 items-baseline">
-            <span class="text-[13px] text-ink font-medium">{{ pair[0] }}</span>
-            <span class="text-[13px] text-muted leading-[1.75]">{{ pair[1] }}</span>
+            <span class="text-body text-ink font-medium">{{ pair[0] }}</span>
+            <span class="text-body text-muted leading-[1.75]">{{ pair[1] }}</span>
           </div>
         </div>
 
         <div
           v-else-if="b.t === 'note'"
-          class="mt-1.5 mb-2 rounded-[9px] border border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)] px-3.5 py-2.5 text-[13px] text-accent/90 leading-[1.7]"
+          class="mt-1.5 mb-2 rounded-input border border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)] px-3.5 py-2.5 text-body text-accent leading-[1.7]"
         >
           {{ b.v }}
         </div>
       </template>
     </div>
 
-    <div v-if="!shown.length" class="card p-8 text-center text-[13px] text-faint">
+    <div v-if="!shown.length" class="card p-8 text-center text-body text-faint">
       没有匹配「{{ q }}」的章节。
     </div>
 
     <div class="card p-4 flex items-center gap-3" v-reveal>
       <div class="min-w-0">
-        <div class="text-[13px] text-ink">完整文档在仓库里</div>
-        <div class="mt-0.5 text-[12px] text-faint">中文和 English README 内容更全，含已知限制和开发说明。</div>
+        <div class="text-body text-ink">完整文档在仓库里</div>
+        <div class="mt-0.5 text-label text-faint">中文和 English README 内容更全，含已知限制和开发说明。</div>
       </div>
       <div class="ml-auto flex items-center gap-2 shrink-0">
         <button class="btn no-drag" @click="openRepo">

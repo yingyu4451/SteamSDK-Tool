@@ -129,14 +129,14 @@ function onLeave(el, done) {
         <!-- 启动失败 -->
         <div v-if="state.booted && state.bootError" class="p-8">
           <div class="card p-6 border-[#4a2a2a]">
-            <div class="text-[15px] font-semibold text-[#ff8a8a] mb-2">启动失败</div>
-            <div class="text-[13px] text-muted">{{ state.bootError }}</div>
+            <div class="text-lead font-semibold text-[#ff8a8a] mb-2">启动失败</div>
+            <div class="text-body text-muted">{{ state.bootError }}</div>
           </div>
         </div>
 
         <!-- 首次加载骨架 -->
         <div v-else-if="!state.booted" class="h-full grid place-items-center">
-          <div class="flex flex-col items-center gap-3 text-muted text-[13px]">
+          <div class="flex flex-col items-center gap-3 text-muted text-body">
             <div
               class="w-7 h-7 rounded-full border-2 border-[#23303d] border-t-[#66c0f4] animate-spin"
             />
@@ -182,13 +182,13 @@ function onLeave(el, done) {
         v-if="state.drop.over && !state.drop.data"
         class="fixed inset-0 z-[58] grid place-items-center pointer-events-none"
       >
-        <div class="absolute inset-3 rounded-[16px] border-2 border-dashed border-[rgba(102,192,244,.5)] bg-[rgba(11,15,22,.72)] backdrop-blur-sm" />
+        <div class="absolute inset-3 rounded-card border-2 border-dashed border-[rgba(102,192,244,.5)] bg-[rgba(11,15,22,.72)] backdrop-blur-sm" />
         <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
           <Upload :size="32" :stroke-width="1.8" />
-          <div class="text-[13px] font-semibold">
+          <div class="text-body font-semibold">
             {{ state.view === 'strip' ? '松手就检查' : '松手就分析' }}
           </div>
-          <div class="text-[12px] text-muted">
+          <div class="text-label text-muted">
             {{ state.view === 'strip' ? '把游戏文件夹拖进来' : '文件夹，或者 .zip' }}
           </div>
         </div>
@@ -203,7 +203,7 @@ function onLeave(el, done) {
     >
       <div
         v-if="state.toast"
-        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-[11px] border text-[13px] shadow-2xl max-w-[80vw] truncate"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-card border text-body shadow-2xl max-w-[80vw] truncate"
         :class="
           state.toast.tone === 'bad'
             ? 'border-[rgba(255,92,108,.3)] bg-[#221a1a] text-[#ff8a8a]'

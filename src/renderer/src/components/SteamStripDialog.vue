@@ -12,6 +12,7 @@ import {
 import { fmtInt, fmtSize } from '../format.js'
 import { Unplug, X, Copy, TriangleAlert } from '@lucide/vue'
 import PathLink from './PathLink.vue'
+import { useDialogA11y } from '../composables/useDialogA11y.js'
 
 const el = ref(null)
 
@@ -57,18 +58,15 @@ watch(open, async (v) => {
   animateIn()
 })
 
-function onKey(e) {
-  if (!open.value) return
-  if (e.key === 'Escape' && !busy.value) closeStripConfirm()
-}
+useDialogA11y(el, () => {
+  if (!busy.value) closeStripConfirm()
+}, { isOpen: () => open.value })
 
 onMounted(() => {
-  window.addEventListener('keydown', onKey)
   if (open.value) animateIn()
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKey)
   if (el.value) gsap.killTweensOf(el.value)
 })
 </script>
@@ -79,17 +77,17 @@ onBeforeUnmount(() => {
     class="fixed inset-0 z-[62] grid place-items-center bg-[rgba(6,9,14,.62)] backdrop-blur-[2px] px-6"
     @click.self="!busy && closeStripConfirm()"
   >
-    <div ref="el" class="w-full max-w-[640px] card overflow-hidden">
+    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="strip-dialog-title" class="w-full max-w-[640px] card overflow-hidden">
       <!-- 头 -->
       <div class="flex items-start gap-3 px-5 py-4 border-b border-line-soft">
         <div
-          class="shrink-0 w-9 h-9 rounded-[9px] grid place-items-center bg-[rgba(102,192,244,.1)] text-accent border border-[rgba(102,192,244,.18)]"
+          class="shrink-0 w-9 h-9 rounded-input grid place-items-center bg-[rgba(102,192,244,.1)] text-accent border border-[rgba(102,192,244,.18)]"
         >
           <Unplug :size="17" :stroke-width="1.8" />
         </div>
         <div class="min-w-0 flex-1">
-          <div class="text-[15px] font-semibold text-ink">剥离 Steam 运行库</div>
-          <div class="mt-0.5 text-[12px] text-muted">
+          <div id="strip-dialog-title" class="text-lead font-semibold text-ink">剥离 Steam 运行库</div>
+          <div class="mt-0.5 text-label text-muted">
             复制一份到旁边，只去掉副本里的 Steam 原生运行库
           </div>
         </div>
@@ -106,10 +104,10 @@ onBeforeUnmount(() => {
       <!-- 内容 -->
       <div class="px-5 py-4 flex flex-col gap-3.5 max-h-[62vh] overflow-y-auto scroll-thin">
         <div class="flex items-center gap-2 min-w-0">
-          <span class="w-[64px] shrink-0 text-[12px] text-faint">原文件夹</span>
+          <span class="w-[64px] shrink-0 text-label text-faint">原文件夹</span>
           <PathLink :path="inspect.root" />
         </div>
-        <div class="flex items-center gap-2 min-w-0 text-[12px] text-muted">
+        <div class="flex items-center gap-2 min-w-0 text-label text-muted">
           <span class="w-[64px] shrink-0 text-faint">文件</span>
           <span>
             <span class="num text-ink">{{ fmtInt(inspect.totalFiles) }}</span> 个 ·
@@ -120,10 +118,10 @@ onBeforeUnmount(() => {
         <!-- 副本里要去掉的文件 -->
         <div class="card-flat px-3.5 py-3">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-[11px] font-semibold tracking-wider text-faint uppercase">
+            <span class="text-micro font-semibold tracking-wider text-faint uppercase">
               副本里去掉
             </span>
-            <span class="text-[11px] text-faint">
+            <span class="text-micro text-faint">
               共 <span class="num text-ink">{{ stripCount }}</span> 个
             </span>
           </div>
@@ -131,14 +129,14 @@ onBeforeUnmount(() => {
             <div
               v-for="f in native"
               :key="f.rel"
-              class="flex items-center gap-2 text-[12px] py-0.5 min-w-0"
+              class="flex items-center gap-2 text-label py-0.5 min-w-0"
             >
               <X :size="12" :stroke-width="2" class="shrink-0 text-danger" />
               <span class="font-mono truncate text-muted">{{ f.rel }}</span>
               <span class="ml-auto num shrink-0 text-faint">{{ fmtSize(f.size) }}</span>
             </div>
           </div>
-          <div v-else class="text-[12px] text-faint">
+          <div v-else class="text-label text-faint">
             这个文件夹里没找到原生 Steam 运行库，复制后内容会和原文件夹一样。
           </div>
           <label
@@ -152,7 +150,7 @@ onBeforeUnmount(() => {
               :disabled="busy"
               @change="setStripRemoveConfig($event.target.checked)"
             />
-            <span class="text-[12px] text-muted leading-relaxed">
+            <span class="text-label text-muted leading-relaxed">
               也去掉 <span class="font-mono">steam_appid.txt</span>（{{ config.length }} 个）
               —— 有它时启动会拿写死的 AppID 绑 Steam
             </span>
@@ -162,7 +160,7 @@ onBeforeUnmount(() => {
         <!-- 托管 DLL -->
         <div
           v-if="managed.length"
-          class="flex items-start gap-2 text-[11.5px] leading-relaxed text-faint"
+          class="flex items-start gap-2 text-label leading-relaxed text-faint"
         >
           <span class="w-[64px] shrink-0">托管 DLL</span>
           <span class="min-w-0">
@@ -174,26 +172,26 @@ onBeforeUnmount(() => {
 
         <!-- 副本位置 -->
         <div class="flex items-center gap-2 min-w-0">
-          <span class="w-[64px] shrink-0 text-[12px] text-faint">副本位置</span>
+          <span class="w-[64px] shrink-0 text-label text-faint">副本位置</span>
           <input
-            class="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-[#0f1620] border border-[#27405c] text-[12px] font-mono text-ink outline-none focus:border-[#4d90c4] disabled:opacity-60"
+            class="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-[#0f1620] border border-[#27405c] text-label font-mono text-ink outline-none focus:border-[#4d90c4] disabled:opacity-60"
             :value="s.dest"
             :disabled="busy"
             spellcheck="false"
             @input="setStripDest($event.target.value)"
           />
-          <button class="btn shrink-0 h-8 px-3 text-[12px]" :disabled="busy" @click="pickStripDest">
+          <button class="btn shrink-0 px-3 " :disabled="busy" @click="pickStripDest">
             选择…
           </button>
         </div>
-        <div class="text-[11px] text-faint pl-[72px]">
+        <div class="text-micro text-faint pl-[72px]">
           「选择…」选一个父文件夹，副本自动命名成
           <span class="font-mono">{{ inspect.name }}{{ inspect.destSuffix || '_NoSteam' }}</span>
           ；重名会加 -2、-3。
         </div>
 
         <!-- 说明 -->
-        <div class="flex items-start gap-2 text-[11.5px] leading-relaxed text-muted">
+        <div class="flex items-start gap-2 text-label leading-relaxed text-muted">
           <TriangleAlert :size="14" class="shrink-0 mt-0.5 text-amber" />
           <span>
             原文件夹不会改动。确认后开始复制
@@ -204,7 +202,7 @@ onBeforeUnmount(() => {
 
         <!-- 进度 -->
         <div v-if="busy" class="flex flex-col gap-2">
-          <div class="flex items-center gap-2 text-[12px] text-muted">
+          <div class="flex items-center gap-2 text-label text-muted">
             <Copy :size="14" :stroke-width="1.8" class="text-accent" />
             正在复制并剥离…
             <span class="ml-auto num">{{ Math.round(pct) }}%</span>
@@ -215,7 +213,7 @@ onBeforeUnmount(() => {
               :style="{ width: pct + '%' }"
             />
           </div>
-          <div class="flex items-center justify-between text-[11px] text-faint">
+          <div class="flex items-center justify-between text-micro text-faint">
             <span class="num"
               >{{ fmtInt(s.progress?.copiedFiles || 0) }} /
               {{ fmtInt(s.progress?.totalFiles || 0) }} 个文件</span
@@ -228,14 +226,14 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- 错误 -->
-        <div v-if="s.error" class="text-[12px] text-[#ff8a8a] break-all">{{ s.error }}</div>
+        <div v-if="s.error" class="text-label text-[#ff8a8a] break-all">{{ s.error }}</div>
       </div>
 
       <!-- 底栏 -->
       <div
         class="flex items-center gap-2 px-5 py-3.5 border-t border-line-soft bg-[rgba(9,15,23,.35)]"
       >
-        <span class="text-[11px] text-faint">只复制内容目录，不改 vdf</span>
+        <span class="text-micro text-faint">只复制内容目录，不改 vdf</span>
         <button class="btn ml-auto" :disabled="busy" @click="closeStripConfirm">取消</button>
         <button
           class="btn btn-primary"

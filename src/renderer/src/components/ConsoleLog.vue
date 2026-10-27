@@ -4,7 +4,8 @@ import gsap from 'gsap'
 import { state, clearLogs, cancelRun, answerPrompt, saveApp, submitGuardCode, cancelGuardPrompt } from '../store.js'
 import { fmtClock } from '../format.js'
 import { reducedMotion } from '../motion.js'
-import { Check, TriangleAlert, ShieldAlert, LoaderCircle } from '@lucide/vue'
+import { Check, TriangleAlert, ShieldAlert, LoaderCircle, Terminal } from '@lucide/vue'
+import EmptyState from './EmptyState.vue'
 
 const verbose = computed(() => state.detail?.verbose === '1')
 const verboseBusy = ref(false)
@@ -147,7 +148,7 @@ const exitTone = computed(() => {
     <div v-if="state.running" class="scanline" />
 
     <header class="px-5 py-3 flex items-center gap-2.5 border-b border-line shrink-0">
-      <h2 class="text-[13px] font-semibold tracking-tight m-0 shrink-0 whitespace-nowrap">构建输出</h2>
+      <h2 class="text-body font-semibold tracking-tight m-0 shrink-0 whitespace-nowrap">构建输出</h2>
 
       <span v-if="state.running" class="pill pill-warn">
         <span class="w-1.5 h-1.5 rounded-full bg-amber animate-pulse" />
@@ -156,12 +157,12 @@ const exitTone = computed(() => {
       <span v-else-if="state.lastExit" class="pill" :class="exitTone === 'ok' ? 'pill-ok' : 'pill-bad'">
         退出码 {{ state.lastExit.code }}
       </span>
-      <span v-else class="text-[12px] text-faint shrink-0 whitespace-nowrap hidden xl:inline">还没有运行过</span>
+      <span v-else class="text-label text-faint shrink-0 whitespace-nowrap hidden xl:inline">还没有运行过</span>
 
-      <span class="ml-auto num text-[11px] text-faint shrink-0 whitespace-nowrap">{{ state.logs.length }} 行</span>
+      <span class="ml-auto num text-micro text-faint shrink-0 whitespace-nowrap">{{ state.logs.length }} 行</span>
 
       <label
-        class="flex items-center gap-1.5 text-[12px] text-faint cursor-pointer select-none shrink-0 whitespace-nowrap"
+        class="flex items-center gap-1.5 text-label text-faint cursor-pointer select-none shrink-0 whitespace-nowrap"
         title="打开后 steamcmd 会逐个文件打印，日志会长很多 —— 排查「到底传了哪些文件」时才需要"
       >
         <input
@@ -174,18 +175,18 @@ const exitTone = computed(() => {
         详细日志
       </label>
 
-      <label class="flex items-center gap-1.5 text-[12px] text-faint cursor-pointer select-none shrink-0 whitespace-nowrap">
+      <label class="flex items-center gap-1.5 text-label text-faint cursor-pointer select-none shrink-0 whitespace-nowrap">
         <input type="checkbox" v-model="autoScroll" class="accent-[#66c0f4]" />
         自动滚动
       </label>
 
-      <button class="btn h-7 px-2.5 text-[12px] no-drag" :disabled="!state.logs.length" @click="copyAll">
+      <button class="btn btn-sm px-2.5  no-drag" :disabled="!state.logs.length" @click="copyAll">
         复制
       </button>
-      <button class="btn h-7 px-2.5 text-[12px] no-drag" :disabled="!state.logs.length" @click="clear">
+      <button class="btn btn-sm px-2.5  no-drag" :disabled="!state.logs.length" @click="clear">
         清空
       </button>
-      <button v-if="state.running" class="btn btn-danger h-7 px-2.5 text-[12px] no-drag" @click="cancelRun">
+      <button v-if="state.running" class="btn btn-danger btn-sm px-2.5  no-drag" @click="cancelRun">
         中止
       </button>
     </header>
@@ -202,22 +203,22 @@ const exitTone = computed(() => {
         class="px-5 py-2.5 border-b border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)] flex items-center gap-3 shrink-0"
       >
         <TriangleAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
-        <span class="text-[13px] text-amber">{{ state.prompt.hint }}</span>
+        <span class="text-body text-amber">{{ state.prompt.hint }}</span>
         <!-- 手机确认那条不用输任何东西，去手机上点就行 —— 别摆一个让人以为要打字的框 -->
         <template v-if="state.prompt.kind === 'mobile-confirm'">
           <LoaderCircle :size="15" class="text-amber shrink-0 drop-spin" />
-          <span class="text-[12px] text-faint">等你在手机上点确认…（盾牌图标 → 确认登录）</span>
+          <span class="text-label text-faint">等你在手机上点确认…（盾牌图标 → 确认登录）</span>
         </template>
         <template v-else>
           <input
             ref="promptEl"
             v-model="promptValue"
             :type="state.prompt.kind === 'password' ? 'password' : 'text'"
-            class="flex-1 max-w-[320px] h-8 px-3 rounded-lg bg-surface border border-line text-[13px] outline-none focus:border-[rgba(255,180,84,.5)]"
+            class="flex-1 max-w-[320px] h-9 px-3 rounded-lg bg-surface border border-line text-body outline-none focus:border-[rgba(255,180,84,.5)]"
             placeholder="输入后回车"
             @keydown.enter="submitPrompt"
           />
-          <button class="btn h-8 no-drag" @click="submitPrompt">提交</button>
+          <button class="btn no-drag" @click="submitPrompt">提交</button>
         </template>
       </div>
     </Transition>
@@ -234,19 +235,19 @@ const exitTone = computed(() => {
         class="px-5 py-2.5 border-b border-[rgba(240,169,46,.24)] bg-[rgba(240,169,46,.06)] flex items-center gap-3 shrink-0 flex-wrap"
       >
         <ShieldAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
-        <span class="text-[13px] text-amber">
+        <span class="text-body text-amber">
           Steam 要 Steam Guard 验证码 —— 手机 Steam App 的「Steam 令牌」页或邮件里的那串码
         </span>
         <input
           ref="guardEl"
           v-model="guardValue"
-          class="w-[150px] h-8 px-3 rounded-lg bg-surface border border-line text-[13px] tracking-[0.18em] num outline-none focus:border-[rgba(240,169,46,.5)]"
+          class="w-[150px] h-9 px-3 rounded-lg bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-[rgba(240,169,46,.5)]"
           placeholder="验证码"
           autocomplete="one-time-code"
           @keydown.enter="submitGuard"
         />
-        <button class="btn h-8 no-drag" @click="submitGuard">带验证码重试</button>
-        <button class="btn h-8 no-drag" @click="cancelGuardPrompt">取消</button>
+        <button class="btn no-drag" @click="submitGuard">带验证码重试</button>
+        <button class="btn no-drag" @click="cancelGuardPrompt">取消</button>
       </div>
     </Transition>
 
@@ -262,18 +263,20 @@ const exitTone = computed(() => {
         class="px-5 py-2.5 border-b border-[rgba(74,222,128,.24)] bg-[rgba(74,222,128,.06)] flex items-center gap-3 shrink-0"
       >
         <Check :size="16" :stroke-width="2.4" class="text-success shrink-0" />
-        <span class="text-[13px] text-success">
+        <span class="text-body text-success">
           上传成功。还差一步：去 Steamworks 把这次构建设为 live（分支由 SetLive 决定）。
         </span>
         <div class="flex-1" />
-        <button class="btn h-8 no-drag" @click="openBuildsPage">打开构建页</button>
-        <button class="btn h-8 no-drag" @click="state.uploaded = null">知道了</button>
+        <button class="btn no-drag" @click="openBuildsPage">打开构建页</button>
+        <button class="btn no-drag" @click="state.uploaded = null">知道了</button>
       </div>
     </Transition>
 
     <div
       ref="bodyEl"
       class="flex-1 min-h-0 overflow-y-auto scroll-thin px-5 py-3 bg-[#080b10] select-text"
+      role="log"
+      aria-label="构建输出"
       @scroll="onScroll"
     >
       <div v-for="(l, i) in state.logs" :key="i" class="log-line">
@@ -281,11 +284,12 @@ const exitTone = computed(() => {
         <span :class="`log-${l.stream}`">{{ l.line }}</span>
       </div>
 
-      <div
-        v-if="!state.logs.length"
-        class="h-full grid place-items-center text-[12px] text-faint"
-      >
-        点「检查配置」或「Preview 空跑」开始
+      <div v-if="!state.logs.length" class="h-full grid place-items-center">
+        <EmptyState
+          :icon="Terminal"
+          title="还没有运行过"
+          hint="点「检查配置」或「Preview 空跑」开始，steamcmd 和脚本的输出会实时出现在这里。"
+        />
       </div>
     </div>
   </section>

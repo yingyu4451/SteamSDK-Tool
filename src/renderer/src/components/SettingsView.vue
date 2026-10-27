@@ -233,12 +233,12 @@ function openExternal(url) {
       <div class="flex flex-col gap-4 min-w-0">
         <!-- 路径 -->
         <section class="card p-5" v-reveal>
-          <h2 class="text-[13px] font-semibold m-0">SDK 路径</h2>
+          <h2 class="text-body font-semibold m-0">SDK 路径</h2>
 
           <div class="mt-3.5 flex gap-2">
             <input
               v-model="sdkDraft"
-              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
               placeholder="D:\SteamSDK"
             />
             <button class="btn no-drag" @click="pick">选择…</button>
@@ -247,19 +247,19 @@ function openExternal(url) {
 
           <div class="mt-2 flex items-center gap-2 flex-wrap">
             <button
-              class="btn h-7 px-2.5 text-[11px] no-drag"
+              class="btn btn-sm px-2.5  no-drag"
               title="打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链"
               @click="openExternal(SDK_DOWNLOAD)"
             >
               <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
             </button>
-            <span v-if="!state.sdk?.sdkRootExists" class="text-[11px] text-amber">
+            <span v-if="!state.sdk?.sdkRootExists" class="text-micro text-amber">
               还没装 SDK —— 下完解压到任意目录，再把上面的路径指过去
             </span>
           </div>
 
           <div class="mt-4 grid grid-cols-1 gap-1.5">
-            <div v-for="c in checks" :key="c.label" class="flex items-center gap-2.5 text-[12px]">
+            <div v-for="c in checks" :key="c.label" class="flex items-center gap-2.5 text-label">
               <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="c.ok ? 'bg-success' : 'bg-danger'" />
               <span class="w-[110px] shrink-0" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
               <span class="font-mono text-faint truncate" :title="c.path">{{ c.path }}</span>
@@ -271,7 +271,7 @@ function openExternal(url) {
           <div v-if="scriptState.show || scriptMsg" class="mt-2.5 flex items-center gap-2 flex-wrap">
             <button
               v-if="scriptState.show && scriptState.canInstall"
-              class="btn h-7 px-2.5 text-[11px] no-drag"
+              class="btn btn-sm px-2.5  no-drag"
               :disabled="installingScripts"
               title="把工具自带的 build.ps1 / check.ps1 写进 SDK 的 tools\ContentBuilder（内容一样的不重写）"
               @click="repairScripts"
@@ -281,19 +281,19 @@ function openExternal(url) {
             </button>
             <span
               v-if="scriptMsg"
-              class="text-[11px]"
+              class="text-micro"
               :class="scriptMsg.tone === 'bad' ? 'text-danger' : 'text-success'"
             >
               {{ scriptMsg.text }}
             </span>
-            <span v-else class="text-[11px]" :class="scriptState.hintClass">{{ scriptState.hint }}</span>
+            <span v-else class="text-micro" :class="scriptState.hintClass">{{ scriptState.hint }}</span>
           </div>
         </section>
 
         <!-- 凭据 -->
         <section class="card p-5" v-reveal="{ delay: 0.04 }">
           <div class="flex items-center gap-2.5">
-            <h2 class="text-[13px] font-semibold m-0">登录凭据</h2>
+            <h2 class="text-body font-semibold m-0">登录凭据</h2>
             <span class="pill" :class="state.hasPassword ? 'pill-ok' : 'pill-idle'">
               {{ state.hasPassword ? '已保存' : '未保存' }}
             </span>
@@ -303,7 +303,7 @@ function openExternal(url) {
           <div class="mt-3.5 flex gap-2">
             <input
               v-model="accountDraft"
-              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
               placeholder="Steam 构建账号名"
               @keydown.enter="saveAccount"
             />
@@ -314,7 +314,7 @@ function openExternal(url) {
             <input
               v-model="passwordDraft"
               type="password"
-              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
+              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)]"
               placeholder="Steam 账号密码"
               @keydown.enter="savePw"
             />
@@ -328,7 +328,7 @@ function openExternal(url) {
               <ShieldOff :size="14" />
               忘记账号
             </button>
-            <span class="text-[11px] text-faint">
+            <span class="text-micro text-faint">
               清掉 steamcmd 的登录令牌、用户档案和本机保存的密码
             </span>
           </div>
@@ -341,9 +341,9 @@ function openExternal(url) {
         <!-- Steamworks Web API -->
         <section class="card p-5" v-reveal="{ delay: 0.06 }">
           <div class="flex items-center gap-2">
-            <h2 class="text-[13px] font-semibold m-0">Steamworks Web API 密钥</h2>
+            <h2 class="text-body font-semibold m-0">Steamworks Web API 密钥</h2>
             <span
-              class="px-2 py-[3px] rounded-full text-[11px] border"
+              class="px-2 py-[3px] rounded-full text-micro border"
               :class="
                 keyState.has
                   ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
@@ -359,7 +359,7 @@ function openExternal(url) {
               v-model="apiKeyDraft"
               type="password"
               placeholder="32 位十六进制 Publisher 密钥"
-              class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
             />
             <button class="btn no-drag" :disabled="!apiKeyDraft.trim()" @click="saveKey">加密保存</button>
             <button class="btn no-drag" :disabled="!keyState.has" @click="clearKey">清除</button>
@@ -375,12 +375,12 @@ function openExternal(url) {
             >
               去后台取密钥
             </button>
-            <span v-if="keyMsg" class="text-[12px]" :class="keyMsg.tone === 'bad' ? 'text-danger' : 'text-accent'">
+            <span v-if="keyMsg" class="text-label" :class="keyMsg.tone === 'bad' ? 'text-danger' : 'text-accent'">
               {{ keyMsg.text }}
             </span>
           </div>
 
-          <div class="mt-2.5 text-[11px] text-faint">
+          <div class="mt-2.5 text-micro text-faint">
             需要 <span class="text-muted">Publisher</span> 级别（普通 App 管理员拿不到）。
           </div>
         </section>
@@ -388,12 +388,12 @@ function openExternal(url) {
         <!-- 关于 & 更新 -->
         <section class="card p-5" v-reveal="{ delay: 0.08 }">
           <div class="flex items-center gap-2.5 flex-wrap">
-            <h2 class="text-[13px] font-semibold m-0">关于</h2>
+            <h2 class="text-body font-semibold m-0">关于</h2>
             <span class="pill">{{ u.current ? `v${u.current}` : '读取版本中…' }}</span>
             <span v-if="u.data?.hasUpdate" class="pill pill-warn">有新版本 v{{ u.data.latest }}</span>
             <span v-else-if="u.checked && u.data" class="pill pill-ok">已是最新</span>
             <button
-              class="ml-auto btn h-7 px-2.5 text-[12px] no-drag"
+              class="ml-auto btn btn-sm px-2.5  no-drag"
               :disabled="u.busy"
               @click="checkUpdateNow()"
             >
@@ -401,13 +401,13 @@ function openExternal(url) {
             </button>
           </div>
 
-          <div v-if="u.error" class="mt-2.5 text-[12px] text-amber">{{ u.error }}</div>
+          <div v-if="u.error" class="mt-2.5 text-label text-amber">{{ u.error }}</div>
 
           <div
             v-if="u.data?.hasUpdate"
-            class="mt-3 rounded-[10px] border border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.06)] p-3"
+            class="mt-3 rounded-card border border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.06)] p-3"
           >
-            <div class="text-[12px] text-[#d7c3a0]">
+            <div class="text-label text-[#d7c3a0]">
               新版本 <b>v{{ u.data.latest }}</b>（当前 v{{ u.current }}）<template v-if="u.data.publishedAt">
                 · {{ fmtDate(u.data.publishedAt) }}</template
               >
@@ -415,7 +415,7 @@ function openExternal(url) {
 
             <pre
               v-if="u.data.notes"
-              class="mt-2 mb-0 text-[11px] text-muted whitespace-pre-wrap max-h-[150px] overflow-y-auto scroll-thin font-sans"
+              class="mt-2 mb-0 text-micro text-muted whitespace-pre-wrap max-h-[150px] overflow-y-auto scroll-thin font-sans"
               >{{ u.data.notes }}</pre
             >
 
@@ -423,7 +423,7 @@ function openExternal(url) {
               <div class="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                 <div class="h-full bg-accent transition-[width] duration-150" :style="{ width: pct + '%' }" />
               </div>
-              <div class="mt-1.5 text-[11px] text-faint num">
+              <div class="mt-1.5 text-micro text-faint num">
                 <template v-if="u.viaIncremental && u.estimate && (!u.total || u.total <= u.estimate * 1.2)">
                   增量下载 · {{ fmtSize(u.got) }} / {{ fmtSize(u.total || u.estimate)
                   }}<template v-if="u.fullSize">（全量 {{ fmtSize(u.fullSize) }}）</template> · {{ pct }}%
@@ -437,7 +437,7 @@ function openExternal(url) {
             <div class="mt-2.5 flex items-center gap-2 flex-wrap">
               <button
                 v-if="!u.ready"
-                class="btn btn-primary h-8 px-3 text-[12px] no-drag"
+                class="btn btn-primary px-3  no-drag"
                 :disabled="u.downloading || !(u.data.asset || u.incremental)"
                 :title="
                   u.data.asset || u.incremental
@@ -448,20 +448,20 @@ function openExternal(url) {
               >
                 {{ u.downloading ? '下载中…' : u.data.asset || u.incremental ? '下载更新' : '没读到安装包' }}
               </button>
-              <button v-else class="btn btn-primary h-8 px-3 text-[12px] no-drag" @click="installUpdateNow()">
+              <button v-else class="btn btn-primary px-3  no-drag" @click="installUpdateNow()">
                 {{ u.portable ? '打开下载位置' : '重启并安装' }}
               </button>
-              <button class="btn h-8 px-3 text-[12px] no-drag" @click="openReleases()">在 GitHub 上看</button>
+              <button class="btn px-3  no-drag" @click="openReleases()">在 GitHub 上看</button>
             </div>
 
-            <div v-if="!u.ready && !u.data.asset && !u.incremental" class="mt-2 text-[11px] text-faint">
+            <div v-if="!u.ready && !u.data.asset && !u.incremental" class="mt-2 text-micro text-faint">
               这次没读到 release 的安装包列表（刚发版时偶尔会这样）。过一会儿再点「检查更新」，或者点「在 GitHub 上看」手动下载。
             </div>
-            <div v-if="u.ready && u.portable" class="mt-2 text-[11px] text-faint">
+            <div v-if="u.ready && u.portable" class="mt-2 text-micro text-faint">
               便携版没有安装目录，也覆盖不了正在运行的自己。
               点「打开下载位置」，关掉工具，用新版替换掉你那个 exe 就行。
             </div>
-            <div v-else-if="u.ready" class="mt-2 text-[11px] text-faint">
+            <div v-else-if="u.ready" class="mt-2 text-micro text-faint">
               {{ u.viaIncremental && u.differential ? '增量包已经下好了（只下了改动的部分）。' : '安装包已经下好了。' }}
               点「重启并安装」会关掉工具、起安装程序。
             </div>

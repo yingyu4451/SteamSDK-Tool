@@ -3,24 +3,6 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { Minus, Square, Copy, X } from '@lucide/vue'
 import { state, goSettings } from '../store.js'
 
-/* 顶栏这颗 SDK 状态：缺什么就说什么。
- * build.ps1 / check.ps1 是工具自带的（官方 SDK 里没有），缺它们不是「路径异常」。 */
-const sdkPill = computed(() => {
-  const s = state.sdk
-  if (!s) return { ok: null, text: '读取 SDK 状态…', hint: '' }
-  if (!s.sdkRootExists) return { ok: false, text: '未设置 SDK 路径', hint: '去设置里选 SteamSDK 目录' }
-  if (!s.contentBuilderExists) {
-    return { ok: false, text: 'SDK 路径异常', hint: '这个目录里没有 tools\\ContentBuilder' }
-  }
-  if (!s.steamcmdExists || !s.scriptsDirExists) {
-    return { ok: false, text: 'SDK 不完整', hint: '缺 builder\\steamcmd.exe 或 scripts 目录，重新解压一份 SDK' }
-  }
-  if (!s.buildScriptExists || !s.checkScriptExists) {
-    return { ok: false, text: '缺少构建脚本', hint: '点这个胶囊去设置，用「安装/修复脚本」补上' }
-  }
-  return { ok: true, text: 'SDK 就绪', hint: '' }
-})
-
 const upd = computed(() => state.update?.data || null)
 
 /* ---- 自己画的窗口按钮 ----
@@ -75,14 +57,14 @@ const win = window.api.win
         <polygon points="70,152 128,186 128,236 70,202" fill="#3f92c9" />
         <polygon points="186,152 128,186 128,236 186,202" fill="#245c8c" />
       </svg>
-      <span class="text-[13px] font-semibold tracking-tight">SteamSDK 上传工作台</span>
+      <span class="text-body font-semibold tracking-tight">SteamSDK 上传工作台</span>
     </div>
 
     <div class="h-4 w-px bg-line" />
 
     <!-- SDK 路径可能很长（比如下载后解压到 Downloads 里），这里必须能收窄，
          否则会把右边的状态胶囊和窗口按钮挤出窗口。 -->
-    <div class="flex items-center gap-2 text-[12px] text-faint no-drag min-w-0">
+    <div class="flex items-center gap-2 text-label text-faint no-drag min-w-0">
       <span class="font-mono truncate" :title="state.sdk?.sdkRoot">{{ state.sdk?.sdkRoot || '—' }}</span>
     </div>
 
@@ -99,27 +81,11 @@ const win = window.api.win
           class="flex items-center gap-2 h-6 px-2.5 rounded-full bg-[rgba(102,192,244,.1)] border border-[rgba(102,192,244,.28)]"
         >
           <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-          <span class="text-[12px] text-accent font-medium">
+          <span class="text-label text-accent font-medium">
             {{ state.runKind === 'check' ? '检查配置中' : state.runPreview ? 'Preview 中' : '上传中' }}
           </span>
         </div>
       </Transition>
-
-      <span
-        class="pill"
-        :class="sdkPill.ok === true ? 'pill-ok' : sdkPill.ok === false ? 'pill-bad' : 'pill-idle'"
-        :title="sdkPill.hint || undefined"
-      >
-        <span
-          class="w-1.5 h-1.5 rounded-full"
-          :class="sdkPill.ok === true ? 'bg-success' : sdkPill.ok === false ? 'bg-danger' : 'bg-faint'"
-        />
-        {{ sdkPill.text }}
-      </span>
-
-      <span v-if="state.hasPassword" class="pill pill-idle" title="密码已用 DPAPI 加密保存">
-        凭据已存
-      </span>
 
       <!-- 有新版本就点一下，直接去设置页 -->
       <button

@@ -3,11 +3,14 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import gsap from 'gsap'
 import { state, closeDeleteDialog, confirmDelete } from '../store.js'
 import { fmtSize, fmtInt } from '../format.js'
+import { useDialogA11y } from '../composables/useDialogA11y.js'
 
 const el = ref(null)
 const btn = ref(null)
 
 const d = computed(() => state.deleteDialog)
+
+useDialogA11y(el, closeDeleteDialog, { isOpen: () => !!d.value })
 
 /* ── 二次点击确认 ───────────────────────────────────────────────
    第一次点只是「上膛」，5 秒内再点一次才真删。
@@ -83,49 +86,52 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
 
     <div
       ref="el"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-app-title"
       class="relative card w-full max-w-[560px] max-h-[88vh] overflow-y-auto scroll-thin transition-colors duration-200"
       :class="armed ? 'border-[#e24b4b]' : 'border-[#4a2a2a]'"
     >
       <header class="px-6 pt-5 pb-4 border-b border-line">
-        <h2 class="text-[15.5px] font-semibold m-0 text-[#ff8a8a]">
+        <h2 id="delete-app-title" class="text-lead font-semibold m-0 text-[#ff8a8a]">
           删除 App「{{ d.dirName }}」
         </h2>
-        <p class="mt-1.5 mb-0 text-[12px] text-[#ff8a8a]">不可撤销。Steam 上已传的构建不受影响。</p>
+        <p class="mt-1.5 mb-0 text-label text-[#ff8a8a]">不可撤销。Steam 上已传的构建不受影响。</p>
       </header>
 
-      <div v-if="d.loading" class="p-6 text-[13px] text-muted">正在统计要删的东西…</div>
+      <div v-if="d.loading" class="p-6 text-body text-muted">正在统计要删的东西…</div>
 
-      <div v-else-if="d.error" class="p-6 text-[13px] text-danger">{{ d.error }}</div>
+      <div v-else-if="d.error" class="p-6 text-body text-danger">{{ d.error }}</div>
 
       <div v-else class="p-6 flex flex-col gap-4">
         <!-- 脚本目录（一定会删） -->
-        <div class="rounded-[10px] border border-[rgba(255,92,108,.22)] bg-[rgba(255,92,108,.05)] p-3.5">
+        <div class="rounded-card border border-[rgba(255,92,108,.22)] bg-[rgba(255,92,108,.05)] p-3.5">
           <div class="flex items-center gap-2">
             <span class="pill pill-bad">一定会删</span>
-            <span class="text-[12px] font-medium">构建脚本目录</span>
-            <span class="ml-auto num text-[12px] text-faint">
+            <span class="text-label font-medium">构建脚本目录</span>
+            <span class="ml-auto num text-label text-faint">
               {{ d.info.scripts.files }} 个文件 · {{ fmtSize(d.info.scripts.bytes) }}
             </span>
           </div>
-          <div class="mt-2 font-mono text-[12px] text-[#ffb0b8] break-all">{{ d.info.scripts.path }}</div>
-          <div class="mt-1.5 text-[11px] text-faint">
+          <div class="mt-2 font-mono text-label text-[#ffb0b8] break-all">{{ d.info.scripts.path }}</div>
+          <div class="mt-1.5 text-micro text-faint">
             包含 app_{{ d.info.appId }}.vdf 和所有 depot 脚本。以后再想要这个版本，得重新建一遍。
           </div>
         </div>
 
         <!-- 内容目录（可选） -->
-        <div class="rounded-[10px] border border-line bg-surface p-3.5">
+        <div class="rounded-card border border-line bg-surface p-3.5">
           <div class="flex items-center gap-2">
             <span class="pill" :class="deletableContent.length ? 'pill-warn' : 'pill-idle'">可选</span>
-            <span class="text-[12px] font-medium">内容目录</span>
-            <span v-if="deletableContent.length" class="ml-auto num text-[12px] text-faint">
+            <span class="text-label font-medium">内容目录</span>
+            <span v-if="deletableContent.length" class="ml-auto num text-label text-faint">
               {{ fmtInt(contentTotals.files) }} 个文件 · {{ fmtSize(contentTotals.bytes) }}
             </span>
           </div>
 
           <label
             v-if="deletableContent.length"
-            class="mt-2.5 flex items-start gap-2 text-[12px] cursor-pointer select-none"
+            class="mt-2.5 flex items-start gap-2 text-label cursor-pointer select-none"
           >
             <input type="checkbox" v-model="d.deleteContent" class="accent-[#e24b4b] mt-0.5" />
             <span>
@@ -135,7 +141,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
           </label>
 
           <div class="mt-2.5 flex flex-col gap-1.5">
-            <div v-for="c in d.info.content" :key="c.depotId" class="flex items-center gap-2 text-[12px]">
+            <div v-for="c in d.info.content" :key="c.depotId" class="flex items-center gap-2 text-label">
               <span class="num text-faint shrink-0 w-14">{{ c.depotId }}</span>
               <span class="font-mono truncate flex-1" :class="c.exists ? 'text-muted' : 'text-faint line-through'">
                 {{ c.path }}
@@ -152,7 +158,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
             </div>
           </div>
 
-          <div v-if="!deletableContent.length" class="mt-2 text-[11px] text-faint">
+          <div v-if="!deletableContent.length" class="mt-2 text-micro text-faint">
             没有可删的内容目录，所以这次只会删脚本。
           </div>
         </div>
@@ -160,14 +166,14 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
         <!-- 上膛后的提示条 -->
         <div
           v-if="armed"
-          class="rounded-[10px] border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] px-3.5 py-2.5 text-[12px] text-[#ff8a8a]"
+          class="rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] px-3.5 py-2.5 text-label text-[#ff8a8a]"
         >
           再点一次底下那个红色按钮才会真的删。改勾选或关掉窗口都会取消。
         </div>
       </div>
 
       <footer class="px-6 py-4 border-t border-line flex items-center gap-2">
-        <span class="text-[11px] text-faint">Steam 后台的 App / Depot 不受影响</span>
+        <span class="text-micro text-faint">Steam 后台的 App / Depot 不受影响</span>
         <div class="flex-1" />
         <button class="btn no-drag" @click="closeDeleteDialog">取消</button>
         <button

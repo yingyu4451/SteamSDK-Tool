@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, nextTick, watch } from 'vue'
 import gsap from 'gsap'
 import { Download, RefreshCw, Check, LoaderCircle, TriangleAlert } from '@lucide/vue'
+import { useDialogA11y } from '../composables/useDialogA11y.js'
 import {
   state,
   onboardGo,
@@ -18,6 +19,12 @@ import {
 
 const el = ref(null)
 const o = computed(() => state.onboard)
+
+useDialogA11y(el, () => {
+  /* 新手教程允许跳过：Esc 等同「跳过教程」 */
+  if (state.onboard?.open) finishOnboard()
+}, { isOpen: () => !!o.value?.open })
+
 const STEPS = ['欢迎', 'SDK 路径', 'Steam 账号']
 
 const sdkOk = computed(() => !!state.sdk?.contentBuilderExists)
@@ -277,7 +284,7 @@ function skip() {
   <div v-if="o.open" class="fixed inset-0 z-[70] grid place-items-center p-6 no-drag">
     <div class="absolute inset-0 bg-[rgba(9,13,19,.82)] backdrop-blur-sm" />
 
-    <div ref="el" class="relative card w-full max-w-[620px] overflow-hidden">
+    <div ref="el" role="dialog" aria-modal="true" aria-label="新手教程" class="relative card w-full max-w-[620px] overflow-hidden">
       <!-- 步骤条 -->
       <div class="flex items-center gap-2 px-6 pt-5">
         <button
@@ -287,7 +294,7 @@ function skip() {
           @click="onboardGo(i)"
         >
           <span
-            class="w-6 h-6 grid place-items-center rounded-full text-[11px] font-semibold transition-colors"
+            class="w-6 h-6 grid place-items-center rounded-full text-micro font-semibold transition-colors"
             :class="
               i === o.step
                 ? 'bg-accent text-[#0d1a26]'
@@ -298,10 +305,10 @@ function skip() {
           >
             {{ i + 1 }}
           </span>
-          <span class="text-[12px]" :class="i === o.step ? 'text-ink' : 'text-faint'">{{ name }}</span>
+          <span class="text-label" :class="i === o.step ? 'text-ink' : 'text-faint'">{{ name }}</span>
           <span v-if="i < STEPS.length - 1" class="w-6 h-px bg-line mx-1" />
         </button>
-        <button class="ml-auto btn h-7 px-3 text-[12px]" @click="skip">跳过教程</button>
+        <button class="ml-auto btn btn-sm px-3 " @click="skip">跳过教程</button>
       </div>
 
       <div class="px-6 py-5">
@@ -324,27 +331,27 @@ function skip() {
               <path d="M186 152 128 186v50l58-34z" fill="#245c8c" />
             </svg>
             <div>
-              <h2 class="text-[17px] font-semibold m-0">SteamSDK 上传工作台</h2>
-              <p class="text-[12px] text-muted mt-1 mb-0">
+              <h2 class="text-title font-semibold m-0">SteamSDK 上传工作台</h2>
+              <p class="text-label text-muted mt-1 mb-0">
                 一份 SDK 管所有 App / Depot / 版本，不用给每个版本复制一份 SDK。
               </p>
             </div>
           </div>
 
           <div class="card-flat p-4 flex flex-col gap-2.5 mt-4">
-            <div class="flex gap-2.5 text-[13px]">
+            <div class="flex gap-2.5 text-body">
               <span class="text-accent shrink-0">①</span>
               <span class="text-muted"
                 >告诉它你的 <span class="text-ink">SteamSDK 在哪</span>，它就能读到你配好的 App 和 Depot</span
               >
             </div>
-            <div class="flex gap-2.5 text-[13px]">
+            <div class="flex gap-2.5 text-body">
               <span class="text-accent shrink-0">②</span>
               <span class="text-muted"
                 >填一次 <span class="text-ink">Steam 账号</span>，之后检查配置、空跑、正式上传都在界面里点</span
               >
             </div>
-            <div class="flex gap-2.5 text-[13px]">
+            <div class="flex gap-2.5 text-body">
               <span class="text-accent shrink-0">③</span>
               <span class="text-muted"
                 >一个 App 一个项目文件夹，下面按平台挂 Depot —— <span class="text-ink">一次构建全平台一起传</span></span
@@ -352,7 +359,7 @@ function skip() {
             </div>
           </div>
 
-          <p class="text-[12px] text-faint mt-3.5 mb-0 leading-relaxed">
+          <p class="text-label text-faint mt-3.5 mb-0 leading-relaxed">
             用过的可以直接「跳过教程」，所有设置都在「设置」里，随时能改。
           </p>
         </template>
@@ -360,9 +367,9 @@ function skip() {
         <!-- ── 1 SDK 路径 ── -->
         <template v-else-if="o.step === 1">
           <div class="flex items-center gap-3">
-            <h2 class="text-[16px] font-semibold m-0">SteamSDK 路径</h2>
+            <h2 class="text-lead font-semibold m-0">SteamSDK 路径</h2>
             <button
-              class="ml-auto btn h-8 px-3 text-[12px]"
+              class="ml-auto btn px-3 "
               :disabled="o.busy"
               title="重新扫一遍常见位置"
               @click="onboardDetect"
@@ -382,7 +389,7 @@ function skip() {
             "
           >
             <div class="flex items-center gap-2">
-              <span class="text-[11px] tracking-wider text-faint uppercase">自动找到的</span>
+              <span class="text-micro tracking-wider text-faint uppercase">自动找到的</span>
               <span v-if="mode === 'auto'" class="pill pill-ok">✓ 用的是这个</span>
             </div>
             <button
@@ -397,7 +404,7 @@ function skip() {
               @click="useCandidate(c)"
             >
               <Check v-if="same(o.manual, c.root)" :size="14" class="shrink-0 text-accent" />
-              <span class="font-mono text-[12px] text-ink truncate">{{ c.root }}</span>
+              <span class="font-mono text-label text-ink truncate">{{ c.root }}</span>
               <span v-if="c.hasSteamcmd" class="pill pill-ok ml-auto shrink-0">有 steamcmd</span>
               <span v-else class="pill pill-warn ml-auto shrink-0">缺 steamcmd</span>
             </button>
@@ -412,14 +419,14 @@ function skip() {
             "
           >
             <div class="flex items-center gap-2">
-              <span class="text-[11px] tracking-wider text-faint uppercase">手动指定</span>
+              <span class="text-micro tracking-wider text-faint uppercase">手动指定</span>
               <span v-if="mode === 'manual'" class="pill pill-ok">✓ 用的是这个</span>
             </div>
             <div class="flex gap-2">
               <input
                 :value="o.manual"
                 placeholder="D:\SteamSDK"
-                class="flex-1 h-9 px-3 rounded-md bg-surface border text-[13px] font-mono outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                class="flex-1 h-9 px-3 rounded-md bg-surface border text-body font-mono outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
                 :class="mode === 'manual' ? 'border-[rgba(102,192,244,.5)]' : 'border-line'"
                 @input="onManualInput"
               />
@@ -430,13 +437,13 @@ function skip() {
           <!-- 还没有 SDK 的人大概率就卡在这一步，给个直达入口 -->
           <div class="mt-3">
             <button
-              class="btn h-8 px-3 text-[12px]"
+              class="btn px-3 "
               title="打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链"
               @click="openSdkDownload"
             >
               <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
             </button>
-            <p class="mt-2 mb-0 text-[11px] text-faint">
+            <p class="mt-2 mb-0 text-micro text-faint">
               官方 SDK 里没有 build.ps1 / check.ps1 —— 这是本工具自带的，选好路径后会自动写进 ContentBuilder。
             </p>
           </div>
@@ -444,7 +451,7 @@ function skip() {
 
         <!-- ── 2 Steam 账号 ── -->
         <template v-else>
-          <h2 class="text-[16px] font-semibold m-0">Steam 账号</h2>
+          <h2 class="text-lead font-semibold m-0">Steam 账号</h2>
 
           <!-- 一进来就查到已经登录过：直接给结论，不用再填一遍 -->
           <div
@@ -453,19 +460,19 @@ function skip() {
           >
             <div class="flex items-center gap-2 flex-wrap">
               <Check :size="15" class="shrink-0 text-success" />
-              <span class="text-[13.5px] font-semibold text-success">已完成登录</span>
+              <span class="text-body font-semibold text-success">已完成登录</span>
               <span
                 v-if="machineLogin?.steamcmd?.account"
-                class="font-mono text-[12px] text-muted"
+                class="font-mono text-label text-muted"
               >
                 {{ machineLogin.steamcmd.account }}
               </span>
             </div>
-            <p class="mt-1.5 mb-0 text-[12px] text-muted leading-relaxed">
+            <p class="mt-1.5 mb-0 text-label text-muted leading-relaxed">
               steamcmd 里存着这个账号的登录令牌，构建不用再输密码。直接点「完成」就行。
             </p>
             <button
-              class="mt-2 text-[12px] text-faint hover:text-muted bg-transparent border-0 p-0 cursor-pointer underline decoration-dotted"
+              class="mt-2 text-label text-faint hover:text-muted bg-transparent border-0 p-0 cursor-pointer underline decoration-dotted"
               @click="overrideLogin = true"
             >
               换个账号
@@ -474,7 +481,7 @@ function skip() {
 
           <!-- 没登录过（或者用户要换账号）：才让人填 -->
           <template v-else>
-          <p class="text-[12px] text-muted mt-1.5 mb-0 leading-relaxed">
+          <p class="text-label text-muted mt-1.5 mb-0 leading-relaxed">
             <template v-if="machineChecking">正在看这台机器登录过没有…</template>
             <template v-else>
               steamcmd 要用它上传构建，也用来读你后台配好的 Depot 列表。
@@ -484,27 +491,27 @@ function skip() {
 
           <div class="mt-3.5 flex flex-col gap-3">
             <label class="flex flex-col gap-1.5">
-              <span class="text-[12px] text-muted">账号名（不是邮箱）</span>
+              <span class="text-label text-muted">账号名（不是邮箱）</span>
               <input
                 :value="o.account"
                 placeholder="例如 my_steam_login"
-                class="h-9 px-3 rounded-md bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                class="h-9 px-3 rounded-md bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
                 @input="o.account = $event.target.value"
               />
             </label>
             <label class="flex flex-col gap-1.5">
-              <span class="text-[12px] text-muted">密码</span>
+              <span class="text-label text-muted">密码</span>
               <input
                 :value="o.password"
                 type="password"
                 placeholder="留空就先不存"
-                class="h-9 px-3 rounded-md bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                class="h-9 px-3 rounded-md bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
                 @input="o.password = $event.target.value"
               />
             </label>
           </div>
 
-          <p class="text-[11px] text-faint mt-2.5 mb-0 leading-relaxed">
+          <p class="text-micro text-faint mt-2.5 mb-0 leading-relaxed">
             密码用 Windows DPAPI 加密后存在本机，只有当前 Windows 用户能解 ——
             不进命令行参数、不写进任何日志。不存也行，每次构建会问你要。
           </p>
@@ -528,7 +535,7 @@ function skip() {
             <Check v-else-if="rowTone === 'ok'" :size="14" class="shrink-0 mt-0.5 text-success" />
             <TriangleAlert v-else :size="14" class="shrink-0 mt-0.5 text-warn" />
             <span
-              class="text-[12px] leading-relaxed"
+              class="text-label leading-relaxed"
               :class="{
                 'text-accent': rowTone === 'busy',
                 'text-success': rowTone === 'ok',
@@ -544,10 +551,10 @@ function skip() {
             v-if="mobileWaiting"
             class="mt-2.5 rounded-md border border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)] px-3 py-2.5"
           >
-            <div class="text-[13px] text-accent font-semibold mb-1.5">
+            <div class="text-body text-accent font-semibold mb-1.5">
               Steam 正在等你手机上点确认
             </div>
-            <ol class="m-0 pl-4 text-[12px] text-muted leading-relaxed">
+            <ol class="m-0 pl-4 text-label text-muted leading-relaxed">
               <li>拿出手机，打开 <strong class="text-ink">Steam App</strong></li>
               <li>点右下角的<strong class="text-ink">盾牌图标</strong>，里面有一条「确认登录」</li>
               <li>点它。这边会自己继续，<strong class="text-ink">不用在这个窗口里做任何操作</strong></li>
@@ -558,16 +565,16 @@ function skip() {
                所以失败后清空，逼用户去拿新的那个 -->
           <div v-if="needGuard" class="mt-2.5">
             <label class="flex flex-col gap-1.5">
-              <span class="text-[12px] text-muted">Steam Guard 验证码</span>
+              <span class="text-label text-muted">Steam Guard 验证码</span>
               <input
                 v-model="guardCode"
                 placeholder="例如 K4F2B"
                 autocomplete="one-time-code"
-                class="h-9 px-3 rounded-md bg-surface border border-line text-[13px] tracking-[0.18em] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint placeholder:tracking-normal"
+                class="h-9 px-3 rounded-md bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint placeholder:tracking-normal"
                 @keyup.enter="next"
               />
             </label>
-            <p class="mt-1.5 mb-0 text-[11px] text-faint leading-relaxed">
+            <p class="mt-1.5 mb-0 text-micro text-faint leading-relaxed">
               在手机 Steam App 的「Steam 令牌」页，或者 Steam 发来的邮件里。填好点下面的「完成」。
             </p>
           </div>
@@ -576,7 +583,7 @@ function skip() {
 
         <div
           v-if="o.error"
-          class="mt-3 rounded-md border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3 py-2 text-[12px] text-danger"
+          class="mt-3 rounded-md border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3 py-2 text-label text-danger"
         >
           {{ o.error }}
         </div>
@@ -593,7 +600,7 @@ function skip() {
         </button>
         <button
           v-else
-          class="text-[12px] text-faint hover:text-muted bg-transparent border-0 p-0 cursor-pointer underline decoration-dotted"
+          class="text-label text-faint hover:text-muted bg-transparent border-0 p-0 cursor-pointer underline decoration-dotted"
           @click="goSettings(); finishOnboard()"
         >
           我自己去设置里配

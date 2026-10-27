@@ -19,7 +19,8 @@ import {
   clearPreflight
 } from '../store.js'
 import { fmtSize } from '../format.js'
-import { Check, Eye, FolderOpen, LoaderCircle, Lock, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Upload, X } from '@lucide/vue'
+import { Check, CheckCircle2, Eye, FolderOpen, LoaderCircle, Lock, PackageSearch, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Upload, X } from '@lucide/vue'
+import EmptyState from './EmptyState.vue'
 
 const confirming = ref(false)
 const pwDraft = ref('')
@@ -167,6 +168,8 @@ watch(
       :disabled="disabled || state.preflight.busy"
       data-pop="pf"
       title="检查文件：扫一遍真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app bundle。配置没问题但文件有问题时，只有这一关能发现。"
+      :aria-expanded="state.preflight.busy || !!state.preflight.error || !!pf"
+      aria-controls="pop-preflight"
       @click="(e) => { anchorTo('pf', e.currentTarget); runPreflight() }"
     >
       <ShieldCheck :size="16" :stroke-width="1.8" />
@@ -193,7 +196,7 @@ watch(
 
     <Transition enter-active-class="transition duration-150" enter-from-class="opacity-0 scale-95">
       <button v-if="state.running" class="btn btn-danger no-drag" @click="cancelRun">
-        <span class="w-2.5 h-2.5 rounded-[3px] bg-current" />
+        <span class="w-2.5 h-2.5 rounded-sm bg-current" />
         中止
       </button>
     </Transition>
@@ -204,6 +207,8 @@ watch(
       class="btn no-drag"
       :disabled="!appId || state.verify.busy"
       data-pop="verify"
+      :aria-expanded="state.verify.busy || !!state.verify.error || !!vd"
+      aria-controls="pop-verify"
       @click="(e) => { anchorTo('verify', e.currentTarget); verifyAgainstSteam() }"
     >
       <RefreshCw :size="15" :stroke-width="1.9" :class="state.verify.busy ? 'animate-spin' : ''" />
@@ -228,10 +233,10 @@ watch(
     >
       <div
         v-if="state.askPassword"
-        class="bar-pop bar-pop-left rounded-[10px] border border-[rgba(255,180,84,.3)] px-3 py-2.5"
+        class="bar-pop bar-pop-left rounded-card border border-[rgba(255,180,84,.3)] px-3 py-2.5"
         :style="anchors.pwd"
       >
-        <div class="flex items-center gap-2 text-[12px] text-amber">
+        <div class="flex items-center gap-2 text-label text-amber">
           <Lock :size="16" :stroke-width="1.9" class="shrink-0" />
           {{ state.askPasswordError }}
         </div>
@@ -242,10 +247,10 @@ watch(
             type="password"
             autofocus
             placeholder="Steam 账号密码"
-            class="flex-1 min-w-[200px] h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(255,180,84,.5)]"
+            class="flex-1 min-w-[200px] h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(255,180,84,.5)]"
             @keydown.enter="submitPw"
           />
-          <label class="flex items-center gap-1.5 text-[12px] text-muted cursor-pointer select-none">
+          <label class="flex items-center gap-1.5 text-label text-muted cursor-pointer select-none">
             <input type="checkbox" v-model="pwRemember" class="accent-[#66c0f4]" />
             加密保存
           </label>
@@ -266,7 +271,10 @@ watch(
     >
       <div
         v-if="state.verify.busy || state.verify.error || state.verify.data"
-        class="bar-pop bar-pop-wide bar-pop-right rounded-[10px] border px-3 py-2.5"
+        id="pop-verify"
+        role="region"
+        aria-label="同步 Depot"
+        class="bar-pop bar-pop-wide bar-pop-right rounded-card border px-3 py-2.5"
         :style="anchors.verify"
         :class="
           state.verify.error
@@ -275,10 +283,10 @@ watch(
         "
       >
         <template v-if="state.verify.error">
-          <div class="flex items-center gap-2 text-[12px] text-amber flex-wrap">
+          <div class="flex items-center gap-2 text-label text-amber flex-wrap">
             <span class="font-semibold">同步失败</span>
             <span class="text-muted min-w-0 flex-1">{{ state.verify.error }}</span>
-            <button class="ml-auto btn h-6 px-2 text-[11px] no-drag shrink-0" @click="clearVerify">关闭</button>
+            <button class="ml-auto btn btn-sm px-2  no-drag shrink-0" @click="clearVerify">关闭</button>
           </div>
           <div v-if="state.verify.needsKey" class="mt-2 flex items-center gap-2 flex-wrap">
             <button class="btn btn-primary no-drag" @click="verifyAgainstSteam(null, 'steamcmd')">
@@ -291,17 +299,20 @@ watch(
         </template>
 
         <template v-else-if="state.verify.busy">
-          <div class="text-[12px] text-muted">正在读取后台 Depot…</div>
+          <div class="flex items-center gap-2.5 text-label text-muted">
+            <LoaderCircle :size="16" class="text-accent drop-spin shrink-0" />
+            <span>正在读取后台 Depot…（走 steamcmd 时要 10–30 秒）</span>
+          </div>
         </template>
 
         <template v-else-if="vd">
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-semibold text-[12px]">同步 Depot</span>
-            <span class="px-2 py-[3px] rounded-full text-[11px] border text-muted border-line">
+            <span class="font-semibold text-label">同步 Depot</span>
+            <span class="px-2 py-[3px] rounded-full text-micro border text-muted border-line">
               {{ viaLabel }}
             </span>
             <span
-              class="px-2 py-[3px] rounded-full text-[11px] border"
+              class="px-2 py-[3px] rounded-full text-micro border"
               :class="
                 vd.appIdKnown
                   ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
@@ -310,16 +321,16 @@ watch(
             >
               {{ vd.appName ? `AppID ${vd.appId} · ${vd.appName}` : `AppID ${vd.appId}` }}
             </span>
-            <span class="text-[11px] text-faint">后台 {{ steamDepots.length }} 个 Depot</span>
-            <button class="ml-auto btn h-6 px-2 text-[11px] no-drag" @click="clearVerify">收起</button>
+            <span class="text-micro text-faint">后台 {{ steamDepots.length }} 个 Depot</span>
+            <button class="ml-auto btn btn-sm px-2  no-drag" @click="clearVerify">收起</button>
           </div>
 
           <!-- 后台 Depot，勾选要加进来的 -->
           <div v-if="steamDepots.length" class="mt-2.5 pt-2.5 border-t border-line-soft">
             <div class="flex items-center gap-2 mb-1.5">
-              <span class="text-[11px] text-faint">勾选要加进本地的</span>
-              <button class="btn h-6 px-2 text-[11px] no-drag" @click="syncPickAll(true)">全选</button>
-              <button class="btn h-6 px-2 text-[11px] no-drag" @click="syncPickAll(false)">全不选</button>
+              <span class="text-micro text-faint">勾选要加进本地的</span>
+              <button class="btn btn-sm px-2  no-drag" @click="syncPickAll(true)">全选</button>
+              <button class="btn btn-sm px-2  no-drag" @click="syncPickAll(false)">全不选</button>
             </div>
 
             <div
@@ -334,14 +345,14 @@ watch(
                 :disabled="localIds.has(String(d.depotId))"
                 @change="toggleSyncPick(d.depotId)"
               />
-              <span class="font-mono num text-[12px] shrink-0">{{ d.depotId }}</span>
-              <span class="text-[12px] text-muted shrink-0">{{ d.platformLabel || '平台未知' }}</span>
-              <span v-if="d.branch" class="text-[11px] text-faint shrink-0">{{ d.branch }}</span>
-              <span class="text-[11px] text-faint num shrink-0">{{ fmtSize(d.size) }}</span>
-              <span v-if="localIds.has(String(d.depotId))" class="text-[11px] text-accent shrink-0">本地已有</span>
+              <span class="font-mono num text-label shrink-0">{{ d.depotId }}</span>
+              <span class="text-label text-muted shrink-0">{{ d.platformLabel || '平台未知' }}</span>
+              <span v-if="d.branch" class="text-micro text-faint shrink-0">{{ d.branch }}</span>
+              <span class="text-micro text-faint num shrink-0">{{ fmtSize(d.size) }}</span>
+              <span v-if="localIds.has(String(d.depotId))" class="text-micro text-accent shrink-0">本地已有</span>
               <button
                 v-else-if="!d.platform"
-                class="ml-auto btn h-6 px-2 text-[11px] no-drag"
+                class="ml-auto btn btn-sm px-2  no-drag"
                 @click="openDepotSlide()"
               >
                 手动加
@@ -350,7 +361,7 @@ watch(
 
             <div class="mt-2 flex items-center gap-2 flex-wrap">
               <button
-                class="btn btn-primary h-7 px-3 text-[12px] no-drag"
+                class="btn btn-primary btn-sm px-3  no-drag"
                 :disabled="!pickCount || state.syncAdding"
                 @click="syncAddSelected"
               >
@@ -358,18 +369,23 @@ watch(
               </button>
             </div>
           </div>
-          <div v-else class="mt-2.5 pt-2.5 border-t border-line-soft text-[12px] text-faint">
-            后台这个 App 下还没有任何 Depot。
+          <div v-else class="mt-2.5 pt-2.5 border-t border-line-soft">
+            <EmptyState
+              compact
+              :icon="PackageSearch"
+              title="后台还没有 Depot"
+              hint="这个 App 在 Steamworks 后台一个 Depot 都没有，先在后台建一个再回来同步。"
+            />
           </div>
 
           <!-- 分支 -->
           <div v-if="branchList.length" class="mt-2.5 pt-2.5 border-t border-line-soft">
-            <div class="text-[11px] text-faint mb-1">后台分支</div>
+            <div class="text-micro text-faint mb-1">后台分支</div>
             <div class="flex gap-1.5 flex-wrap">
               <span
                 v-for="b in branchList"
                 :key="b.key"
-                class="px-2 py-[3px] rounded-full text-[11px] border"
+                class="px-2 py-[3px] rounded-full text-micro border"
                 :class="
                   b.key === 'public' || b.key === 'default'
                     ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
@@ -394,7 +410,10 @@ watch(
     >
       <div
         v-if="state.preflight.busy || state.preflight.error || pf"
-        class="bar-pop bar-pop-wide bar-pop-left rounded-[10px] border px-3 py-2.5"
+        id="pop-preflight"
+        role="region"
+        aria-label="检查文件结果"
+        class="bar-pop bar-pop-wide bar-pop-left rounded-card border px-3 py-2.5"
         :style="anchors.pf"
         :class="
           state.preflight.error
@@ -403,18 +422,22 @@ watch(
         "
       >
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="font-semibold text-[12px]">检查文件</span>
-          <span v-if="pf" class="text-[11px]" :class="pfTone">
+          <span class="font-semibold text-label">检查文件</span>
+          <span v-if="pf" class="text-micro" :class="pfTone">
             {{ pf.errors }} 个会拦住上传 · {{ pf.warns }} 个警告 · {{ pf.infos }} 条提示
           </span>
-          <span v-else-if="state.preflight.busy" class="text-[11px] text-faint">正在查后台和本地…</span>
-          <button class="ml-auto btn h-7 px-2.5 text-[11px] no-drag" @click="clearPreflight">收起</button>
+          <span v-else-if="state.preflight.busy" class="text-micro text-faint">正在查后台和本地…</span>
+          <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="clearPreflight">收起</button>
         </div>
 
-        <div v-if="state.preflight.error" class="mt-2 text-[12px] text-amber">
-          {{ state.preflight.error }}
+        <div v-if="state.preflight.error" class="mt-2 flex flex-col gap-1">
+          <div class="text-label text-amber">{{ state.preflight.error }}</div>
+          <div class="text-micro text-faint leading-relaxed">
+            先跑「检查配置」确认 vdf 和内容目录没问题；脚本的完整报错在底部「构建输出」里。
+          </div>
         </div>
-        <div v-else-if="pf && !pf.problems.length" class="mt-2 text-[12px] text-accent">
+        <div v-else-if="pf && !pf.problems.length" class="mt-2 flex items-center gap-2 text-label text-accent">
+          <CheckCircle2 :size="16" :stroke-width="2" class="shrink-0" />
           没有发现问题。
         </div>
         <div v-else-if="pf" class="mt-2 flex flex-col gap-2">
@@ -426,9 +449,9 @@ watch(
               {{ p.level === 'error' ? '拦住' : p.level === 'warn' ? '警告' : '提示' }}
             </span>
             <div class="min-w-0">
-              <div class="text-[12px] text-ink">{{ p.title }}</div>
-              <div class="text-[11px] text-faint font-mono break-all">{{ p.text }}</div>
-              <div v-if="p.hint" class="text-[11px] text-muted">{{ p.hint }}</div>
+              <div class="text-label text-ink">{{ p.title }}</div>
+              <div class="text-micro text-faint font-mono break-all">{{ p.text }}</div>
+              <div v-if="p.hint" class="text-micro text-muted">{{ p.hint }}</div>
             </div>
           </div>
         </div>

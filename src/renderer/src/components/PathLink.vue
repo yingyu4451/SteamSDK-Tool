@@ -39,5 +39,5 @@ async function open() {
     <span class="path-text">{{ path }}</span>
     <ExternalLink :size="12" :stroke-width="2" class="shrink-0 opacity-55" />
   </button>
-  <span v-else class="text-[12px] text-faint">—</span>
+  <span v-else class="text-label text-faint">—</span>
 </template>

@@ -7,7 +7,8 @@ import StatCard from './StatCard.vue'
 import DepotMatrix from './DepotMatrix.vue'
 import BranchPanel from './BranchPanel.vue'
 import ConsoleLog from './ConsoleLog.vue'
-import { TriangleAlert, Upload } from '@lucide/vue'
+import EmptyState from './EmptyState.vue'
+import { MousePointerClick, TriangleAlert } from '@lucide/vue'
 
 const detail = computed(() => state.detail)
 
@@ -55,14 +56,14 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       <div class="flex items-start gap-3">
         <TriangleAlert :size="20" :stroke-width="1.9" class="shrink-0 text-amber mt-0.5" />
         <div class="min-w-0 flex-1">
-          <div class="text-[13px] text-amber font-medium">
+          <div class="text-body text-amber font-medium">
             scripts 根目录下有 {{ state.orphans.length }} 个 vdf 没有被任何 App 管着
           </div>
           <div class="mt-2 flex flex-col gap-0.5">
             <div
               v-for="o in state.orphans"
               :key="o.file"
-              class="font-mono text-[11px] text-muted truncate"
+              class="font-mono text-micro text-muted truncate"
             >
               {{ o.file }}
               <span class="text-faint">
@@ -81,18 +82,12 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
          所以不会像早期那些面板一样把整页顶得跳一下。 -->
     <Transition name="appswitch" mode="out-in">
       <!-- 没选 App -->
-      <div
-        v-if="!detail && !state.detailLoading"
-        key="__none"
-        class="card p-10 flex flex-col items-center gap-3 text-center"
-        v-reveal
-      >
-        <div
-          class="w-12 h-12 rounded-2xl grid place-items-center border border-line bg-surface-2"
-        >
-          <Upload :size="24" :stroke-width="1.8" class="text-faint" />
-        </div>
-        <div class="text-[14px] font-medium">左侧选一个 App</div>
+      <div v-if="!detail && !state.detailLoading" key="__none" class="card p-6" v-reveal>
+        <EmptyState
+          :icon="MousePointerClick"
+          title="左侧选一个 App"
+          hint="还没有 App 就点左栏的「＋」加一个；已有的点一下，就能开始检查、空跑或正式上传。"
+        />
       </div>
 
       <div v-else-if="detail" :key="state.selectedDir" class="flex flex-col gap-4 min-w-0">
@@ -162,7 +157,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       </div>
 
       <!-- 加载中 -->
-      <div v-else key="__loading" class="card p-10 grid place-items-center text-muted text-[13px]">
+      <div v-else key="__loading" class="card p-10 grid place-items-center text-muted text-body">
         <div class="flex items-center gap-3">
           <div class="w-5 h-5 rounded-full border-2 border-[#23303d] border-t-[#66c0f4] animate-spin" />
           正在读取 {{ state.selectedDir }}…

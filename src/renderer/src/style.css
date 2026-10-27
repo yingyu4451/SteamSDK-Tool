@@ -35,7 +35,21 @@
   --font-mono:
     'JetBrains Mono', 'Cascadia Mono', 'SF Mono', ui-monospace, 'Consolas', monospace;
 
+  /* 圆角只用三档：卡片 10 / 输入框 8 / 按钮与内嵌小块 6。徽标和胶囊是 999。 */
   --radius-card: 10px;
+  --radius-input: 8px;
+  --radius-btn: 6px;
+
+  /* 字号阶梯：全项目只用这几档（模板里用 text-micro / text-label / text-body /
+     text-copy / text-lead / text-title / text-display / text-stat） */
+  --text-micro: 11px;
+  --text-label: 12px;
+  --text-body: 13px;
+  --text-copy: 14px;
+  --text-lead: 15px;
+  --text-title: 17px;
+  --text-display: 19px;
+  --text-stat: 26px;
 }
 
 * {
@@ -58,7 +72,7 @@ body {
   font-family:
     'JetBrains Mono', 'MiSans', 'MiSans Normal', 'Microsoft YaHei UI', 'Microsoft YaHei',
     sans-serif;
-  font-size: 14px;
+  font-size: var(--text-copy);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
@@ -82,6 +96,14 @@ textarea {
   user-select: text;
 }
 
+/* ---------- 键盘焦点 ----------
+   鼠标点击不显示焦点环，键盘 Tab 才显示（:focus-visible）。
+   以前全项目只有输入框有 focus:border 变色，按钮 Tab 过去完全看不出来。 */
+:where(button, input, select, textarea, a[href], [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* ---------- 标题栏拖拽 ---------- */
 .drag {
   -webkit-app-region: drag;
@@ -99,15 +121,12 @@ textarea {
   background: linear-gradient(180deg, #1b2735 0%, #172230 58%, #15202c 100%);
   border: 1px solid #24384f;
   border-radius: var(--radius-card);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035),
-    0 2px 10px -4px rgba(0, 0, 0, 0.55);
 }
 
 .card-flat {
   background: rgba(9, 15, 23, 0.62);
   border: 1px solid #223650;
-  border-radius: 6px;
+  border-radius: var(--radius-btn);
 }
 
 /* ---------- 切换 App 的过渡 ----------
@@ -152,25 +171,25 @@ textarea {
   transform: translateX(32px);
 }
 
-/* ---------- 按钮 ---------- */
+/* ---------- 按钮 ----------
+   两层就够：卡片是暗的平面，按钮是「抬起来」的亮色块。
+   按钮用纯色底 + 描边区分层级，不再叠加渐变 + 内高光 + 投影三件套
+   （和卡片放一起时那种「到处都是立体感」的观感就是这么来的）。 */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 0 14px;
-  height: 34px;
-  border-radius: 6px;
+  height: 36px;
+  border-radius: var(--radius-btn);
   border: 1px solid #3d6588;
-  background: linear-gradient(180deg, #3a6285, #2b4a6a);
+  background: var(--color-surface-3);
   color: var(--color-ink);
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    0 1px 3px -1px rgba(0, 0, 0, 0.5);
   transition:
     background 0.16s ease,
     border-color 0.16s ease,
@@ -178,9 +197,8 @@ textarea {
     transform 0.08s ease;
 }
 .btn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #4c80aa, #35618a);
+  background: #3b5f7f;
   border-color: #5d93bd;
-  color: #ffffff;
 }
 .btn:active:not(:disabled) {
   transform: translateY(1px);
@@ -190,39 +208,60 @@ textarea {
   cursor: not-allowed;
 }
 
-/* 主按钮 = Steam 那个绿色 Play 按钮 */
+/* 小号按钮：表格行 / 面板里的小动作。高度 28，与 36 拉开层级。 */
+.btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--text-label);
+  gap: 6px;
+}
+
+/* 大号按钮：新手引导 / 大弹窗底部的主操作。高度 44。 */
+.btn-lg {
+  height: 44px;
+  padding: 0 20px;
+  font-size: var(--text-copy);
+}
+
+/* 主按钮 = Steam 那个绿色 Play 按钮。
+   旧配色的浅黄字 #d2e885 落在绿底上只有 1.96–3.08，白字在旧渐变上也才 2.63；
+   现在用深一档的绿 + 白字（实测 5.10 / 6.90），既保留 Steam 的绿，也过 4.5。 */
 .btn-primary {
-  background: linear-gradient(180deg, #75b022, #588a1b);
-  border-color: #4f7d18;
-  color: #d2e885;
+  background: linear-gradient(180deg, #4e7a14, #3f6410);
+  border-color: #3f6410;
+  color: #ffffff;
   font-weight: 600;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #8ed629, #6ba32b);
-  border-color: #8ed629;
-  color: #f4ffd6;
+  background: linear-gradient(180deg, #556f12, #466f12);
+  border-color: #5d8a1c;
+  color: #ffffff;
 }
 
+/* 危险动作：平时只是描边红的低调样式，不跟主按钮抢 */
 .btn-danger {
-  border-color: #4a2a2a;
-  color: #ff8a8a;
+  border-color: rgba(226, 75, 75, 0.38);
+  background: rgba(226, 75, 75, 0.1);
+  color: #ff9a9a;
 }
 .btn-danger:hover:not(:disabled) {
-  background: #2a1a1a;
-  border-color: #6d3030;
+  background: rgba(226, 75, 75, 0.16);
+  border-color: rgba(226, 75, 75, 0.55);
+  color: #ffb0b0;
 }
 
-/* 「上膛」状态：实心红，跟未上膛的空心红明确区分 */
+/* 「上膛」状态：实心红，跟未上膛的低调红明确区分（白字实测 5.85） */
 .btn-danger-solid {
-  background: linear-gradient(180deg, #e24b4b, #c33a3a);
-  border-color: #e24b4b;
-  color: #2a0006;
+  background: linear-gradient(180deg, #b53838, #9c2f2f);
+  border-color: #b53838;
+  color: #ffffff;
   font-weight: 600;
 }
 .btn-danger-solid:hover:not(:disabled) {
-  background: linear-gradient(180deg, #ef6a6a, #c94a4a);
-  border-color: #ef6a6a;
+  background: linear-gradient(180deg, #c94040, #a83030);
+  border-color: #c94040;
+  color: #ffffff;
 }
 
 /*
@@ -233,8 +272,8 @@ textarea {
   background: transparent;
   border: 0;
   padding: 1px 5px;
-  border-radius: 6px;
-  font-size: 11px;
+  border-radius: var(--radius-btn);
+  font-size: var(--text-label);
   line-height: 1.5;
   color: var(--color-faint);
   cursor: pointer;
@@ -252,13 +291,6 @@ textarea {
   background: rgba(226, 75, 75, 0.14);
 }
 
-.btn-lg {
-  height: 42px;
-  padding: 0 20px;
-  font-size: 14px;
-  border-radius: 6px;
-}
-
 /* ---------- 徽标 / 药丸 ---------- */
 .pill {
   display: inline-flex;
@@ -266,7 +298,7 @@ textarea {
   gap: 6px;
   padding: 3px 9px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--text-label);
   font-weight: 600;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
@@ -292,40 +324,6 @@ textarea {
   border-color: rgba(143, 152, 160, 0.22);
 }
 
-/* ---------- 跟在徽标后面的小动作按钮 ----------
- * App 名字旁边那一排是状态徽标（实线边、填色），里面的「编辑」如果也用 .btn
- * 就会跟它们混成一片。这个形状跟着徽标走（同高、同圆角），但用虚线边 + 图标，
- * 悬停时虚线变实线、底色浮起来 —— 不靠颜色也能看出「这个能点」。
- */
-.pill-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px dashed rgba(102, 192, 244, 0.4);
-  background: transparent;
-  color: var(--color-accent);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition:
-    background 0.14s ease,
-    border-color 0.14s ease,
-    color 0.14s ease;
-}
-.pill-btn:hover {
-  background: rgba(102, 192, 244, 0.13);
-  border-color: rgba(102, 192, 244, 0.75);
-  border-style: solid;
-  color: #d3ecfa;
-}
-.pill-btn:active {
-  background: rgba(102, 192, 244, 0.2);
-}
-
 /* ---------- 筛选胶囊（构建历史：全部 / 每个 App） ---------- */
 .chip {
   display: inline-flex;
@@ -333,7 +331,7 @@ textarea {
   gap: 7px;
   padding: 5px 11px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--text-label);
   font-weight: 500;
   cursor: pointer;
   background: transparent;
@@ -362,12 +360,12 @@ textarea {
   max-width: 100%;
   min-width: 0;
   padding: 2.5px 9px 2.5px 7px;
-  border-radius: 6px;
+  border-radius: var(--radius-btn);
   border: 1px solid rgba(102, 192, 244, 0.2);
   background: rgba(102, 192, 244, 0.055);
   color: #a8d8f0;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-label);
   line-height: 1.5;
   cursor: pointer;
   transition:
@@ -396,7 +394,7 @@ textarea {
   gap: 10px;
   padding: 1px 0;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-label);
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-all;
@@ -447,6 +445,69 @@ textarea {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+
+/* ---------- 空状态 / 错误状态 ----------
+   空态不是「空白」，要说明现在是什么状态、下一步能做什么。
+   多个面板共用这一个组件（EmptyState.vue）。 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 32px 24px;
+  text-align: center;
+}
+.empty-state-compact {
+  padding: 18px 14px;
+  gap: 4px;
+}
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(102, 192, 244, 0.18);
+  background: rgba(102, 192, 244, 0.08);
+  color: var(--color-accent);
+}
+.empty-state-compact .empty-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-input);
+}
+.empty-icon-danger {
+  border-color: rgba(226, 75, 75, 0.24);
+  background: rgba(226, 75, 75, 0.08);
+  color: #ff9a9a;
+}
+.empty-title {
+  font-size: var(--text-copy);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.empty-state-compact .empty-title {
+  font-size: var(--text-label);
+}
+.empty-hint {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--text-label);
+  line-height: 1.7;
+  color: var(--color-faint);
+}
+.empty-state-compact .empty-hint {
+  font-size: var(--text-micro);
+  line-height: 1.6;
+}
+.empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 /* 构建中：顶部一条流动的进度光带 */
@@ -506,8 +567,9 @@ textarea {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #1f3448, #182636);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line);
+  background: #22374d;
   box-shadow:
     0 26px 56px -18px rgba(0, 0, 0, 0.86),
     0 3px 10px -3px rgba(0, 0, 0, 0.6);
@@ -550,4 +612,18 @@ textarea {
 /* 按钮里、状态行里的小转圈（lucide 的 LoaderCircle 配这个） */
 .drop-spin {
   animation: drop-spin 0.75s linear infinite;
+}
+
+/* ---------- 减少动态效果 ----------
+   系统开了「减少动画」时，把 CSS 动画/过渡全部压掉；
+   JS 侧的 GSAP 动画在 motion.js 里判断 prefers-reduced-motion。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

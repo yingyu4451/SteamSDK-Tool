@@ -46,18 +46,18 @@ const dup = computed(() => {
     <div class="flex items-start gap-4 flex-wrap min-w-0">
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-          <h1 class="text-[19px] font-semibold tracking-tight m-0 truncate min-w-0 max-w-[420px]">{{ app.dirName }}</h1>
+          <h1 class="text-display font-semibold tracking-tight m-0 truncate min-w-0 max-w-[420px]">{{ app.dirName }}</h1>
           <span class="pill" :class="status.tone">{{ status.text }}</span>
           <span v-if="app.setLive" class="pill pill-warn">SetLive · {{ app.setLive }}</span>
-          <button class="pill-btn no-drag" title="改 AppID / 描述 / 项目文件夹 / 构建缓存目录" @click="openDrawer('app')">
+          <button class="btn btn-sm no-drag" title="改 AppID / 描述 / 项目文件夹 / 构建缓存目录" @click="openDrawer('app')">
             <Pencil :size="12" :stroke-width="2.2" />
             编辑
           </button>
         </div>
 
-        <div v-if="app.desc" class="mt-2 text-[13px] text-muted truncate">{{ app.desc }}</div>
+        <div v-if="app.desc" class="mt-2 text-body text-muted truncate">{{ app.desc }}</div>
 
-        <div class="mt-2.5 flex items-center gap-3 flex-wrap text-[12px] text-muted">
+        <div class="mt-2.5 flex items-center gap-3 flex-wrap text-label text-muted">
           <span class="num">
             AppID <span class="text-ink font-medium">{{ app.appId || '—' }}</span>
           </span>
@@ -67,12 +67,12 @@ const dup = computed(() => {
 
         <div class="mt-3 flex flex-col gap-1.5 min-w-0">
           <div class="flex items-center gap-3 min-w-0">
-            <span class="shrink-0 w-[64px] text-[12px] text-faint whitespace-nowrap">内容根目录</span>
+            <span class="shrink-0 w-[64px] text-label text-faint whitespace-nowrap">项目文件夹</span>
             <PathLink :path="app.contentRoot" kind="folder" class="min-w-0" />
           </div>
 
           <div class="flex items-center gap-3 min-w-0">
-            <span class="shrink-0 w-[64px] text-[12px] text-faint whitespace-nowrap tracking-[0.3em]">构建脚本</span>
+            <span class="shrink-0 w-[64px] text-label text-faint whitespace-nowrap tracking-[0.3em]">构建脚本</span>
             <PathLink :path="app.appPath" kind="file" class="min-w-0" />
           </div>
         </div>
@@ -82,10 +82,10 @@ const dup = computed(() => {
     <!-- AppID 跨 App 冲突 -->
     <div
       v-if="dup"
-      class="mt-4 rounded-[10px] border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] p-3"
+      class="mt-4 rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] p-3"
     >
-      <div class="text-[12px] font-semibold text-danger mb-1.5">AppID 冲突</div>
-      <div class="text-[12px] text-[#ffb0b8] leading-relaxed">
+      <div class="text-label font-semibold text-danger mb-1.5">AppID 冲突</div>
+      <div class="text-label text-[#ffb0b8] leading-relaxed">
         AppID <span class="num font-semibold">{{ dup.appId }}</span> 同时被这些本地 App 使用：
         <span class="font-mono">{{ dup.apps.join('、') }}</span>。<br />
         给其中一个跑构建，内容会传到<strong>同一个 Steam App</strong> 上。请到 Steamworks
@@ -96,19 +96,19 @@ const dup = computed(() => {
     <!-- 问题清单：只列还没被忽略的。全忽略完这块整个消失，不留空壳 -->
     <div
       v-if="activeRows.length"
-      class="mt-4 rounded-[10px] border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
+      class="mt-4 rounded-card border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
     >
       <div class="flex items-center gap-2 mb-1.5">
-        <span class="text-[12px] font-semibold text-amber">待处理</span>
-        <span class="text-[11px] text-faint num">{{ activeRows.length }} 项</span>
-        <span v-if="ignoredCount" class="text-[11px] text-faint num">
+        <span class="text-label font-semibold text-amber">待处理</span>
+        <span class="text-micro text-faint num">{{ activeRows.length }} 项</span>
+        <span v-if="ignoredCount" class="text-micro text-faint num">
           · 另有 {{ ignoredCount }} 项已忽略（在「编辑」里恢复）
         </span>
       </div>
 
       <div class="flex flex-col gap-1">
         <div v-for="(r, i) in activeRows" :key="i" class="flex items-start gap-2 group">
-          <span class="text-[12px] leading-relaxed min-w-0 flex-1 text-[#d7c3a0]">{{ r.text }}</span>
+          <span class="text-label leading-relaxed min-w-0 flex-1 text-[#d7c3a0]">{{ r.text }}</span>
 
           <button
             class="link-btn shrink-0"
@@ -130,7 +130,7 @@ const dup = computed(() => {
   </div>
 
   <div v-else-if="app?.error" class="card p-5 border-[#4a2a2a]">
-    <div class="text-[14px] font-semibold text-[#ff8a8a]">读取 App 失败</div>
-    <div class="text-[13px] text-muted mt-1.5">{{ app.error }}</div>
+    <div class="text-copy font-semibold text-[#ff8a8a]">读取 App 失败</div>
+    <div class="text-body text-muted mt-1.5">{{ app.error }}</div>
   </div>
 </template>

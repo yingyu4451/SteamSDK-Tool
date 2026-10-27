@@ -8,10 +8,12 @@ import {
   ShieldCheck,
   Plus,
   BookOpen,
-  Unplug
+  Unplug,
+  FolderPlus
 } from '@lucide/vue'
 import { state, selectApp, rescan, openWizard, runCheckAll } from '../store.js'
 import { useListStagger } from '../motion.js'
+import EmptyState from './EmptyState.vue'
 
 const listEl = ref(null)
 const { run } = useListStagger(listEl, (el) => el.dataset.dir)
@@ -72,7 +74,7 @@ function healthTitle(app) {
   }
   if (h === 'warn') {
     const n = activeProblems(app)
-    return n ? `有待处理 ${n} 项` : '内容根目录不存在'
+    return n ? `有待处理 ${n} 项` : '项目文件夹不存在'
   }
   return '一切正常'
 }
@@ -85,7 +87,7 @@ function healthTitle(app) {
       <button
         v-for="n in nav"
         :key="n.id"
-        class="group flex items-center gap-2.5 h-9 px-3 rounded-[9px] text-[13px] transition-colors cursor-pointer border-0 text-left"
+        class="group flex items-center gap-2.5 h-9 px-3 rounded-input text-body transition-colors cursor-pointer border-0 text-left"
         :class="
           state.view === n.id
             ? 'bg-surface-3 text-ink font-medium'
@@ -106,11 +108,12 @@ function healthTitle(app) {
 
     <!-- App 列表 -->
     <div class="px-3 pt-3 pb-2 flex items-center gap-2">
-      <span class="text-[11px] font-semibold tracking-wider text-faint uppercase">Apps</span>
-      <span class="num text-[11px] text-faint">{{ appCount }}</span>
+      <span class="text-micro font-semibold tracking-wider text-faint uppercase">Apps</span>
+      <span class="num text-micro text-faint">{{ appCount }}</span>
       <button
-        class="ml-auto w-6 h-6 grid place-items-center rounded-md text-faint hover:text-accent hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent"
+        class="ml-auto w-7 h-7 grid place-items-center rounded-btn text-faint hover:text-accent hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent"
         title="重新扫描 scripts 目录"
+        aria-label="重新扫描 scripts 目录"
         @click="rescan"
       >
         <RefreshCw
@@ -120,13 +123,14 @@ function healthTitle(app) {
         />
       </button>
       <button
-        class="w-6 h-6 grid place-items-center rounded-md transition-colors cursor-pointer border-0 bg-transparent"
+        class="w-7 h-7 grid place-items-center rounded-btn transition-colors cursor-pointer border-0 bg-transparent"
         :class="
           checkingAll
             ? 'text-accent'
             : 'text-faint hover:text-accent hover:bg-surface-2'
         "
         title="把所有 App 都跑一遍 check.ps1"
+        aria-label="全部检查配置"
         @click="runCheckAll"
       >
         <ShieldCheck
@@ -136,8 +140,9 @@ function healthTitle(app) {
         />
       </button>
       <button
-        class="w-6 h-6 grid place-items-center rounded-md text-faint hover:text-accent hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent"
+        class="w-7 h-7 grid place-items-center rounded-btn text-faint hover:text-accent hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent"
         title="新建 App（Demo / 正式版 / 新平台）"
+        aria-label="新建 App"
         @click="openWizard"
       >
         <Plus :size="14" :stroke-width="2.2" />
@@ -149,12 +154,13 @@ function healthTitle(app) {
         v-for="app in state.apps"
         :key="app.dirName"
         :data-dir="app.dirName"
-        class="text-left rounded-[10px] border px-3 py-2.5 transition-colors cursor-pointer"
+        class="text-left rounded-card border px-3 py-2.5 transition-colors cursor-pointer"
         :class="
           state.selectedDir === app.dirName
             ? 'border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.06)]'
             : 'border-line bg-surface hover:bg-surface-2'
         "
+        :aria-current="state.selectedDir === app.dirName ? 'true' : undefined"
         @click="selectApp(app.dirName)"
       >
         <div class="flex items-center gap-2 min-w-0">
@@ -170,29 +176,29 @@ function healthTitle(app) {
             "
             :title="healthTitle(app)"
           />
-          <span class="text-[13px] font-medium truncate">{{ app.dirName }}</span>
+          <span class="text-body font-medium truncate">{{ app.dirName }}</span>
         </div>
-        <div class="mt-1.5 flex items-center gap-2 text-[11px] text-faint num">
+        <div class="mt-1.5 flex items-center gap-2 text-micro text-faint num">
           <span>App {{ app.appId || '?' }}</span>
           <span class="text-rule">·</span>
-          <span>{{ app.depots?.length || 0 }} depot</span>
+          <span>{{ app.depots?.length || 0 }} Depot</span>
           <span v-if="app.setLive" class="ml-auto text-amber truncate max-w-[74px]">
             {{ app.setLive }}
           </span>
         </div>
       </button>
 
-      <div v-if="!state.apps.length && !state.scanning" class="px-1 py-3">
-        <button class="btn h-7 px-2.5 text-[12px] w-full" @click="openWizard">
-          ＋ 新建 App
-        </button>
+      <div v-if="!state.apps.length && !state.scanning" class="px-1 py-2">
+        <EmptyState compact :icon="FolderPlus" title="还没有 App" hint="点右上角 + 新建一个，或把游戏文件夹拖进窗口。">
+          <button class="btn btn-sm" @click="openWizard">新建 App</button>
+        </EmptyState>
       </div>
 
       <div v-if="state.scanErrors?.length" class="mt-1 flex flex-col gap-1">
         <div
           v-for="(e, i) in state.scanErrors"
           :key="i"
-          class="text-[11px] text-danger/80 bg-[rgba(255,92,108,.07)] border border-[rgba(255,92,108,.2)] rounded-lg px-2.5 py-2"
+          class="text-micro text-danger/80 bg-[rgba(255,92,108,.07)] border border-[rgba(255,92,108,.2)] rounded-lg px-2.5 py-2"
         >
           {{ e.error }}
         </div>

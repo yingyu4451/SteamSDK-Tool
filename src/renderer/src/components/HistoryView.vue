@@ -2,7 +2,8 @@
 import { ref, computed } from 'vue'
 import { state, loadHistory } from '../store.js'
 import { fmtSize, fmtTime } from '../format.js'
-import { FolderOpen } from '@lucide/vue'
+import { FolderOpen, FileClock, FileSearch } from '@lucide/vue'
+import EmptyState from './EmptyState.vue'
 
 const selected = ref(null)
 const content = ref('')
@@ -66,21 +67,21 @@ function openLogDir() {
 <template>
   <div class="p-5 flex flex-col gap-4 h-full min-h-0">
     <div class="flex items-center gap-3">
-      <h1 class="text-[17px] font-semibold tracking-tight m-0">构建历史</h1>
-      <span class="text-[12px] text-faint">
+      <h1 class="text-title font-semibold tracking-tight m-0">构建历史</h1>
+      <span class="text-label text-faint">
         <span class="font-mono">ContentBuilder\output\</span> 下的所有构建日志
       </span>
       <div class="flex-1" />
       <input
         v-model="filter"
         placeholder="筛选文件名"
-        class="h-8 w-[200px] px-3 rounded-lg bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+        class="h-9 w-[200px] px-3 rounded-lg bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
       />
-      <button class="btn h-8 no-drag" :disabled="!logDir" title="在资源管理器里打开日志所在文件夹" @click="openLogDir">
+      <button class="btn no-drag" :disabled="!logDir" title="在资源管理器里打开日志所在文件夹" @click="openLogDir">
         <FolderOpen :size="14" :stroke-width="1.9" />
         打开文件夹
       </button>
-      <button class="btn h-8 no-drag" @click="refresh">刷新</button>
+      <button class="btn no-drag" @click="refresh">刷新</button>
     </div>
 
     <!-- 全部 / 每个 App 一份 -->
@@ -109,7 +110,7 @@ function openLogDir() {
       <!-- 列表 -->
       <div class="card overflow-y-auto scroll-thin min-h-0 min-w-0" v-reveal>
         <div v-for="[group, items] in shownGroups" :key="group" class="p-2.5">
-          <div class="px-2 py-1.5 text-[11px] font-semibold tracking-wider text-faint uppercase">
+          <div class="px-2 py-1.5 text-micro font-semibold tracking-wider text-faint uppercase">
             {{ group }}
           </div>
           <button
@@ -123,8 +124,8 @@ function openLogDir() {
             "
             @click="open(h)"
           >
-            <div class="text-[13px] font-medium truncate">{{ h.name }}</div>
-            <div class="mt-1 flex items-center gap-2 text-[11px] text-faint num">
+            <div class="text-body font-medium truncate">{{ h.name }}</div>
+            <div class="mt-1 flex items-center gap-2 text-micro text-faint num">
               <span>{{ fmtTime(h.mtime) }}</span>
               <span class="text-rule">·</span>
               <span>{{ fmtSize(h.size) }}</span>
@@ -132,27 +133,40 @@ function openLogDir() {
           </button>
         </div>
 
-        <div v-if="!shown.length" class="p-6 text-[13px] text-faint">还没有构建日志</div>
+        <div v-if="!shown.length" class="p-4">
+          <EmptyState
+            compact
+            :icon="FileClock"
+            title="还没有构建日志"
+            hint="跑一次「检查配置」或「Preview 空跑」，日志会落在 output 目录并出现在这里。"
+          />
+        </div>
       </div>
 
       <!-- 内容 -->
       <div class="card overflow-hidden flex flex-col min-h-0 min-w-0" v-reveal="{ delay: 0.04 }">
         <header class="px-4 py-2.5 border-b border-line flex items-center gap-3 shrink-0">
-          <span class="text-[13px] font-medium truncate">
+          <span class="text-body font-medium truncate">
             {{ selected?.name || '选一个日志' }}
           </span>
-          <span v-if="selected" class="text-[11px] text-faint font-mono truncate ml-auto" :title="selected.file">
+          <span v-if="selected" class="text-micro text-faint font-mono truncate ml-auto" :title="selected.file">
             {{ selected.file }}
           </span>
         </header>
         <div class="flex-1 min-h-0 overflow-auto scroll-thin bg-[#080b10] p-4">
-          <div v-if="loading" class="text-[12px] text-faint">读取中…</div>
+          <div v-if="loading" class="text-label text-faint">读取中…</div>
           <pre
             v-else-if="content"
-            class="m-0 text-[12px] leading-[1.7] font-mono text-[#c6d4df] whitespace-pre-wrap break-all"
+            class="m-0 text-label leading-[1.7] font-mono text-[#c6d4df] whitespace-pre-wrap break-all"
             >{{ content }}</pre
           >
-          <div v-else class="text-[12px] text-faint">左侧点一个日志查看内容。</div>
+          <div v-else class="h-full grid place-items-center">
+            <EmptyState
+              :icon="FileSearch"
+              title="选一个日志看内容"
+              hint="左边列表里点一下文件名；这里会显示明文，可以全选复制。"
+            />
+          </div>
         </div>
       </div>
     </div>

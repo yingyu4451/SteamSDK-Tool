@@ -40,11 +40,11 @@ const toneClass = computed(
 
 <template>
   <div class="card p-4 overflow-hidden min-w-0">
-    <div class="text-[11px] font-semibold tracking-wider text-faint uppercase">{{ label }}</div>
+    <div class="text-micro font-semibold tracking-wider text-faint uppercase">{{ label }}</div>
     <div class="mt-1.5 flex items-baseline gap-1.5">
-      <span class="num text-[26px] font-semibold leading-none" :class="toneClass">{{ text }}</span>
-      <span v-if="unitText" class="text-[12px] text-faint">{{ unitText }}</span>
+      <span class="num text-stat font-semibold leading-none" :class="toneClass">{{ text }}</span>
+      <span v-if="unitText" class="text-label text-faint">{{ unitText }}</span>
     </div>
-    <div v-if="hint" class="mt-2 text-[12px] text-faint leading-snug">{{ hint }}</div>
+    <div v-if="hint" class="mt-2 text-label text-faint leading-snug">{{ hint }}</div>
   </div>
 </template>

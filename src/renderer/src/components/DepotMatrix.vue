@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import { fmtSize, fmtInt } from '../format.js'
 import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL } from '../store.js'
 import PathLink from './PathLink.vue'
-import { ChevronRight } from '@lucide/vue'
+import EmptyState from './EmptyState.vue'
+import { ChevronRight, Package } from '@lucide/vue'
 
 const props = defineProps({ depots: { type: Array, default: () => [] } })
 
@@ -89,9 +90,9 @@ async function openPath(p) {
 <template>
   <section class="card overflow-hidden min-w-0" v-reveal="{ delay: 0.04 }">
     <header class="px-5 pt-4 pb-3 flex items-center gap-3 flex-wrap">
-      <h2 class="text-[13px] font-semibold tracking-tight m-0">Depot</h2>
-      <span class="text-[12px] text-faint num">{{ sortedDepots.length }}</span>
-      <button class="ml-auto btn h-7 px-2.5 text-[12px] no-drag" @click="openDepotSlide()">
+      <h2 class="text-body font-semibold tracking-tight m-0">Depot</h2>
+      <span class="text-label text-faint num">{{ sortedDepots.length }}</span>
+      <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="openDepotSlide()">
         ＋ 新建 Depot
       </button>
     </header>
@@ -105,7 +106,7 @@ async function openPath(p) {
       <button
         v-for="d in sortedDepots"
         :key="d.id"
-        class="text-left rounded-[10px] border px-3 py-2 transition-colors cursor-pointer min-w-0 bg-transparent"
+        class="text-left rounded-card border px-3 py-2 transition-colors cursor-pointer min-w-0 bg-transparent"
         :class="
           String(d.id) === String(current?.id)
             ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.06)]'
@@ -123,13 +124,13 @@ async function openPath(p) {
             }"
           />
           <span
-            class="text-[13px] font-medium truncate"
+            class="text-body font-medium truncate"
             :class="String(d.id) === String(current?.id) ? 'text-ink' : 'text-muted'"
           >
             {{ platLabel(d.platform) }}
           </span>
         </div>
-        <div class="mt-1 flex items-center gap-1.5 text-[11px] text-faint num min-w-0">
+        <div class="mt-1 flex items-center gap-1.5 text-micro text-faint num min-w-0">
           <span class="font-mono truncate">{{ d.id }}</span>
           <span class="text-rule">·</span>
           <span class="shrink-0">{{ fmtSize(d.analysis?.totalBytes) }}</span>
@@ -151,19 +152,19 @@ async function openPath(p) {
           >
             {{ depotState(current).text }}
           </span>
-          <span class="text-[12px] text-muted">{{ osLabel(current.meta?.os) }} {{ archLabel(current.meta?.arch) }}</span>
-          <span class="text-[12px] text-faint">{{ langLabel(current.meta?.language) }}</span>
-          <span v-if="metaLine.length" class="text-[12px] text-muted truncate">{{ metaLine[0] }}</span>
+          <span class="text-label text-muted">{{ osLabel(current.meta?.os) }} {{ archLabel(current.meta?.arch) }}</span>
+          <span class="text-label text-faint">{{ langLabel(current.meta?.language) }}</span>
+          <span v-if="metaLine.length" class="text-label text-muted truncate">{{ metaLine[0] }}</span>
 
           <div class="ml-auto flex items-center gap-1.5">
             <button
               v-if="a && !a.exists"
-              class="btn h-7 px-2.5 text-[12px] no-drag border-[rgba(255,180,84,.3)] text-amber hover:bg-[rgba(255,180,84,.08)]"
+              class="btn btn-sm px-2.5  no-drag border-[rgba(255,180,84,.3)] text-amber hover:bg-[rgba(255,180,84,.08)]"
               @click="createDir(current)"
             >
               创建目录
             </button>
-            <button class="btn h-7 px-2.5 text-[12px] no-drag" @click="openDrawer('depot', current.file)">
+            <button class="btn btn-sm px-2.5  no-drag" @click="openDrawer('depot', current.file)">
               编辑
             </button>
           </div>
@@ -172,28 +173,28 @@ async function openPath(p) {
         <!-- 数字 -->
         <div v-if="a" class="mt-3 grid grid-cols-4 gap-3">
           <div>
-            <div class="text-[11px] text-faint tracking-wide">磁盘文件</div>
-            <div class="num text-[15px] font-semibold mt-0.5">{{ fmtInt(a.fileCount) }}</div>
+            <div class="text-micro text-faint tracking-wide">磁盘文件</div>
+            <div class="num text-lead font-semibold mt-0.5">{{ fmtInt(a.fileCount) }}</div>
           </div>
           <div>
-            <div class="text-[11px] text-faint tracking-wide">总体积</div>
-            <div class="num text-[15px] font-semibold mt-0.5">{{ fmtSize(a.totalBytes) }}</div>
+            <div class="text-micro text-faint tracking-wide">总体积</div>
+            <div class="num text-lead font-semibold mt-0.5">{{ fmtSize(a.totalBytes) }}</div>
           </div>
           <div>
-            <div class="text-[11px] text-amber/80 tracking-wide">被排除</div>
-            <div class="num text-[15px] font-semibold mt-0.5" :class="a.excludedCount ? 'text-amber' : 'text-faint'">
+            <div class="text-micro tracking-wide" :class="a.excludedCount ? 'text-amber' : 'text-faint'">被排除</div>
+            <div class="num text-lead font-semibold mt-0.5" :class="a.excludedCount ? 'text-amber' : 'text-faint'">
               {{ fmtInt(a.excludedCount) }}
             </div>
           </div>
           <div>
-            <div class="text-[11px] text-accent/80 tracking-wide">会上传</div>
-            <div class="num text-[15px] font-semibold mt-0.5 text-accent">{{ fmtInt(a.uploadCount) }}</div>
+            <div class="text-micro text-accent tracking-wide">会上传</div>
+            <div class="num text-lead font-semibold mt-0.5 text-accent">{{ fmtInt(a.uploadCount) }}</div>
           </div>
         </div>
 
         <div class="mt-2.5 flex flex-col gap-1">
-          <div class="flex items-center gap-2 text-[12px] min-w-0">
-            <span class="shrink-0 w-[52px] text-faint/70">内容目录</span>
+          <div class="flex items-center gap-2 text-label min-w-0">
+            <span class="shrink-0 w-[64px] text-faint">内容目录</span>
             <PathLink
               v-if="a?.contentRoot"
               :path="a.contentRoot"
@@ -203,19 +204,19 @@ async function openPath(p) {
             />
             <span v-else class="text-faint">未设置</span>
           </div>
-          <div class="flex items-center gap-2 text-[12px] min-w-0">
-            <span class="shrink-0 w-[52px] text-faint/70">脚本</span>
+          <div class="flex items-center gap-2 text-label min-w-0">
+            <span class="shrink-0 w-[64px] text-faint">脚本</span>
             <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
           </div>
-          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-[12px] min-w-0">
-            <span class="shrink-0 w-[52px] text-faint/70">存档保护</span>
+          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-label min-w-0">
+            <span class="shrink-0 w-[64px] text-faint">存档保护</span>
             <span class="font-mono break-all text-muted">
               {{ current.userConfig.join('、') }}
             </span>
           </div>
-          <div v-else class="flex items-center gap-2 text-[12px] min-w-0">
-            <span class="shrink-0 w-[52px] text-faint/70">存档保护</span>
-            <span class="text-amber/80">没标任何玩家数据文件</span>
+          <div v-else class="flex items-center gap-2 text-label min-w-0">
+            <span class="shrink-0 w-[64px] text-faint">存档保护</span>
+            <span class="text-amber">没标任何玩家数据文件</span>
           </div>
         </div>
       </div>
@@ -231,9 +232,9 @@ async function openPath(p) {
         :stroke-width="2.4"
         :class="['text-danger transition-transform', showSuspicious && 'rotate-90']"
       />
-          <span class="text-[12px] font-medium text-danger">会被上传的可疑文件</span>
-          <span class="num text-[12px] text-faint">{{ a.suspicious.length }}</span>
-          <span class="ml-auto text-[11px] text-faint">这些应该加进 FileExclusion</span>
+          <span class="text-label font-medium text-danger">会被上传的可疑文件</span>
+          <span class="num text-label text-faint">{{ a.suspicious.length }}</span>
+          <span class="ml-auto text-micro text-faint">这些应该加进 FileExclusion</span>
         </button>
         <div v-show="showSuspicious" class="px-5 pb-3 max-h-[200px] overflow-y-auto scroll-thin">
           <div
@@ -241,8 +242,8 @@ async function openPath(p) {
             :key="i"
             class="flex items-center gap-3 py-1.5 border-b border-line-soft last:border-b-0"
           >
-            <span class="font-mono text-[12px] text-[#ffb0b8] truncate flex-1 min-w-0" :title="f.rel">{{ f.rel }}</span>
-            <span class="num text-[11px] text-faint shrink-0">{{ fmtSize(f.size) }}</span>
+            <span class="font-mono text-label text-[#ffb0b8] truncate flex-1 min-w-0" :title="f.rel">{{ f.rel }}</span>
+            <span class="num text-micro text-faint shrink-0">{{ fmtSize(f.size) }}</span>
           </div>
         </div>
       </div>
@@ -258,39 +259,41 @@ async function openPath(p) {
         :stroke-width="2.4"
         :class="['text-amber transition-transform', showExcluded && 'rotate-90']"
       />
-          <span class="text-[12px] font-medium text-amber">被 FileExclusion 挡下的文件</span>
-          <span class="num text-[12px] text-faint">{{ a?.excludedCount || 0 }}</span>
-          <span class="ml-auto text-[11px] text-faint">只不上传，本地都还在</span>
+          <span class="text-label font-medium text-amber">被 FileExclusion 挡下的文件</span>
+          <span class="num text-label text-faint">{{ a?.excludedCount || 0 }}</span>
+          <span class="ml-auto text-micro text-faint">只不上传，本地都还在</span>
         </button>
         <div v-show="showExcluded" class="px-5 pb-3 max-h-[240px] overflow-y-auto scroll-thin">
           <div v-for="[rule, files] in excludedByRule" :key="rule" class="mb-2.5 last:mb-0">
             <div class="flex items-center gap-2 mb-1">
-              <code class="text-[11px] text-accent bg-[rgba(102,192,244,.07)] border border-[rgba(102,192,244,.18)] rounded px-1.5 py-0.5">
+              <code class="text-micro text-accent bg-[rgba(102,192,244,.07)] border border-[rgba(102,192,244,.18)] rounded px-1.5 py-0.5">
                 {{ rule }}
               </code>
-              <span class="num text-[11px] text-faint">{{ files.length }} 个</span>
+              <span class="num text-micro text-faint">{{ files.length }} 个</span>
             </div>
             <div
               v-for="(f, i) in files.slice(0, 30)"
               :key="i"
-              class="font-mono text-[11px] text-faint truncate pl-1 py-0.5"
+              class="font-mono text-micro text-faint truncate pl-1 py-0.5"
               :title="f.rel"
             >
               {{ f.rel }}
             </div>
-            <div v-if="files.length > 30" class="text-[11px] text-faint pl-1">
+            <div v-if="files.length > 30" class="text-micro text-faint pl-1">
               … 还有 {{ files.length - 30 }} 个
             </div>
           </div>
-          <div v-if="!excludedByRule.length" class="text-[12px] text-faint py-1">
+          <div v-if="!excludedByRule.length" class="text-label text-faint py-1">
             没有文件被排除。
           </div>
         </div>
       </div>
     </div>
 
-    <div v-else class="border-t border-line px-5 py-6 text-[13px] text-faint">
-      这个 App 还没有 Depot。
+    <div v-else class="border-t border-line px-5 py-3">
+      <EmptyState compact :icon="Package" title="还没有 Depot" hint="点右上角「新建 Depot」，按平台各建一个 —— 一次构建会全平台一起传。">
+        <button class="btn btn-sm" @click="openDepotSlide()">新建 Depot</button>
+      </EmptyState>
     </div>
   </section>
 </template>

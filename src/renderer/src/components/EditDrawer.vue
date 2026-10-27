@@ -17,6 +17,7 @@ import {
 } from '../store.js'
 import PathLink from './PathLink.vue'
 import { X } from '@lucide/vue'
+import { useDialogA11y } from '../composables/useDialogA11y.js'
 
 /**
  * 已忽略的待处理提示 —— 从 App 头上搬到这里。
@@ -69,6 +70,8 @@ async function doRename() {
 
 const detail = computed(() => state.detail)
 const drawer = computed(() => state.drawer)
+
+useDialogA11y(el, closeDrawer, { isOpen: () => !!drawer.value })
 const isDepot = computed(() => drawer.value?.kind === 'depot')
 
 const depot = computed(() =>
@@ -301,14 +304,17 @@ onUnmounted(depotDisarm)
 
     <aside
       ref="el"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-drawer-title"
       class="relative w-[500px] max-w-[92vw] h-full bg-[#0c1016] border-l border-line flex flex-col min-h-0"
     >
       <header class="px-5 py-4 border-b border-line flex items-center gap-3 shrink-0">
         <div>
-          <h2 class="text-[14.5px] font-semibold m-0">
+          <h2 id="edit-drawer-title" class="text-copy font-semibold m-0">
             {{ isDepot ? `编辑 Depot ${depot?.id ?? ''}` : '编辑 App' }}
           </h2>
-          <div class="mt-1 text-[11px] font-mono text-faint truncate max-w-[360px]">
+          <div class="mt-1 text-micro font-mono text-faint truncate max-w-[360px]">
             {{ isDepot ? drawer.depotFile : detail?.appFile }}
           </div>
         </div>
@@ -327,11 +333,11 @@ onUnmounted(depotDisarm)
           <div class="card-flat divide-y divide-[#22334a]">
             <div class="px-3 py-2.5">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="w-[88px] shrink-0 text-[12px] text-faint">App 名字</span>
+                <span class="w-[88px] shrink-0 text-label text-faint">App 名字</span>
                 <template v-if="editing !== 'name'">
-                  <span class="min-w-0 flex-1 text-[13px] truncate">{{ detail?.dirName }}</span>
+                  <span class="min-w-0 flex-1 text-body truncate">{{ detail?.dirName }}</span>
                   <button
-                    class="btn h-7 px-2.5 text-[12px] no-drag shrink-0"
+                    class="btn btn-sm px-2.5  no-drag shrink-0"
                     @click="startEdit('name', detail?.dirName)"
                   >
                     改名
@@ -340,20 +346,20 @@ onUnmounted(depotDisarm)
                 <template v-else>
                   <input
                     v-model="nameForm"
-                    class="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
+                    class="flex-1 min-w-0 h-9 px-2.5 rounded-lg bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)]"
                     @keyup.enter="doRename"
                   />
                   <button
-                    class="btn h-7 px-2.5 text-[12px] no-drag shrink-0"
+                    class="btn btn-sm px-2.5  no-drag shrink-0"
                     :disabled="!nameDirty || renaming"
                     @click="doRename"
                   >
                     {{ renaming ? '改名中…' : '确定' }}
                   </button>
-                  <button class="btn h-7 px-2.5 text-[12px] no-drag shrink-0" @click="cancelEdit">取消</button>
+                  <button class="btn btn-sm px-2.5  no-drag shrink-0" @click="cancelEdit">取消</button>
                 </template>
               </div>
-              <div v-if="editing === 'name' && nameDirty" class="mt-1.5 pl-[96px] text-[11px] text-faint leading-relaxed">
+              <div v-if="editing === 'name' && nameDirty" class="mt-1.5 pl-[96px] text-micro text-faint leading-relaxed">
                 会把 <span class="font-mono">scripts\{{ detail?.dirName }}</span> 整个文件夹改成
                 <span class="font-mono">scripts\{{ nameForm.trim() }}</span>，脚本文件跟着重命名。内容目录<strong class="text-muted">不动</strong>。
               </div>
@@ -361,15 +367,15 @@ onUnmounted(depotDisarm)
 
             <div v-for="row in appRows" :key="row.key" class="px-3 py-2.5">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="w-[88px] shrink-0 text-[12px] text-faint">{{ row.label }}</span>
+                <span class="w-[88px] shrink-0 text-label text-faint">{{ row.label }}</span>
                 <template v-if="editing !== row.key">
                   <span
-                    class="min-w-0 flex-1 text-[13px] truncate"
+                    class="min-w-0 flex-1 text-body truncate"
                     :class="[row.mono ? 'font-mono' : '', row.value ? 'text-ink' : 'text-faint']"
                     :title="row.value || ''"
                     >{{ row.value || row.empty }}</span
                   >
-                  <button class="btn h-7 px-2.5 text-[12px] no-drag shrink-0" @click="startEdit(row.key, row.value)">
+                  <button class="link-btn no-drag shrink-0" @click="startEdit(row.key, row.value)">
                     {{ row.btn }}
                   </button>
                 </template>
@@ -377,34 +383,34 @@ onUnmounted(depotDisarm)
                   <input
                     v-model="editValue"
                     :placeholder="row.placeholder || ''"
-                    class="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                    class="flex-1 min-w-0 h-9 px-2.5 rounded-lg bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                     :class="[row.mono ? 'font-mono' : '', row.num ? 'num' : '']"
                     @keyup.enter="commitEdit(row.key)"
                   />
-                  <button v-if="row.pick" class="btn h-7 px-2.5 text-[12px] no-drag shrink-0" @click="pickRoot">
+                  <button v-if="row.pick" class="btn btn-sm px-2.5  no-drag shrink-0" @click="pickRoot">
                     选择…
                   </button>
                   <button
-                    class="btn h-7 px-2.5 text-[12px] no-drag shrink-0"
+                    class="btn btn-sm px-2.5  no-drag shrink-0"
                     :disabled="busy"
                     @click="commitEdit(row.key)"
                   >
                     保存
                   </button>
-                  <button class="btn h-7 px-2.5 text-[12px] no-drag shrink-0" @click="cancelEdit">取消</button>
+                  <button class="btn btn-sm px-2.5  no-drag shrink-0" @click="cancelEdit">取消</button>
                 </template>
               </div>
 
               <template v-if="row.key === 'contentRoot' && editing !== 'contentRoot'">
                 <div v-if="detail?.depots?.length" class="mt-2 pl-[96px] flex flex-col gap-1">
                   <div v-for="d in detail.depots" :key="'pd' + d.id" class="flex items-center gap-2 min-w-0">
-                    <span class="w-[74px] shrink-0 text-[11px] text-faint">{{ d.platform || d.id }}</span>
+                    <span class="w-[74px] shrink-0 text-micro text-faint">{{ d.platform || d.id }}</span>
                     <PathLink :path="d.contentRoot" kind="folder" class="min-w-0 flex-1" />
                   </div>
                 </div>
                 <button
                   v-if="detail?.depots?.length && detail.contentRoot"
-                  class="btn h-7 px-2.5 text-[12px] no-drag mt-2 ml-[96px]"
+                  class="btn btn-sm px-2.5  no-drag mt-2 ml-[96px]"
                   :disabled="syncingRoots"
                   @click="syncDepotRoots"
                 >
@@ -412,7 +418,7 @@ onUnmounted(depotDisarm)
                 </button>
                 <div
                   v-if="syncMsg"
-                  class="mt-1.5 pl-[96px] text-[11px]"
+                  class="mt-1.5 pl-[96px] text-micro"
                   :class="syncMsg.ok ? 'text-accent/90' : 'text-danger'"
                 >
                   {{ syncMsg.text }}
@@ -424,13 +430,13 @@ onUnmounted(depotDisarm)
           <!-- 已忽略的提示：App 头上不再显示它们，来这里恢复 -->
           <div v-if="ignoredRows.length" class="pt-3 border-t border-line">
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-[12px] font-semibold text-muted">已忽略的提示</span>
-              <span class="text-[11px] text-faint num">{{ ignoredRows.length }} 条</span>
+              <span class="text-label font-semibold text-muted">已忽略的提示</span>
+              <span class="text-micro text-faint num">{{ ignoredRows.length }} 条</span>
             </div>
             <div class="flex flex-col gap-1.5">
               <div v-for="(r, i) in ignoredRows" :key="i" class="flex items-start gap-2">
-                <span class="text-[12px] leading-relaxed min-w-0 flex-1 text-faint">{{ r.text }}</span>
-                <span class="text-[10px] shrink-0 text-faint pt-[2px]">
+                <span class="text-label leading-relaxed min-w-0 flex-1 text-faint">{{ r.text }}</span>
+                <span class="text-micro shrink-0 text-faint pt-[2px]">
                   {{ r.perm ? '永久忽略' : '本次忽略' }}
                 </span>
                 <button
@@ -454,32 +460,32 @@ onUnmounted(depotDisarm)
         <template v-else>
           <div class="grid grid-cols-2 gap-3">
             <label class="flex flex-col gap-1.5">
-              <span class="text-[12px] text-muted">DepotID</span>
+              <span class="text-label text-muted">DepotID</span>
               <input
                 v-model="depotForm.depotId"
-                class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] num outline-none focus:border-[rgba(102,192,244,.45)]"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body num outline-none focus:border-[rgba(102,192,244,.45)]"
               />
             </label>
             <label class="flex flex-col gap-1.5">
-              <span class="text-[12px] text-muted">平台</span>
+              <span class="text-label text-muted">平台</span>
               <select
                 v-model="depotForm.platform"
-                class="h-9 px-3 rounded-[9px] bg-surface border border-line text-[13px] outline-none focus:border-[rgba(102,192,244,.45)]"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)]"
               >
                 <option v-for="p in platforms" :key="p.id" :value="p.id">{{ p.label }}</option>
               </select>
             </label>
           </div>
-          <span class="text-[11px] text-faint -mt-2">
+          <span class="text-micro text-faint -mt-2">
             改 DepotID 或平台会自动重命名脚本文件，并同步 app 脚本里的引用。
           </span>
 
           <label class="flex flex-col gap-1.5">
-            <span class="text-[12px] text-muted">内容目录</span>
+            <span class="text-label text-muted">内容目录</span>
             <div class="flex gap-2">
               <input
                 v-model="depotForm.contentRoot"
-                class="flex-1 h-9 px-3 rounded-[9px] bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
               />
               <button class="btn no-drag" @click="pickRoot">选择…</button>
             </div>
@@ -488,8 +494,8 @@ onUnmounted(depotDisarm)
           <!-- FileExclusion -->
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
-              <span class="text-[12px] text-muted">FileExclusion（{{ depotForm.exclusions.length }} 条）</span>
-              <button class="ml-auto btn h-7 px-2.5 text-[12px] no-drag" @click="resetRules">恢复默认</button>
+              <span class="text-label text-muted">FileExclusion（{{ depotForm.exclusions.length }} 条）</span>
+              <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="resetRules">恢复默认</button>
             </div>
 
             <div class="card-flat divide-y divide-[#22334a] max-h-[260px] overflow-y-auto scroll-thin">
@@ -500,7 +506,7 @@ onUnmounted(depotDisarm)
               >
                 <input
                   v-model="depotForm.exclusions[i]"
-                  class="flex-1 bg-transparent border-0 outline-none text-[12px] font-mono text-accent"
+                  class="flex-1 bg-transparent border-0 outline-none text-label font-mono text-accent"
                 />
                 <button
                   class="w-6 h-6 grid place-items-center rounded-md text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer"
@@ -509,7 +515,7 @@ onUnmounted(depotDisarm)
                   <X :size="14" :stroke-width="2" />
                 </button>
               </div>
-              <div v-if="!depotForm.exclusions.length" class="px-3 py-3 text-[12px] text-faint">
+              <div v-if="!depotForm.exclusions.length" class="px-3 py-3 text-label text-faint">
                 没有任何排除规则 —— 内容目录里的日志、符号文件都会被传上去。
               </div>
             </div>
@@ -518,17 +524,17 @@ onUnmounted(depotDisarm)
               <input
                 v-model="newRule"
                 placeholder="加一条，例如 *.pdb 或 logs\*"
-                class="flex-1 h-8 px-3 rounded-lg bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                class="flex-1 h-9 px-3 rounded-lg bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 @keydown.enter="addRule"
               />
-              <button class="btn h-8 no-drag" :disabled="!newRule.trim()" @click="addRule">添加</button>
+              <button class="btn no-drag" :disabled="!newRule.trim()" @click="addRule">添加</button>
             </div>
           </div>
 
           <!-- FileProperties / userconfig -->
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
-              <span class="text-[12px] text-muted">
+              <span class="text-label text-muted">
                 FileProperties / userconfig（{{ depotForm.userConfig.length }} 条）
               </span>
               <span
@@ -548,7 +554,7 @@ onUnmounted(depotDisarm)
                 <input
                   v-model="depotForm.userConfig[i]"
                   placeholder="MyGame_Data/Progress/Progress_0.PBProg"
-                  class="flex-1 min-w-0 bg-transparent border-0 outline-none text-[12px] font-mono text-accent placeholder:text-faint"
+                  class="flex-1 min-w-0 bg-transparent border-0 outline-none text-label font-mono text-accent placeholder:text-faint"
                 />
                 <button
                   class="w-6 h-6 grid place-items-center rounded-md text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer shrink-0"
@@ -557,7 +563,7 @@ onUnmounted(depotDisarm)
                   <X :size="14" :stroke-width="2" />
                 </button>
               </div>
-              <div v-if="!depotForm.userConfig.length" class="px-3 py-3 text-[12px] text-faint">
+              <div v-if="!depotForm.userConfig.length" class="px-3 py-3 text-label text-faint">
                 没有标记为玩家数据的文件 —— 玩家存档在升级时会被覆盖掉。
               </div>
             </div>
@@ -566,10 +572,10 @@ onUnmounted(depotDisarm)
               <input
                 v-model="newUserConfig"
                 placeholder="相对内容目录，例如 MyGame_Data/Progress"
-                class="flex-1 h-8 px-3 rounded-lg bg-surface border border-line text-[12px] font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                class="flex-1 h-9 px-3 rounded-lg bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 @keydown.enter="addUserConfig"
               />
-              <button class="btn h-8 no-drag" :disabled="!newUserConfig.trim()" @click="addUserConfig">
+              <button class="btn no-drag" :disabled="!newUserConfig.trim()" @click="addUserConfig">
                 添加
               </button>
             </div>
@@ -586,7 +592,7 @@ onUnmounted(depotDisarm)
               {{ depotArmed ? `确认删除 Depot（${depotLeft}）` : '删除这个 Depot' }}
             </button>
           </div>
-          <div v-if="depotArmed" class="mt-2 text-[11px] text-[#ff8a8a] leading-relaxed">
+          <div v-if="depotArmed" class="mt-2 text-micro text-[#ff8a8a] leading-relaxed">
             会删掉文件 {{ drawer.depotFile }}，并从 app 脚本里移除引用。
             Steam 上已经传过的 depot 不受影响。5 秒内再点一次才真删。
           </div>
