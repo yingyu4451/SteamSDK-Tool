@@ -190,12 +190,6 @@ async function savePw() {
   flash('密码已用 DPAPI 加密保存，只有当前 Windows 用户能解密')
 }
 
-async function clearPw() {
-  await window.api.settings.clearPassword()
-  await reloadSettings()
-  flash('已清除保存的密码')
-}
-
 /* ---- 工具自身的更新 ---- */
 
 const u = computed(() => state.update)
@@ -324,7 +318,6 @@ function openExternal(url) {
               @keydown.enter="savePw"
             />
             <button class="btn no-drag" :disabled="!state.encryptionAvailable" @click="savePw">加密保存</button>
-            <button class="btn btn-danger no-drag" :disabled="!state.hasPassword" @click="clearPw">清除</button>
           </div>
 
           <div class="mt-3 pt-3 border-t border-line-soft flex items-center gap-2 flex-wrap">
