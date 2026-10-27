@@ -203,7 +203,15 @@ Write-Host ""
 if ($Preview) { Write-Host "Preview build: nothing will be uploaded." -ForegroundColor Yellow }
 if ($Local)   { Write-Host "Local build: content goes to $htdocs, not to Steam." -ForegroundColor Yellow }
 
+# 日志放哪：vdf 配了 BuildOutput 就跟着它；没配的话 steamcmd 默认写到
+# <app 脚本目录>\buildoutput\（2026-10-27 实测，不是 ContentBuilder\output）。
+# 两处都找，否则旧 vdf（没有 BuildOutput）会误报「没有构建日志」+ 退出码 1。
 $logFile = Join-Path $outDir ("app_build_{0}.log" -f $appId)
+$logCandidates = @()
+if ($buildOutput) { $logCandidates += $logFile }
+$logCandidates += (Join-Path $appDir ("buildoutput\app_build_{0}.log" -f $appId))
+$logCandidates += $logFile
+$logCandidates = @($logCandidates | Select-Object -Unique)
 
 try {
     Write-Host ""
@@ -236,8 +244,13 @@ try {
     }
     $exit = $LASTEXITCODE
 
+    $logFile = $null
+    foreach ($candidate in $logCandidates) {
+        if (Test-Path $candidate) { $logFile = $candidate; break }
+    }
+
     Write-Host ""
-    if (Test-Path $logFile) {
+    if ($logFile) {
         Write-Host "--- $logFile (tail) ---" -ForegroundColor DarkGray
         Get-Content -LiteralPath $logFile -Tail 25 -Encoding UTF8 | ForEach-Object { Write-Host "  $_" }
         $logText = Get-Content -LiteralPath $logFile -Raw -Encoding UTF8
@@ -256,7 +269,11 @@ try {
             exit 1
         }
     } else {
-        Write-Host "No build log produced at $logFile" -ForegroundColor Red
+        Write-Host "No build log found. Tried:" -ForegroundColor Red
+        foreach ($candidate in $logCandidates) { Write-Host "  - $candidate" -ForegroundColor Red }
+        $hint = "steamcmd's log location depends on BuildOutput in the app vdf;"
+        $hint += " if the build really succeeded, check the Steamworks build page."
+        Write-Host $hint -ForegroundColor Yellow
         exit 1
     }
 
