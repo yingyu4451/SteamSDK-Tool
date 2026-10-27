@@ -35,6 +35,12 @@ param(
     [switch]$NoLoginCheck
 )
 
+# 输出被重定向（工具是管道）时统一按 UTF-8 写：Windows PowerShell 5.1 和 pwsh 在没有
+# 控制台的管道里默认按系统 ANSI（中文系统 936）输出，工具按 UTF-8 解码就会看到乱码。
+try {
+    if ([Console]::IsOutputRedirected) { [Console]::OutputEncoding = [Text.Encoding]::UTF8 }
+} catch { }
+
 $ErrorActionPreference = 'Stop'
 $CB       = $PSScriptRoot
 $steamcmd = Join-Path $CB 'builder\steamcmd.exe'
@@ -59,26 +65,34 @@ if ($AppScript) {
 }
 if (-not (Test-Path $appVdf)) { Fail "app build script not found: $appVdf" }
 
-$appText = Get-Content -LiteralPath $appVdf -Raw
+# vdf 是 UTF-8（工具写出来时不带 BOM），必须显式指定编码：Windows PowerShell 5.1
+# 默认按系统 ANSI（中文系统 936）解码，中文路径/目录会被读坏，内容目录就全部对不上。
+$appText = Get-Content -LiteralPath $appVdf -Raw -Encoding UTF8
+
+# vdf 里 // 到行尾是注释，注释掉的行等于不存在。解析时先用去掉注释的文本：
+# 否则「被注释掉的 depot」也会被算进 Depots，steamcmd 实际又不建它，
+# 日志里就会出现 Depots : 2 却只建了 1 个 depot 的假象。
+# （check.ps1 一直按去注释后的文本解析，这里对齐。）
+$parseText = [regex]::Replace($appText, '(?m)//.*$', '')
 
 # 日志和构建缓存跟着 BuildOutput 走：每个 App 的缓存目录是分开的，
 # 写死在 ContentBuilder\output 会读不到别的 App 的日志。
 $buildOutput = $null
-if ($appText -match '(?im)^\s*"BuildOutput"\s+"([^"]+)"') { $buildOutput = $Matches[1] }
+if ($parseText -match '(?im)^\s*"BuildOutput"\s+"([^"]+)"') { $buildOutput = $Matches[1] }
 if ($buildOutput) { $outDir = $buildOutput }
 
-if ($appText -notmatch '(?im)^\s*"appid"\s+"([^"]+)"') { Fail "no AppID in $appVdf" }
+if ($parseText -notmatch '(?im)^\s*"appid"\s+"([^"]+)"') { Fail "no AppID in $appVdf" }
 $appId = $Matches[1]
 
 # App 层 ContentRoot = 给「没写自己 contentroot 的 depot」用的默认值。
 # 一个 App 挂多个平台时，每个 depot 都有各自的 contentroot，
 # App 层这个值基本没用，所以不强制它存在。
 $appContentRoot = $null
-if ($appText -match '(?im)^\s*"contentroot"\s+"([^"]+)"') { $appContentRoot = $Matches[1] }
+if ($parseText -match '(?im)^\s*"contentroot"\s+"([^"]+)"') { $appContentRoot = $Matches[1] }
 
 # ---- depots ----------------------------------------------------------------
 $depotRefs = @()
-if ($appText -match '(?is)"Depots"\s*\{([^}]*)\}') {
+if ($parseText -match '(?is)"Depots"\s*\{([^}]*)\}') {
     foreach ($m in [regex]::Matches($Matches[1], '"([^"]+)"\s+"([^"]+)"')) {
         $depotRefs += [pscustomobject]@{ Id = $m.Groups[1].Value; File = $m.Groups[2].Value }
     }
@@ -100,7 +114,7 @@ foreach ($d in $depotRefs) {
     $dp = if ([IO.Path]::IsPathRooted($d.File)) { $d.File } else { Join-Path $appDir $d.File }
     if (-not (Test-Path $dp)) { Fail "depot script not found: $dp" }
 
-    $dtext = Get-Content -LiteralPath $dp -Raw
+    $dtext = Get-Content -LiteralPath $dp -Raw -Encoding UTF8
     $cr = $null
     if ($dtext -match '(?im)^\s*"contentroot"\s+"([^"]+)"') { $cr = $Matches[1] }
     $own = [bool]$cr
@@ -225,8 +239,8 @@ try {
     Write-Host ""
     if (Test-Path $logFile) {
         Write-Host "--- $logFile (tail) ---" -ForegroundColor DarkGray
-        Get-Content -LiteralPath $logFile -Tail 25 | ForEach-Object { Write-Host "  $_" }
-        $logText = Get-Content -LiteralPath $logFile -Raw
+        Get-Content -LiteralPath $logFile -Tail 25 -Encoding UTF8 | ForEach-Object { Write-Host "  $_" }
+        $logText = Get-Content -LiteralPath $logFile -Raw -Encoding UTF8
         $ok = $logText -match 'Successfully finished'
         Write-Host ""
         if ($ok) {

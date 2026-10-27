@@ -24,6 +24,13 @@ param(
     [switch]$ShowIncluded
 )
 
+# 输出被重定向（工具是管道）时统一按 UTF-8 写：Windows PowerShell 5.1 和 pwsh 在没有
+# 控制台的管道里默认按系统 ANSI（中文系统 936）输出，工具按 UTF-8 解码就会看到乱码，
+# 路径里的中文尤其明显。手动在控制台里跑不受影响。
+try {
+    if ([Console]::IsOutputRedirected) { [Console]::OutputEncoding = [Text.Encoding]::UTF8 }
+} catch { }
+
 $ErrorActionPreference = 'Stop'
 $CB         = $PSScriptRoot
 $scriptsDir = Join-Path $CB 'scripts'
@@ -36,7 +43,10 @@ $SUSPICIOUS_PARTS = @('DoNotShip', 'PlayerLogs', 'mem-diag', 'CrashDump', 'Crash
 
 function Get-Vdf {
     param([string]$Path)
-    $raw = Get-Content -LiteralPath $Path -Raw
+    # vdf 一律是 UTF-8（工具写出来时不带 BOM）。必须显式指定编码：Windows PowerShell
+    # 5.1 默认按系统 ANSI（中文系统 936）解码，中文路径会被读坏，后面 Test-Path 就会
+    # 误报「ContentRoot does not exist」。
+    $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
     # strip // comments (no URLs expected in these files)
     $t = [regex]::Replace($raw, '(?m)//.*$', '')
     [pscustomobject]@{
