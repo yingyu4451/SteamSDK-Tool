@@ -83,12 +83,27 @@ async function partnerGet(pathname, params, key) {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * Valve 的列表字段包法五花八门：有时是数组，有时是 { app: [...] } / { apps: [...] } / { build: [...] }，
+ * 偶尔还是以数字为键的对象。统一摊平成数组，避免在字符串/对象上直接 .map 崩掉。
+ */
+function asArray(value) {
+  if (Array.isArray(value)) return value
+  if (!value || typeof value !== 'object') return []
+  for (const key of ['app', 'apps', 'beta', 'betas', 'build', 'builds', 'depot', 'depots', 'manifest', 'manifests']) {
+    if (Array.isArray(value[key])) return value[key]
+  }
+  const values = Object.values(value)
+  return values.length && values.every((v) => v && typeof v === 'object' && !Array.isArray(v)) ? values : []
+}
+
 /** 这个密钥有权限的所有 App。用来校验 AppID 到底存不存在。 */
 export async function getPartnerApps(key) {
   const r = await partnerGet('/ISteamApps/GetPartnerAppListForWebAPIKey/v2/', {}, key)
-  const list = r?.apps || r?.applist?.apps || []
+  // 官方响应示例：{"applist":{"apps":{"app":[{ "appid": 500, "app_type": "game", "app_name": "Left 4 Dead" }]}}}
+  const list = asArray(r?.applist?.apps ?? r?.apps ?? r?.applist)
   return list
-    .map((a) => ({ appid: String(a.appid ?? ''), name: a.name || '' }))
+    .map((a) => ({ appid: String(a.appid ?? ''), name: a.app_name || a.name || '' }))
     .filter((a) => a.appid)
     .sort((a, b) => Number(a.appid) - Number(b.appid))
 }
@@ -96,11 +111,11 @@ export async function getPartnerApps(key) {
 /** 某个 App 下后台真实存在的 Depot 列表（含每个 Depot 当前的 Manifest）。 */
 export async function getAppDepotVersions(key, appid) {
   const r = await partnerGet('/ISteamApps/GetAppDepotVersions/v1/', { appid }, key)
-  const depots = (r?.depots || []).map((d) => ({
+  const depots = asArray(r?.depots ?? r?.depot).map((d) => ({
     depotid: String(d.depotid ?? ''),
     name: d.name || '',
     maxsize: Number(d.maxsize || 0),
-    manifests: (d.manifests || []).map((m) => ({
+    manifests: asArray(d.manifests ?? d.manifest).map((m) => ({
       manifestid: String(m.manifestid ?? ''),
       buildid: String(m.buildid ?? ''),
       branch: m.branch || '',
@@ -117,7 +132,7 @@ export async function getAppDepotVersions(key, appid) {
 /** 某个 App 的所有分支。 */
 export async function getAppBetas(key, appid) {
   const r = await partnerGet('/ISteamApps/GetAppBetas/v1/', { appid }, key)
-  const betas = (r?.betas || []).map((b) => ({
+  const betas = asArray(r?.betas ?? r?.beta).map((b) => ({
     betakey: b.betakey || '',
     description: b.description || '',
     buildid: b.buildid != null ? String(b.buildid) : '',
@@ -133,10 +148,10 @@ export async function getAppBuilds(key, appid, count = 5) {
     { appid, count, depot_details: 1 },
     key
   )
-  const builds = (r?.builds || []).map((b) => ({
+  const builds = asArray(r?.builds ?? r?.build).map((b) => ({
     buildid: b.buildid != null ? String(b.buildid) : '',
     timeupdated: b.timeupdated || null,
-    depots: (b.depots || []).map((d) => ({
+    depots: asArray(b.depots ?? b.depot).map((d) => ({
       depotid: String(d.depotid ?? ''),
       manifestid: String(d.manifestid ?? ''),
       size: Number(d.size || 0),
