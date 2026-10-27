@@ -108,7 +108,7 @@ async function viaSteamcmd(appId, settings) {
   if (!username) {
     return { ok: false, error: '还没有配置 Steam 账号名（设置 → 账号）', needsPassword: true }
   }
-  const password = readPassword()
+  const password = await readPassword()
   if (!password) {
     return {
       ok: false,
@@ -298,9 +298,9 @@ function assertInsideContentBuilder(file) {
   return target
 }
 
-function currentPassword(override) {
+async function currentPassword(override) {
   if (typeof override === 'string' && override.length) return override
-  return readPassword()
+  return await readPassword()
 }
 
 /* ------------------------------------------------------------------ *
@@ -349,9 +349,9 @@ function ensureRunScript(settings, paths, which) {
 
 function registerIpc() {
   /* ---- 设置 ---- */
-  ipcMain.handle('settings:get', () => ({
+  ipcMain.handle('settings:get', async () => ({
     settings: loadSettings(),
-    encryptionAvailable: encryptionAvailable(),
+    encryptionAvailable: await encryptionAvailable(),
     hasPassword: hasPassword()
   }))
 
@@ -367,15 +367,15 @@ function registerIpc() {
   ipcMain.handle('settings:onboarded', (_e, on) => setOnboarded(on))
 
   /* ---- Steamworks Web API ---- */
-  ipcMain.handle('api:setKey', (_e, key) => saveApiKey(key))
+  ipcMain.handle('api:setKey', async (_e, key) => saveApiKey(key))
   ipcMain.handle('api:clearKey', () => clearApiKey())
-  ipcMain.handle('api:keyState', () => {
+  ipcMain.handle('api:keyState', async () => {
     const s = loadSettings()
-    const k = readApiKey()
+    const k = await readApiKey()
     return { has: !!k, tail: k ? k.slice(-4) : '' }
   })
   ipcMain.handle('api:testKey', async () => {
-    const k = readApiKey()
+    const k = await readApiKey()
     if (!k) return { ok: false, error: '还没有配置 Web API 密钥' }
     try {
       const r = await testKey(k)
@@ -399,7 +399,7 @@ function registerIpc() {
     if (!/^\d+$/.test(id)) return { ok: false, error: 'AppID 必须是数字' }
 
     const s = loadSettings()
-    const key = readApiKey()
+    const key = await readApiKey()
     // via='steamcmd' 强制走第二条；否则有密钥就用密钥
     const useWeb = via === 'steamcmd' ? false : !!key
 
@@ -456,7 +456,7 @@ function registerIpc() {
     if (app.error) return { ok: false, error: app.error }
     if (!app.appId) return { ok: false, error: '这个 App 没有 AppID，没法查后台' }
 
-    const key = readApiKey()
+    const key = await readApiKey()
     const useWeb = via === 'steamcmd' ? false : !!key
 
     if (useWeb) {
@@ -496,7 +496,7 @@ function registerIpc() {
     return buildSteamVerify(app, steamy, s)
   })
 
-  ipcMain.handle('cred:set', (_e, password) => savePassword(String(password ?? '')))
+  ipcMain.handle('cred:set', async (_e, password) => savePassword(String(password ?? '')))
   ipcMain.handle('cred:clear', () => clearPassword())
 
   ipcMain.handle('sdk:pickFolder', async (_e, current) => {
@@ -650,7 +650,7 @@ function registerIpc() {
     // 有发布商密钥时补上密钥权限范围内的**全部** App ——
     // 这是唯一能完整枚举的办法，普通账号拿不到这种密钥。
     let partnerCount = 0
-    const key = readApiKey()
+    const key = await readApiKey()
     if (key) {
       try {
         const list = await getPartnerApps(key)
@@ -971,7 +971,7 @@ function registerIpc() {
     return handle ? { ok: true, ...handle } : { ok: false, error: missing || 'check.ps1 启动失败' }
   })
 
-  ipcMain.handle('run:build', (_e, { dirName, preview = true, password, local = false, guardCode } = {}) => {
+  ipcMain.handle('run:build', async (_e, { dirName, preview = true, password, local = false, guardCode } = {}) => {
     const s = loadSettings()
     const p = getPaths(s)
 
@@ -983,7 +983,7 @@ function registerIpc() {
       return { ok: false, error: '还没填 Steam 账号名（设置 → 登录凭据）—— 上传要用它登录 steamcmd。' }
     }
 
-    const pw = currentPassword(password)
+    const pw = await currentPassword(password)
 
     // 这台机器上 steamcmd 没有缓存凭据（日志里明确写 Cached credentials not found），
     // 所以没有密码就没法构建 —— 直接说清楚，不要让用户对着卡住的进程发呆。

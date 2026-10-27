@@ -154,20 +154,40 @@ export function setIgnoredProblem(appDirName, text, on) {
  *  只有当前 Windows 用户能解密）加密后落盘，明文永不写入磁盘。
  * ------------------------------------------------------------------ */
 
-export function encryptionAvailable() {
+export async function encryptionAvailable() {
   try {
-    return safeStorage.isEncryptionAvailable()
+    // Electron 45 起同步的 isEncryptionAvailable() 已弃用、46 会移除，
+    // 统一走 async 版本（Windows 上同样是 DPAPI）。
+    return await safeStorage.isAsyncEncryptionAvailable()
   } catch {
     return false
   }
 }
 
-export function savePassword(password) {
-  if (!encryptionAvailable()) {
+/**
+ * 解一个 safeStorage 加密的文件。
+ * decryptStringAsync 返回 { shouldReEncrypt, result }：当底层密钥后端换了
+ * （新版 Electron / 系统密钥环变动），shouldReEncrypt 为 true，这时把文件
+ * 用新的加密结果写回去，免得以后彻底解不开。旧同步 API 加密的数据也能解。
+ */
+async function decryptFile(file) {
+  const res = await safeStorage.decryptStringAsync(fs.readFileSync(file))
+  if (res && res.shouldReEncrypt) {
+    try {
+      fs.writeFileSync(file, await safeStorage.encryptStringAsync(res.result))
+    } catch {
+      /* 写回失败不影响本次读取 */
+    }
+  }
+  return res.result
+}
+
+export async function savePassword(password) {
+  if (!(await encryptionAvailable())) {
     return { ok: false, error: '系统不支持安全存储（safeStorage 不可用），密码不会被保存' }
   }
   try {
-    const enc = safeStorage.encryptString(password)
+    const enc = await safeStorage.encryptStringAsync(String(password ?? ''))
     fs.mkdirSync(path.dirname(credFile()), { recursive: true })
     fs.writeFileSync(credFile(), enc)
     saveSettings({ rememberPassword: true })
@@ -177,10 +197,10 @@ export function savePassword(password) {
   }
 }
 
-export function readPassword() {
+export async function readPassword() {
   try {
     if (!fs.existsSync(credFile())) return ''
-    return safeStorage.decryptString(fs.readFileSync(credFile()))
+    return await decryptFile(credFile())
   } catch {
     return ''
   }
@@ -216,8 +236,8 @@ export function settingsFileDir() {
  *  哪些 Depot / 哪些分支」。同样用 safeStorage 加密落盘。
  * ------------------------------------------------------------------ */
 
-export function saveApiKey(key) {
-  if (!encryptionAvailable()) {
+export async function saveApiKey(key) {
+  if (!(await encryptionAvailable())) {
     return { ok: false, error: '系统不支持安全存储（safeStorage 不可用），密钥不会被保存' }
   }
   const clean = String(key || '').trim()
@@ -226,7 +246,7 @@ export function saveApiKey(key) {
   }
   try {
     fs.mkdirSync(path.dirname(apiKeyFile()), { recursive: true })
-    fs.writeFileSync(apiKeyFile(), safeStorage.encryptString(clean))
+    fs.writeFileSync(apiKeyFile(), await safeStorage.encryptStringAsync(clean))
     saveSettings({ hasApiKey: true })
     return { ok: true, tail: clean.slice(-4) }
   } catch (e) {
@@ -234,10 +254,10 @@ export function saveApiKey(key) {
   }
 }
 
-export function readApiKey() {
+export async function readApiKey() {
   try {
     if (!fs.existsSync(apiKeyFile())) return ''
-    return safeStorage.decryptString(fs.readFileSync(apiKeyFile()))
+    return await decryptFile(apiKeyFile())
   } catch {
     return ''
   }
