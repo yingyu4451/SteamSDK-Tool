@@ -22,6 +22,7 @@ import {
   setUserConfig
 } from './vdf-edit.js'
 import { readDepotMeta, setDepotMeta, readIgnoredProblems } from './store.js'
+import { inspectScripts } from './scripts.js'
 
 /* ------------------------------------------------------------------ *
  *  路径
@@ -80,6 +81,9 @@ export function readSteamLogin(settings) {
 
 export function sdkStatus(settings) {
   const p = getPaths(settings)
+  // 构建脚本是工具自带的（不是 SDK 的一部分）：这里顺带比一下 SDK 里那份和
+  // 自带版本差在哪，界面据此决定要不要显示「安装/修复脚本」。
+  const scripts = inspectScripts(p.contentBuilder)
   return {
     ...p,
     sdkRootExists: fs.existsSync(p.sdkRoot),
@@ -88,7 +92,10 @@ export function sdkStatus(settings) {
     steamcmdExists: fs.existsSync(p.steamcmd),
     checkScriptExists: fs.existsSync(p.checkScript),
     buildScriptExists: fs.existsSync(p.buildScript),
-    outputDirExists: fs.existsSync(p.outputDir)
+    outputDirExists: fs.existsSync(p.outputDir),
+    scriptsBundled: scripts.bundledReady,
+    missingScripts: scripts.missing,
+    staleScripts: scripts.stale
   }
 }
 

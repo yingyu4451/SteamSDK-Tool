@@ -88,6 +88,12 @@ import {
 } from './steamapi.js'
 import { fetchAppDepotsViaSteamcmd } from './steamcmdinfo.js'
 import { runScript, killRun, sendInput, listRuns } from './runner.js'
+import {
+  resolveBundledScriptsDir,
+  setBundledScriptsDir,
+  ensureScripts,
+  installScripts
+} from './scripts.js'
 
 let mainWindow = null
 
@@ -298,6 +304,46 @@ function currentPassword(override) {
 }
 
 /* ------------------------------------------------------------------ *
+ *  构建脚本（工具自带，不是 SDK 的一部分）
+ * ------------------------------------------------------------------ */
+
+/**
+ * 自动把工具自带的 build.ps1 / check.ps1 补进 SDK 的 tools\ContentBuilder。
+ * 只在 ContentBuilder 存在时动手；已经存在的文件不覆盖（用户可能改过）。
+ * 失败不抛：调用方会再检查一次文件在不在，不耽误后面的流程。
+ */
+function autoInstallScripts(settings = loadSettings()) {
+  const sdkRoot = String(settings?.sdkRoot || '').trim()
+  if (!sdkRoot) return { ok: false, error: '还没设置 SDK 路径' }
+  const paths = getPaths(settings)
+  if (!fs.existsSync(paths.contentBuilder)) {
+    return { ok: false, error: 'SDK 路径里没有 tools\\ContentBuilder' }
+  }
+  try {
+    return ensureScripts(paths.contentBuilder)
+  } catch (e) {
+    console.error('[scripts] auto install failed:', e)
+    return { ok: false, error: e.message }
+  }
+}
+
+/**
+ * 跑 check / build 之前确认脚本在那儿：缺了就补一次，补不上再把原因说人话。
+ * 返回 null = 可以跑；返回字符串 = 直接回给界面的错误。
+ */
+function ensureRunScript(settings, paths, which) {
+  const file = which === 'check' ? paths.checkScript : paths.buildScript
+  const label = which === 'check' ? 'check.ps1' : 'build.ps1'
+  if (fs.existsSync(file)) return null
+  autoInstallScripts(settings)
+  if (fs.existsSync(file)) return null
+  if (!fs.existsSync(paths.contentBuilder)) {
+    return `找不到 ${label} —— SDK 路径没指向带 tools\\ContentBuilder 的目录：${settings.sdkRoot}`
+  }
+  return `缺少 ${label}，工具自带的也没能写进去（${paths.contentBuilder}）。到设置里点「安装/修复脚本」重试。`
+}
+
+/* ------------------------------------------------------------------ *
  *  IPC
  * ------------------------------------------------------------------ */
 
@@ -309,7 +355,15 @@ function registerIpc() {
     hasPassword: hasPassword()
   }))
 
-  ipcMain.handle('settings:save', (_e, patch) => saveSettings(patch || {}))
+  ipcMain.handle('settings:save', (_e, patch) => {
+    const saved = saveSettings(patch || {})
+    // 换了 SDK 路径就顺手补一次构建脚本：干净机器上 SDK 里本来就没有这两个
+    // 工具自带文件，不补的话换完路径设置页立刻两行红字。
+    if (saved?.ok && patch && Object.prototype.hasOwnProperty.call(patch, 'sdkRoot')) {
+      autoInstallScripts(saved.settings || loadSettings())
+    }
+    return saved
+  })
   ipcMain.handle('settings:onboarded', (_e, on) => setOnboarded(on))
 
   /* ---- Steamworks Web API ---- */
@@ -496,6 +550,15 @@ function registerIpc() {
     return { ...r, hasPassword: hasPassword() }
   })
   ipcMain.handle('sdk:status', () => sdkStatus(loadSettings()))
+
+  // 「安装/修复脚本」：把工具自带的 build.ps1 / check.ps1 覆盖回 SDK。
+  // 自动流程只在缺失时写，这一颗按钮才允许覆盖内容不一样的版本。
+  ipcMain.handle('sdk:installScripts', () => {
+    const s = loadSettings()
+    const paths = getPaths(s)
+    const result = installScripts(paths.contentBuilder, { force: true })
+    return { ...result, status: sdkStatus(s) }
+  })
   ipcMain.handle('sdk:scan', () => scanApps(loadSettings()))
   ipcMain.handle('sdk:app', (_e, dirName) => readApp(dirName, loadSettings()))
   ipcMain.handle('sdk:history', () => listHistory(loadSettings()))
@@ -879,7 +942,10 @@ function registerIpc() {
 
   /* ---- 执行 ---- */
   ipcMain.handle('run:check', (_e, { dirName } = {}) => {
-    const p = getPaths(loadSettings())
+    const s = loadSettings()
+    const p = getPaths(s)
+    const missing = ensureRunScript(s, p, 'check')
+    if (missing) return { ok: false, error: missing }
     const args = dirName ? ['-App', dirName] : []
     const handle = runScript({
       script: p.checkScript,
@@ -889,12 +955,21 @@ function registerIpc() {
       onData: (d) => send('run:data', { kind: 'check', ...d }),
       onExit: (d) => send('run:exit', { kind: 'check', ...d })
     })
-    return handle ? { ok: true, ...handle } : { ok: false, error: 'check.ps1 未找到' }
+    return handle ? { ok: true, ...handle } : { ok: false, error: missing || 'check.ps1 启动失败' }
   })
 
   ipcMain.handle('run:build', (_e, { dirName, preview = true, password, local = false, guardCode } = {}) => {
     const s = loadSettings()
     const p = getPaths(s)
+
+    const missing = ensureRunScript(s, p, 'build')
+    if (missing) return { ok: false, error: missing }
+
+    // -User 是必填（脚本不再自带默认账号）：账号空着时先说清楚，别让 steamcmd 卡在登录提示上
+    if (!String(s.account || '').trim()) {
+      return { ok: false, error: '还没填 Steam 账号名（设置 → 登录凭据）—— 上传要用它登录 steamcmd。' }
+    }
+
     const pw = currentPassword(password)
 
     // 这台机器上 steamcmd 没有缓存凭据（日志里明确写 Cached credentials not found），
@@ -1012,7 +1087,21 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId(
       app.isPackaged ? 'com.yingyu.steamsdktool' : 'com.yingyu.steamsdktool.dev'
     )
+    // 工具自带的构建脚本在安装包的 resources\scripts 下（开发时在仓库的 resources\scripts）。
+    // 先定下位置，再给当前 SDK 补一次 —— 干净机器上 SDK 里本来就没有 build.ps1 / check.ps1。
+    try {
+      setBundledScriptsDir(
+        resolveBundledScriptsDir({
+          isPackaged: app.isPackaged,
+          resourcesPath: process.resourcesPath,
+          appPath: app.getAppPath()
+        })
+      )
+    } catch (e) {
+      console.error('[scripts] resolve bundled dir failed:', e)
+    }
     pruneOldDownloads()
+    autoInstallScripts()
     registerIpc()
     createWindow()
 

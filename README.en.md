@@ -59,7 +59,7 @@ This tool folds all of that into one window: **one App = one project folder, wit
 
 ```text
 D:\SteamSDK\tools\ContentBuilder\
-├─ build.ps1 / check.ps1        ← the actual build and validation logic
+├─ build.ps1 / check.ps1        ← build / validation scripts, shipped with this tool (not in the SDK)
 ├─ builder\                     ← steamcmd
 ├─ output\                      ← build logs
 └─ scripts\
@@ -72,6 +72,8 @@ D:\SteamSDK\tools\ContentBuilder\
 ```
 
 > The GUI and the command line drive **the same scripts**, so there is no "works in the UI, not from the shell" split. You can bypass the GUI entirely with `D:\SteamSDK\tools\ContentBuilder\build.ps1 -App MyGame`.
+>
+> Those two scripts are **not** part of the Steamworks SDK — the installer ships a copy and the tool writes them into `ContentBuilder` on startup / SDK-path change / before any check or upload when they are missing (existing files are never overwritten). If you edited them and want the bundled version back, click "Install/repair scripts" in Settings.
 
 ---
 
@@ -264,6 +266,7 @@ Main-process code lives in `src/main/`:
 | `localserver.js` | Local content server |
 | `updater.js` | GitHub Releases update check |
 | `runner.js` | Runs PowerShell / steamcmd with streamed output |
+| `scripts.js` | Installs / version-checks the bundled `build.ps1` / `check.ps1` |
 | `store.js` | Settings and credential persistence |
 
 ---
@@ -272,6 +275,9 @@ Main-process code lives in `src/main/`:
 
 **The UI says "SDK not ready"**
 The SDK path in Settings must point at the directory containing `tools\ContentBuilder`. If `builder\steamcmd.exe` is missing, run `steamcmd.exe` once so it self-updates.
+
+**`build.ps1` / `check.ps1` show up red in Settings**
+Those two are **not** part of the Steamworks SDK — they are this tool's own build / validation logic. The installer ships a copy and writes it into `tools\ContentBuilder` on startup, SDK-path change, and before any check or upload (existing files are never overwritten, so your edits survive). If the directory is read-only or the write fails, Settings shows an "Install/repair scripts" button that writes the bundled version back.
 
 **"Upload for real" finished but nothing was uploaded**
 Check whether `"preview"` in the app vdf is `1`. That value is now driven by the button (clicking Upload for real forces it to 0), but be aware if you hand-edited the script.

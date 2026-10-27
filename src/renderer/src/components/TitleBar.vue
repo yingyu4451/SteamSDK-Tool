@@ -3,9 +3,23 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { Minus, Square, Copy, X } from '@lucide/vue'
 import { state, goSettings } from '../store.js'
 
-const sdkOk = computed(
-  () => !!(state.sdk?.steamcmdExists && state.sdk?.scriptsDirExists && state.sdk?.buildScriptExists)
-)
+/* 顶栏这颗 SDK 状态：缺什么就说什么。
+ * build.ps1 / check.ps1 是工具自带的（官方 SDK 里没有），缺它们不是「路径异常」。 */
+const sdkPill = computed(() => {
+  const s = state.sdk
+  if (!s) return { ok: null, text: '读取 SDK 状态…', hint: '' }
+  if (!s.sdkRootExists) return { ok: false, text: '未设置 SDK 路径', hint: '去设置里选 SteamSDK 目录' }
+  if (!s.contentBuilderExists) {
+    return { ok: false, text: 'SDK 路径异常', hint: '这个目录里没有 tools\\ContentBuilder' }
+  }
+  if (!s.steamcmdExists || !s.scriptsDirExists) {
+    return { ok: false, text: 'SDK 不完整', hint: '缺 builder\\steamcmd.exe 或 scripts 目录，重新解压一份 SDK' }
+  }
+  if (!s.buildScriptExists || !s.checkScriptExists) {
+    return { ok: false, text: '缺少构建脚本', hint: '点这个胶囊去设置，用「安装/修复脚本」补上' }
+  }
+  return { ok: true, text: 'SDK 就绪', hint: '' }
+})
 
 const upd = computed(() => state.update?.data || null)
 
@@ -66,8 +80,10 @@ const win = window.api.win
 
     <div class="h-4 w-px bg-line" />
 
-    <div class="flex items-center gap-2 text-[12px] text-faint no-drag">
-      <span class="font-mono">{{ state.sdk?.sdkRoot || '—' }}</span>
+    <!-- SDK 路径可能很长（比如下载后解压到 Downloads 里），这里必须能收窄，
+         否则会把右边的状态胶囊和窗口按钮挤出窗口。 -->
+    <div class="flex items-center gap-2 text-[12px] text-faint no-drag min-w-0">
+      <span class="font-mono truncate" :title="state.sdk?.sdkRoot">{{ state.sdk?.sdkRoot || '—' }}</span>
     </div>
 
     <div class="ml-auto flex items-center gap-2 no-drag">
@@ -89,9 +105,16 @@ const win = window.api.win
         </div>
       </Transition>
 
-      <span class="pill" :class="sdkOk ? 'pill-ok' : 'pill-bad'">
-        <span class="w-1.5 h-1.5 rounded-full" :class="sdkOk ? 'bg-success' : 'bg-danger'" />
-        {{ sdkOk ? 'SDK 就绪' : 'SDK 路径异常' }}
+      <span
+        class="pill"
+        :class="sdkPill.ok === true ? 'pill-ok' : sdkPill.ok === false ? 'pill-bad' : 'pill-idle'"
+        :title="sdkPill.hint || undefined"
+      >
+        <span
+          class="w-1.5 h-1.5 rounded-full"
+          :class="sdkPill.ok === true ? 'bg-success' : sdkPill.ok === false ? 'bg-danger' : 'bg-faint'"
+        />
+        {{ sdkPill.text }}
       </span>
 
       <span v-if="state.hasPassword" class="pill pill-idle" title="密码已用 DPAPI 加密保存">

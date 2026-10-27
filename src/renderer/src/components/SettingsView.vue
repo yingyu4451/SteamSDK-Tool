@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Download, ShieldOff } from '@lucide/vue'
+import { Download, ShieldOff, Wrench } from '@lucide/vue'
 import {
   state,
   rescan,
@@ -83,6 +83,56 @@ const checks = computed(() => {
     { label: 'output 目录', ok: s.outputDirExists, path: s.outputDir }
   ]
 })
+
+/* ---- 构建脚本 ----
+ * build.ps1 / check.ps1 是工具自带的（官方 SDK 里没有这两文件）。启动和换 SDK 路径时
+ * 主进程会自动补；补不上、或者 SDK 里那份和自带版本不一样时，这里给一颗写回的按钮。 */
+const installingScripts = ref(false)
+const scriptMsg = ref(null)
+
+const scriptState = computed(() => {
+  const s = state.sdk || {}
+  const missing = s.missingScripts || []
+  const stale = s.staleScripts || []
+  const cbOk = !!s.contentBuilderExists
+  // 安装包里没有自带脚本（或者两份不全）时别给一颗点不动的按钮，直接说清楚要重装。
+  const bundled = s.scriptsBundled !== false
+  const canInstall = cbOk && bundled
+  return {
+    missing,
+    stale,
+    canInstall,
+    // ContentBuilder 都没有的时候是「SDK 路径不对」，不是脚本的问题，不显示这一行
+    show: cbOk && (missing.length > 0 || stale.length > 0),
+    hint: !bundled
+      ? '这个安装包不完整（缺自带的 build.ps1 / check.ps1）—— 重新装一次工具'
+      : missing.length
+        ? `${missing.join(' / ')} 没写进去`
+        : '脚本和工具自带的版本不一致',
+    hintClass: !bundled || missing.length ? 'text-danger' : 'text-amber'
+  }
+})
+
+async function repairScripts() {
+  installingScripts.value = true
+  scriptMsg.value = null
+  try {
+    const res = await window.api.sdk.installScripts()
+    if (res?.status) state.sdk = res.status
+    if (!res?.ok) {
+      scriptMsg.value = { text: res?.error || '写入失败', tone: 'bad' }
+      return
+    }
+    const n = (res.written || []).length
+    scriptMsg.value = { text: n ? `已写入 ${n} 个脚本` : '脚本已是最新', tone: 'ok' }
+    // 状态刷新后这一行会收起来，成功提示自己留 4 秒，别让按钮点完就「无影无踪」
+    setTimeout(() => (scriptMsg.value = null), 4000)
+  } catch (e) {
+    scriptMsg.value = { text: e.message, tone: 'bad' }
+  } finally {
+    installingScripts.value = false
+  }
+}
 
 function flash(text, tone = 'ok') {
   message.value = { text, tone }
@@ -214,6 +264,29 @@ function openExternal(url) {
               <span class="w-[110px] shrink-0" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
               <span class="font-mono text-faint truncate" :title="c.path">{{ c.path }}</span>
             </div>
+          </div>
+
+          <!-- build.ps1 / check.ps1 是工具自带的（官方 SDK 里没有这两个文件）：缺了会自动补，
+               补不上、或者 SDK 里那份跟自带版本不一样时，在这里一键写回。 -->
+          <div v-if="scriptState.show || scriptMsg" class="mt-2.5 flex items-center gap-2 flex-wrap">
+            <button
+              v-if="scriptState.show && scriptState.canInstall"
+              class="btn h-7 px-2.5 text-[11px] no-drag"
+              :disabled="installingScripts"
+              title="把工具自带的 build.ps1 / check.ps1 写进 SDK 的 tools\ContentBuilder（内容一样的不重写）"
+              @click="repairScripts"
+            >
+              <Wrench :size="13" class="mr-1.5" />
+              {{ installingScripts ? '写入中…' : '安装/修复脚本' }}
+            </button>
+            <span
+              v-if="scriptMsg"
+              class="text-[11px]"
+              :class="scriptMsg.tone === 'bad' ? 'text-danger' : 'text-success'"
+            >
+              {{ scriptMsg.text }}
+            </span>
+            <span v-else class="text-[11px]" :class="scriptState.hintClass">{{ scriptState.hint }}</span>
           </div>
         </section>
 

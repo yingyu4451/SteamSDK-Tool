@@ -57,7 +57,7 @@
 
 ```text
 D:\SteamSDK\tools\ContentBuilder\
-├─ build.ps1 / check.ps1        ← 真正的构建和校验逻辑都在这两个脚本里
+├─ build.ps1 / check.ps1        ← 构建 / 校验脚本，工具自带（官方 SDK 里没有）
 ├─ builder\                     ← steamcmd
 ├─ output\                      ← 构建日志
 └─ scripts\
@@ -70,6 +70,8 @@ D:\SteamSDK\tools\ContentBuilder\
 ```
 
 > 命令行和界面走的是**同一套脚本**，不会出现「界面上能跑、命令行跑不了」的分叉。想脱离界面用 `D:\SteamSDK\tools\ContentBuilder\build.ps1 -App MyGame` 也行。
+>
+> 这两个脚本不是 Steamworks SDK 自带的 —— 安装包里带了一份，工具在启动 / 换 SDK 路径 / 跑检查或上传之前发现缺了会自动写进 `ContentBuilder`（已有的不覆盖）。自己改过、或者想换回工具版本，到设置页点「安装/修复脚本」。
 
 ---
 
@@ -294,6 +296,7 @@ pnpm dist         # 出安装包到 release/
 | `localserver.js` | 本地内容服务器 |
 | `updater.js` | GitHub Releases 检查更新 |
 | `runner.js` | 跑 PowerShell / steamcmd，流式回传输出 |
+| `scripts.js` | 随包的 `build.ps1` / `check.ps1` 安装与版本检查 |
 | `store.js` | 设置与凭据持久化 |
 
 ---
@@ -302,6 +305,9 @@ pnpm dist         # 出安装包到 release/
 
 **界面显示「SDK 未就绪」**
 设置页里 SDK 路径要指向含 `tools\ContentBuilder` 的目录；`builder\steamcmd.exe` 不在的话先跑一次 `steamcmd.exe` 让它自更新。
+
+**设置里 `build.ps1` / `check.ps1` 是红的**
+这两个脚本**不是 Steamworks SDK 自带的**，是本工具自己的构建 / 校验逻辑：安装包里带一份，启动、换 SDK 路径、跑检查或上传之前，发现 `tools\ContentBuilder` 里没有就自动写进去（**已有的不覆盖**，免得把你改过的冲掉）。写不进去（目录只读之类）时设置页会出现「安装/修复脚本」按钮，点一下把自带版本写回。
 
 **「正式上传」跑完什么都没传**
 看 app vdf 里的 `"preview"` 是不是 `1`。现在这个值由按钮决定（点「正式上传」会强制写成 0），但如果你手改过脚本要注意。

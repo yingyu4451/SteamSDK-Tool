@@ -18,11 +18,15 @@ extraMetadata:
   main: out/main/index.js
 
 # 任务栏 / 窗口图标要在运行时按真实路径读到（BrowserWindow 的 icon 不收 asar 内的虚拟路径）
+# tools\ContentBuilder 里那两个构建脚本也不是 SDK 自带的，随包发一份，
+# 由 src/main/scripts.js 在启动 / 换路径 / 跑任务前补进 SDK。
 extraResources:
   - from: build/icon.ico
     to: icon.ico
   - from: build/icon.png
     to: icon.png
+  - from: resources/scripts
+    to: scripts
 
 win:
   target:

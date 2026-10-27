@@ -436,6 +436,9 @@ function skip() {
             >
               <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
             </button>
+            <p class="mt-2 mb-0 text-[11px] text-faint">
+              官方 SDK 里没有 build.ps1 / check.ps1 —— 这是本工具自带的，选好路径后会自动写进 ContentBuilder。
+            </p>
           </div>
         </template>
 
