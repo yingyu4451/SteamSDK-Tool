@@ -227,15 +227,16 @@ gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md `
 装出来的版本（不是便携版）走 `electron-updater`：
 
 - 版本信息来自 `<release>/latest.yml`，地址是 `https://github.com/yingyu4451/SteamSDK-Tool/releases/latest/download/`（由 `resources/app-update.yml` 带进去）
-- 它拿新旧两版的 `.blockmap` 对比，**只下改动的块** —— 平常一次更新是几 MB，不是 106 MB
-- 走的是这个地址而不是 `api.github.com`，所以没有「匿名 60 次/小时/IP」的限制
+- 它拿新旧两版的 `.blockmap` 对比，**只下改动的块** —— 0.1.12 → 0.1.13 实测只下 938 KB（整包 106.8 MB）
+- 下载前会先把「当前版本的块表」写进 `%LOCALAPPDATA%\steamsdk-tool-updater\current.blockmap`：从对应 tag 的 release 资产里取（约 118 KB），和 NSIS 安装时缓存的 `installer.exe` 拼成差分基准 —— 所以**第一次更新也能增量**，不用等下一轮
+- `app-update.yml` 里写死了 `useMultipleRangeRequest: false`：GitHub 的下载端不支持 multipart range（会回 501），不关掉它差分永远失败、只能退回整包
 
-两条注定走整包的情况：
+还会走整包的情况：
 
-1. **第一次更新**。增量需要「上一版的安装包」做对比基准，而手动下载安装的人本地没有这份缓存 —— 第一次只能是整包，之后就有基准了。
-2. **便携版**。没有安装目录，`quitAndInstall` 无处可装，永远整包 + 手动替换。
+1. **便携版**。没有安装目录，`quitAndInstall` 无处可装，永远整包 + 手动替换。
+2. **没有可用的差分基准**（v0.1.8 及更早的 release 本身没传块表、缓存被清掉、块表下载失败）。这时直接整包，不影响更新。
 
-任何一步失败（没 `latest.yml`、没块表、网络问题）都会**自动退回整包下载**，不会让更新整个不可用。
+任何一步失败（没 `latest.yml`、没块表、网络问题）都会**自动退回整包下载**，不会让更新整个不可用。设置页的下载进度里会标明这次是增量还是整包、大概多大。
 
 **更新日志写短一点。** 它在「关于」卡片里是直接铺开显示的，写成长文没人看。一两句话点明「这次改了什么、用户能感觉到什么」就够了 —— 需要细节就让用户点「在 GitHub 上看」。
 

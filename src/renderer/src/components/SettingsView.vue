@@ -424,7 +424,13 @@ function openExternal(url) {
                 <div class="h-full bg-accent transition-[width] duration-150" :style="{ width: pct + '%' }" />
               </div>
               <div class="mt-1.5 text-[11px] text-faint num">
-                {{ fmtSize(u.got) }} / {{ u.total ? fmtSize(u.total) : '未知大小' }} · {{ pct }}%
+                <template v-if="u.viaIncremental && u.estimate && (!u.total || u.total <= u.estimate * 1.2)">
+                  增量下载 · {{ fmtSize(u.got) }} / {{ fmtSize(u.total || u.estimate)
+                  }}<template v-if="u.fullSize">（全量 {{ fmtSize(u.fullSize) }}）</template> · {{ pct }}%
+                </template>
+                <template v-else>
+                  {{ fmtSize(u.got) }} / {{ u.total ? fmtSize(u.total) : '未知大小' }} · {{ pct }}%
+                </template>
               </div>
             </div>
 
@@ -456,7 +462,8 @@ function openExternal(url) {
               点「打开下载位置」，关掉工具，用新版替换掉你那个 exe 就行。
             </div>
             <div v-else-if="u.ready" class="mt-2 text-[11px] text-faint">
-              安装包已经下好了。点「重启并安装」会关掉工具、起安装程序。
+              {{ u.viaIncremental && u.differential ? '增量包已经下好了（只下了改动的部分）。' : '安装包已经下好了。' }}
+              点「重启并安装」会关掉工具、起安装程序。
             </div>
           </div>
 

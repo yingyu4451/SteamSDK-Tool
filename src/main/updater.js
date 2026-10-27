@@ -18,6 +18,7 @@ import { autoUpdater } from 'electron-updater'
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import zlib from 'node:zlib'
 
 const FALLBACK_OWNER = 'yingyu4451'
 const FALLBACK_REPO = 'SteamSDK-Tool'
@@ -487,24 +488,137 @@ export function pruneOldDownloads(maxAgeDays = 3) {
  *   · 便携版没有安装目录，quitAndInstall 无处可装
  *   · 没打过 latest.yml 的旧 release 会让它 404
  *   · 缓存里没有上一版安装包时它会自动退回整包下载（不是错误）
+ *
+ * 另外两个坑（都在这儿补掉了）：
+ *   · GitHub 的下载节点不支持 multipart range，electron-updater 默认发多区间
+ *     请求会直接 501 → 永远退回整包。electron-builder.yml 的 publish 里写了
+ *     useMultipleRangeRequest: false，让它改成一个区间一个请求。
+ *   · feed 是 latest/download，旧块表 URL 必然 404 → 下载前自己从 tag 资产里
+ *     补一份 current.blockmap（见 seedBlockmap）。
  */
-
-let updaterWired = false
 
 /** 这个版本有没有资格走增量（装出来的、不是便携版、并且确实是打包产物） */
 export function canIncremental() {
   return app.isPackaged && !isPortable()
 }
 
-function wireUpdater(ctx = {}) {
+/* ── 差分的前置：补一份「当前版本」的旧块表 ──
+ *
+ * electron-updater 找旧块表只有两条路：
+ *   1. <缓存目录>\current.blockmap —— 有就直接用
+ *   2. 按 feed 拼 <feed>/SteamSDK-Tool-<旧版本>-setup.exe.blockmap
+ *
+ * 我们的 feed 是 releases/latest/download/ —— 那里只有最新一版的资产，
+ * 拼出来的旧块表 URL 必然 404，于是每次都退回 106 MB 整包。
+ *
+ * 旧块表其实我们自己发过：releases/download/v<版本>/…blockmap（约 118 KB）。
+ * 下载前把它写进缓存目录\current.blockmap，差分才有对比的基准；
+ * installer.exe 由安装包装完时自己写（NSIS 默认行为），跟当前版本天然一致。
+ */
+
+function updaterYmlPath() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'app-update.yml')
+    : path.join(app.getAppPath(), 'dev-app-update.yml')
+}
+
+/** electron-builder 写进 app-update.yml 的缓存子目录名 */
+function updaterCacheDirName() {
+  try {
+    const text = fs.readFileSync(updaterYmlPath(), 'utf8')
+    const m = /^\s*updaterCacheDirName:\s*['"]?([^'"\r\n]+?)['"]?\s*$/m.exec(text)
+    return m ? m[1].trim() : 'steamsdk-tool-updater'
+  } catch {
+    return 'steamsdk-tool-updater'
+  }
+}
+
+/** electron-updater 的缓存根：Windows 上取 LOCALAPPDATA（见 AppAdapter.getAppCacheDir） */
+function updaterCacheDir() {
+  const base = process.env.LOCALAPPDATA || app.getPath('cache')
+  return path.join(base, updaterCacheDirName())
+}
+
+/** 校验一段字节是「gzip 过的 v2 blockmap」，挡掉 404 页面之类 */
+function looksLikeBlockmap(buf) {
+  if (!buf || buf.length < 64) return false
+  if (buf[0] !== 0x1f || buf[1] !== 0x8b) return false
+  try {
+    const json = JSON.parse(zlib.gunzipSync(buf).toString('utf8'))
+    return json?.version === '2' && Array.isArray(json.files) && json.files.length > 0
+  } catch {
+    return false
+  }
+}
+
+/** 当前版本那份安装包的 .blockmap 地址（优先按 tag 的资产列表取真实文件名） */
+async function blockmapUrlOf(version) {
+  const tag = `v${version}`
+  try {
+    const frag = await getText(`${repoUrl()}/releases/expanded_assets/${encodeURIComponent(tag)}`)
+    if (frag.statusCode === 200) {
+      const hit = parseAssets(frag.text).find((a) => /\.blockmap$/i.test(a.name))
+      if (hit) return hit.url
+    }
+  } catch {
+    /* 资产列表读不到就直接拼名字 */
+  }
+  return `${repoUrl()}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(
+    `SteamSDK-Tool-${version}-setup.exe.blockmap`
+  )}`
+}
+
+/**
+ * 把旧块表补进 electron-updater 的缓存。
+ * 失败不抛错 —— 它自己会退回整包下载；更新不能用才是大事。
+ */
+async function seedBlockmap(version) {
+  const dir = updaterCacheDir()
+  const installer = path.join(dir, 'installer.exe')
+  if (!fs.existsSync(installer)) return { ok: false, reason: '缓存里没有旧安装包' }
+
+  const url = await blockmapUrlOf(version)
+  const res = await netRequest(url, { headers: { Accept: '*/*' } })
+  if (res.statusCode !== 200) return { ok: false, reason: `旧块表 HTTP ${res.statusCode}` }
+  if (!looksLikeBlockmap(res.body)) return { ok: false, reason: '旧块表内容不像 blockmap' }
+
+  fs.mkdirSync(dir, { recursive: true })
+  const target = path.join(dir, 'current.blockmap')
+  const tmp = path.join(dir, `current.blockmap.${process.pid}.tmp`)
+  fs.writeFileSync(tmp, res.body)
+  // 同盘 rename：Windows 上也会覆盖已存在的目标，避免「写一半」留下半个块表
+  fs.renameSync(tmp, target)
+  return { ok: true, bytes: res.body.length }
+}
+
+let updaterWired = false
+let progressSink = null
+let logSink = null
+
+function emitLog(level, args) {
+  const text = args.map((a) => (typeof a === 'string' ? a : a instanceof Error ? a.message : String(a))).join(' ')
+  // 排查更新问题时设 STEAMSDK_UPDATE_DEBUG=1：把 electron-updater 的日志打到控制台
+  if (process.env.STEAMSDK_UPDATE_DEBUG) console.log(`[updater:${level}] ${text}`)
+  logSink?.(level, text)
+}
+
+function wireUpdater() {
   if (updaterWired) return
   updaterWired = true
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.allowPrerelease = false
-  autoUpdater.logger = null
+  // 我们只发 NSIS 安装包，不走 web installer 那条路
+  autoUpdater.disableWebInstaller = true
+  // 默认 logger 是 null；换成自己的 —— 从日志里读「这次差分要下多少」
+  autoUpdater.logger = {
+    info: (...a) => emitLog('info', a),
+    warn: (...a) => emitLog('warn', a),
+    error: (...a) => emitLog('error', a),
+    debug: () => {}
+  }
   autoUpdater.on('download-progress', (p) => {
-    ctx.onProgress?.({
+    progressSink?.({
       got: p.transferred,
       total: p.total,
       percent: Math.round(p.percent || 0),
@@ -513,22 +627,63 @@ function wireUpdater(ctx = {}) {
   })
 }
 
+function kbOf(text, label) {
+  const m = new RegExp(`${label}:\\s*([\\d,.]+)\\s*KB`, 'i').exec(text)
+  return m ? Math.round(parseFloat(m[1].replace(/,/g, '')) * 1024) : 0
+}
+
 /**
  * 走 electron-updater 下载（能增量就增量）。
- * 返回 `{ ok, version, upToDate }`；抛错由调用方决定要不要退回整包。
+ * 返回 `{ ok, version, upToDate, differential, estimateBytes, fullBytes }`；
+ * 抛错由调用方决定要不要退回整包。
  */
-export async function incrementalDownload(onProgress) {
-  wireUpdater({ onProgress })
-
-  const r = await autoUpdater.checkForUpdates()
-  const latest = String(r?.updateInfo?.version || '')
-  if (!latest) throw new Error('没读到 latest.yml 里的版本号')
-  if (compareVersions(latest, currentVersion()) <= 0) {
-    return { ok: true, upToDate: true, version: latest }
+export async function incrementalDownload(onProgress, onEstimate) {
+  wireUpdater()
+  progressSink = onProgress || null
+  const stats = { estimateBytes: 0, fullBytes: 0, fallback: false }
+  let estimateSent = false
+  logSink = (level, text) => {
+    if (!estimateSent && /To download:/i.test(text)) {
+      stats.fullBytes = kbOf(text, 'Full')
+      stats.estimateBytes = kbOf(text, 'To download')
+      if (stats.estimateBytes) {
+        estimateSent = true
+        onEstimate?.({ estimateBytes: stats.estimateBytes, fullBytes: stats.fullBytes })
+      }
+    }
+    if (/Cannot download differentially|fallback to full download/i.test(text)) stats.fallback = true
   }
 
-  await autoUpdater.downloadUpdate()
-  return { ok: true, upToDate: false, version: latest }
+  try {
+    const r = await autoUpdater.checkForUpdates()
+    const latest = String(r?.updateInfo?.version || '')
+    if (!latest) throw new Error('没读到 latest.yml 里的版本号')
+    if (compareVersions(latest, currentVersion()) <= 0) {
+      return { ok: true, upToDate: true, version: latest }
+    }
+
+    // 先补旧块表；补不上也没关系，下面会自动退回整包
+    try {
+      await seedBlockmap(currentVersion())
+    } catch {
+      /* ignore */
+    }
+
+    await autoUpdater.downloadUpdate()
+    const differential =
+      !stats.fallback && stats.estimateBytes > 0 && (!stats.fullBytes || stats.estimateBytes < stats.fullBytes)
+    return {
+      ok: true,
+      upToDate: false,
+      version: latest,
+      differential,
+      estimateBytes: stats.estimateBytes,
+      fullBytes: stats.fullBytes
+    }
+  } finally {
+    progressSink = null
+    logSink = null
+  }
 }
 
 /** 关掉自己、装掉刚下好的那份、再起来 */

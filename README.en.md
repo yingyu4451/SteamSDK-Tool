@@ -197,6 +197,17 @@ Update checks go through `releases.atom` and the release web pages, **not the Gi
 
 A portable build can't overwrite itself while running, so its update is manual by design — the app says so, and the updater only downloads the edition you're actually running.
 
+### How incremental updates work
+
+Installed builds (not the portable exe) use `electron-updater`:
+
+- Version info comes from `<release>/latest.yml`, fed in via `resources/app-update.yml` (served from `releases/latest/download/`, never the GitHub API — no anonymous rate limit);
+- Before downloading, the updater seeds `%LOCALAPPDATA%\steamsdk-tool-updater\current.blockmap` from the matching `vX.Y.Z` release asset (~118 KB) and pairs it with the `installer.exe` that NSIS keeps in that folder — so even the **first** update is incremental;
+- `electron-updater` then diffs the old/new `.blockmap` files and downloads only the changed blocks — 0.1.12 → 0.1.13 took 938 KB instead of 106.8 MB;
+- `app-update.yml` sets `useMultipleRangeRequest: false` because GitHub's download endpoints reject multipart range requests (HTTP 501);
+- Portable builds always download the full package and swap manually;
+- Any failure (missing `latest.yml`/blockmap, no cached baseline, network error) silently falls back to the full download — updates never break.
+
 ### Publishing a new version (maintainer notes)
 
 Push a `v*` tag and the workflow in `.github/workflows/build.yml` builds both editions and creates the release. Manually it's the same path:

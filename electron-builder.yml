@@ -52,9 +52,13 @@ portable:
 
 # 增量更新：electron-updater 靠 latest.yml 找版本、靠 .blockmap 只下改动的块。
 # 走 generic + /releases/latest/download/，不需要 api.github.com（那里匿名只有 60 次/小时）。
+# useMultipleRangeRequest: false —— GitHub 的下载节点不支持 multipart range，
+# electron-updater 默认发多区间请求会被 501 拒掉、差分永远失败、每次都退回 106 MB 整包。
+# 关掉后它改成一个区间一个请求，差分才真能走通。
 publish:
   provider: generic
   url: https://github.com/yingyu4451/SteamSDK-Tool/releases/latest/download/
+  useMultipleRangeRequest: false
 
 nsis:
   oneClick: false

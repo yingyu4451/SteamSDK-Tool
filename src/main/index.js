@@ -881,9 +881,22 @@ function registerIpc() {
     // 绝不能因为「增量这条路没打通」让更新整个不可用。
     if (canIncremental()) {
       try {
-        const r = await incrementalDownload((p) => send({ got: p.got, total: p.total, percent: p.percent, incremental: true }))
+        const r = await incrementalDownload(
+          (p) => send({ got: p.got, total: p.total, percent: p.percent, incremental: true }),
+          // 差分日志里先算出「这次要下多少」——下载前就把预计大小发给界面
+          (est) => send({ estimate: est.estimateBytes, full: est.fullBytes, incremental: true })
+        )
         if (r?.upToDate) return { ok: true, upToDate: true, version: r.version, incremental: true }
-        return { ok: true, incremental: true, version: r.version }
+        // 差分没成（比如校验不符自动回落），让界面别一直挂着「增量下载」
+        if (!r?.differential) send({ note: 'incremental-fallback: full', differential: false })
+        return {
+          ok: true,
+          incremental: true,
+          differential: !!r.differential,
+          estimateBytes: r.estimateBytes || 0,
+          fullBytes: r.fullBytes || 0,
+          version: r.version
+        }
       } catch (err) {
         send({ note: `incremental-fallback: ${err.message}` })
       }

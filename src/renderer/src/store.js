@@ -173,6 +173,11 @@ export const state = reactive({
     downloading: false,
     got: 0,
     total: 0,
+    incremental: false, // 装出来的版本能走 electron-updater 增量
+    viaIncremental: false, // 这次下载实际走的是增量
+    differential: null, // 增量是否真的成功（false = 退回整包）
+    estimate: 0, // 差分日志算出来的「这次要下多少」
+    fullSize: 0, // 整包多大
     ready: '' // 下载好的安装包路径
   }
 })
@@ -480,8 +485,12 @@ export async function downloadUpdateNow() {
   if (!a && !u.incremental) return toast('没读到安装包地址，过一会儿再点「检查更新」', 'bad')
   u.downloading = true
   u.got = 0
-  u.total = a?.size || 0
-  u.incremental = !!u.incremental
+  // 增量下载时 actual total 来自 progress 事件（可能只有 1 MB 上下），先不摆整包大小
+  u.total = u.incremental ? 0 : a?.size || 0
+  u.viaIncremental = false
+  u.differential = null
+  u.estimate = 0
+  u.fullSize = 0
   u.error = null
   try {
     const r = await api.update.download(a?.url, a?.name)
@@ -493,7 +502,11 @@ export async function downloadUpdateNow() {
       // 整包才有 path，安装时要用它起安装程序。
       u.ready = r.path || '__updater__'
       u.viaIncremental = !!r.incremental
-      toast(r.incremental ? `增量包下好了（v${r.version}），点「重启并安装」` : '下载好了，点「重启并安装」')
+      u.differential = r.incremental ? !!r.differential : null
+      u.estimate = r.estimateBytes || 0
+      u.fullSize = r.fullBytes || 0
+      const usedIncremental = !!r.incremental && r.differential !== false
+      toast(usedIncremental ? `增量包下好了（v${r.version}），点「重启并安装」` : '下载好了，点「重启并安装」')
     } else {
       u.error = r?.error || '下载失败'
       toast(u.error, 'bad')
@@ -1778,13 +1791,19 @@ export function pushLog(stream, line) {
  * ------------------------------------------------------------------ */
 
 export function wireEvents() {
-  api.update.onProgress(({ got, total, percent, incremental, note }) => {
+  api.update.onProgress(({ got, total, incremental, estimate, full, differential, note }) => {
     // 增量下载时 total 是「这次要下的字节数」，可能只有几 MB —— 界面按它算百分比
     if (typeof got === 'number') state.update.got = got
     if (total) state.update.total = total
-    if (typeof percent === 'number') state.update.percent = percent
+    // 差分算完、真正开始下之前先报一次「这次要下多少 / 整包多大」
+    if (typeof estimate === 'number') state.update.estimate = estimate
+    if (typeof full === 'number') state.update.fullSize = full
     if (incremental) state.update.viaIncremental = true
-    if (note && /incremental-fallback/.test(String(note))) state.update.viaIncremental = false
+    if (typeof differential === 'boolean') state.update.differential = differential
+    if (note && /incremental-fallback/.test(String(note))) {
+      state.update.viaIncremental = false
+      state.update.differential = false
+    }
   })
 
   api.drop.onProgress((msg) => {
