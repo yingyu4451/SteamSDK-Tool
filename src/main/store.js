@@ -15,6 +15,8 @@ const DEFAULTS = {
   branches: {},
   lastApp: null,
   windowBounds: null,
+  // 界面缩放（对应的 webContents.setZoomFactor）：1 = 100%，设置页可调，范围 0.8–1.5
+  zoomFactor: 1,
   defaultBuildMode: 'preview', // preview | live
   // depotId -> { name, language, os, arch }
   // Steamworks 后台的 Depot 有名称/语言/系统/架构，本地 vdf 里没有这些字段

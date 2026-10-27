@@ -20,6 +20,8 @@ export const state = reactive({
   bootError: null,
 
   settings: null,
+  // 界面缩放：1 = 100%，主进程 setZoomFactor 后回填（值同时存 settings.zoomFactor）
+  zoom: 1,
   sdk: null,
   hasPassword: false,
   encryptionAvailable: false,
@@ -203,6 +205,7 @@ export async function boot() {
   try {
     const [s, status] = await Promise.all([api.settings.get(), api.sdk.status()])
     state.settings = s.settings
+    state.zoom = Number(s.settings?.zoomFactor) || 1
     state.hasPassword = s.hasPassword
     state.encryptionAvailable = s.encryptionAvailable
     state.sdk = status
@@ -1784,6 +1787,37 @@ export function pushLog(stream, line) {
   state.logs.push({ stream, line, t: Date.now() })
   // 控制台上限，防止长时间构建把内存吃满
   if (state.logs.length > 4000) state.logs.splice(0, state.logs.length - 4000)
+}
+
+/* ------------------------------------------------------------------ *
+ *  界面缩放（主进程 webContents.setZoomFactor，值同时写进 settings.json）
+ * ------------------------------------------------------------------ */
+
+const ZOOM_STEPS = [0.8, 0.9, 1, 1.1, 1.25, 1.5]
+
+export async function setZoom(factor) {
+  const r = await api.ui.zoom(factor)
+  if (r?.ok) {
+    state.zoom = r.zoomFactor
+    state.settings = { ...state.settings, zoomFactor: r.zoomFactor }
+  }
+  return r
+}
+
+/** dir = 1 放大一档，-1 缩小一档；到头就停在 80% / 150% */
+export async function zoomStep(dir) {
+  const cur = Number(state.zoom) || 1
+  let next
+  if (dir > 0) {
+    next = ZOOM_STEPS.find((z) => z > cur + 0.001) ?? ZOOM_STEPS[ZOOM_STEPS.length - 1]
+  } else {
+    next = [...ZOOM_STEPS].reverse().find((z) => z < cur - 0.001) ?? ZOOM_STEPS[0]
+  }
+  return setZoom(next)
+}
+
+export function zoomReset() {
+  return setZoom(1)
 }
 
 /* ------------------------------------------------------------------ *

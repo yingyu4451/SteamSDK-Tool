@@ -156,6 +156,11 @@ const api = {
     }
   },
 
+  /** 界面缩放：主进程里 webContents.setZoomFactor，值存进 settings.json */
+  ui: {
+    zoom: (factor) => ipcRenderer.invoke('ui:zoom', factor)
+  },
+
   // 工具自身的更新（GitHub Releases）
   update: {
     info: () => ipcRenderer.invoke('update:info'),

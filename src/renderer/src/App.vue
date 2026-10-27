@@ -8,7 +8,9 @@ import {
   loadHistory,
   setDropOver,
   dropAnalyze,
-  inspectStripFolder
+  inspectStripFolder,
+  zoomStep,
+  zoomReset
 } from './store.js'
 import { reducedMotion } from './motion.js'
 
@@ -85,11 +87,27 @@ function onDrop(e) {
   else dropAnalyze(p)
 }
 
+/* 界面缩放快捷键：Ctrl + = / - / 0（主键盘和小键盘的 + - 都覆盖） */
+function onZoomKey(e) {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+  if (e.key === '=' || e.key === '+') {
+    e.preventDefault()
+    zoomStep(1)
+  } else if (e.key === '-' || e.key === '_') {
+    e.preventDefault()
+    zoomStep(-1)
+  } else if (e.key === '0') {
+    e.preventDefault()
+    zoomReset()
+  }
+}
+
 onMounted(async () => {
   window.addEventListener('dragenter', onDragEnter)
   window.addEventListener('dragover', onDragOver)
   window.addEventListener('dragleave', onDragLeave)
   window.addEventListener('drop', onDrop)
+  window.addEventListener('keydown', onZoomKey)
 
   wireEvents()
   await boot()
@@ -101,6 +119,7 @@ onUnmounted(() => {
   window.removeEventListener('dragover', onDragOver)
   window.removeEventListener('dragleave', onDragLeave)
   window.removeEventListener('drop', onDrop)
+  window.removeEventListener('keydown', onZoomKey)
 })
 
 /* 视图切换：淡出 + 轻微位移，比直接硬切有方向感 */

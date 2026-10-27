@@ -9,8 +9,13 @@ import {
   checkUpdateNow,
   downloadUpdateNow,
   installUpdateNow,
-  openReleases
+  openReleases,
+  zoomStep,
+  zoomReset
 } from '../store.js'
+
+/** 当前界面缩放百分比，卡片上显示 */
+const zoomPct = computed(() => Math.round((Number(state.zoom) || 1) * 100))
 
 /** 官方 SDK 下载页。要 Steamworks 账号登录（就是上传构建那个），没有匿名直链 */
 const SDK_DOWNLOAD = 'https://partner.steamgames.com/downloads/list'
@@ -382,6 +387,21 @@ function openExternal(url) {
 
           <div class="mt-2.5 text-micro text-faint">
             需要 <span class="text-muted">Publisher</span> 级别（普通 App 管理员拿不到）。
+          </div>
+        </section>
+
+        <!-- 界面缩放 -->
+        <section class="card p-5" v-reveal="{ delay: 0.07 }">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-body font-semibold m-0">界面缩放</h2>
+            <span class="pill num">{{ zoomPct }}%</span>
+            <span class="ml-auto text-micro text-faint">Ctrl + = / − / 0</span>
+          </div>
+          <div class="mt-3 flex items-center gap-2 flex-wrap">
+            <button class="btn no-drag" :disabled="zoomPct <= 80" @click="zoomStep(-1)">缩小</button>
+            <button class="btn no-drag" @click="zoomReset()">100%</button>
+            <button class="btn no-drag" :disabled="zoomPct >= 150" @click="zoomStep(1)">放大</button>
+            <span class="text-label text-faint">整界面一起缩放，重开仍生效。</span>
           </div>
         </section>
 

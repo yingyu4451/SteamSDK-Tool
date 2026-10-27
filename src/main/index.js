@@ -250,6 +250,12 @@ function createWindow() {
 
   mainWindow.on('ready-to-show', () => mainWindow.show())
 
+  // 记住的界面缩放：页面加载完再套（导航会重置缩放，所以绑 did-finish-load）
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    mainWindow.webContents.setZoomFactor(clampZoom(loadSettings().zoomFactor))
+  })
+
   // 最大化状态变了要告诉界面，按钮图标得跟着换
   const tellMaximized = () => {
     if (!mainWindow || mainWindow.isDestroyed()) return
@@ -286,6 +292,15 @@ const send = (channel, payload) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, payload)
   }
+}
+
+/* 界面缩放：允许 80%–150%。再小字看不清，再大在最小窗口（1120×720）下布局会挤 */
+const ZOOM_MIN = 0.8
+const ZOOM_MAX = 1.5
+function clampZoom(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return 1
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(n * 100) / 100))
 }
 
 /** 只允许读 ContentBuilder 目录下的文件，防止渲染层拿到任意路径读取能力 */
@@ -1059,6 +1074,14 @@ function registerIpc() {
     return { ok: true }
   })
   ipcMain.handle('win:state', () => ({ ok: true, maximized: !!mainWindow?.isMaximized() }))
+
+  /* ---- 界面缩放（设置页 + Ctrl +/-/0） ---- */
+  ipcMain.handle('ui:zoom', (_e, factor) => {
+    const zoom = clampZoom(factor)
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.setZoomFactor(zoom)
+    saveSettings({ zoomFactor: zoom })
+    return { ok: true, zoomFactor: zoom }
+  })
 
   /* ---- 系统 ---- */
   ipcMain.handle('shell:openPath', async (_e, target) => {
