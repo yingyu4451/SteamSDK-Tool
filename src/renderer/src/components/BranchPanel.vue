@@ -126,14 +126,25 @@ watch(appId, () => {
       >
         {{ current || '未设置' }}
       </span>
-      <span v-if="hasKey" class="ml-auto flex items-center gap-1.5">
-        <span class="text-micro text-faint">
+      <span class="ml-auto flex items-center gap-1.5">
+        <span v-if="hasKey" class="text-micro text-faint">
           {{ backendBusy ? '读取后台分支…' : backendBetas.length ? `${backendBetas.length} 个后台分支` : '后台分支未读到' }}
         </span>
         <button
+          class="btn btn-sm"
+          :class="creating ? 'border-accent text-accent' : ''"
+          :disabled="busy"
+          title="新建一个 beta 分支：只写本地 vdf 的 SetLive，后台还要在 Steamworks 里配"
+          @click="toggleCreating"
+        >
+          <Plus :size="13" :stroke-width="2" />
+          新建分支
+        </button>
+        <button
+          v-if="hasKey"
           class="btn btn-sm px-2"
           :disabled="backendBusy || !appId"
-          :title="hasKey ? '从后台刷新分支（Web API GetAppBetas）' : '先在设置里保存 Web API 密钥'"
+          title="从后台刷新分支（Web API GetAppBetas）"
           @click="loadBuildPanel(true)"
         >
           <RefreshCw :size="13" :stroke-width="1.9" :class="backendBusy ? 'animate-spin' : ''" />
@@ -152,15 +163,6 @@ watch(appId, () => {
         @click="apply(b.key)"
       >
         {{ b.key }}
-      </button>
-      <button
-        class="btn btn-sm no-drag border-dashed"
-        :class="creating ? 'border-accent text-accent' : ''"
-        :disabled="busy"
-        @click="toggleCreating"
-      >
-        <Plus :size="13" :stroke-width="2" />
-        新建分支
       </button>
       <button
         class="btn btn-sm no-drag"
