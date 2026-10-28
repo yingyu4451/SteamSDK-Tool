@@ -75,7 +75,7 @@ function openLogDir() {
       <input
         v-model="filter"
         placeholder="筛选文件名"
-        class="h-9 w-[200px] px-3 rounded-lg bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+        class="h-9 w-[200px] px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
       />
       <button class="btn no-drag" :disabled="!logDir" title="在资源管理器里打开日志所在文件夹" @click="openLogDir">
         <FolderOpen :size="14" :stroke-width="1.9" />
@@ -116,7 +116,7 @@ function openLogDir() {
           <button
             v-for="h in items"
             :key="h.file"
-            class="w-full text-left px-2.5 py-2 rounded-lg transition-colors cursor-pointer border-0 bg-transparent"
+            class="w-full text-left px-2.5 py-2 rounded-card transition-colors cursor-pointer border-0 bg-transparent"
             :class="
               selected?.file === h.file
                 ? 'bg-[rgba(102,192,244,.07)] ring-1 ring-[rgba(102,192,244,.3)]'
@@ -125,9 +125,8 @@ function openLogDir() {
             @click="open(h)"
           >
             <div class="text-body font-normal truncate">{{ h.name }}</div>
-            <div class="mt-1 flex items-center gap-2 text-micro text-faint num">
+            <div class="mt-1 flex items-center justify-between gap-2 text-micro text-faint num">
               <span>{{ fmtTime(h.mtime) }}</span>
-              <span class="text-faint">·</span>
               <span>{{ fmtSize(h.size) }}</span>
             </div>
           </button>

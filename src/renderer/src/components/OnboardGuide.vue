@@ -382,7 +382,7 @@ function skip() {
 
           <div
             v-if="o.candidates.length"
-            class="mt-3.5 flex flex-col gap-1.5 rounded-lg border p-3 transition-colors"
+            class="mt-3.5 flex flex-col gap-1.5 rounded-card border p-3 transition-colors"
             :class="
               mode === 'auto'
                 ? 'border-[rgba(102,192,244,.45)] bg-[rgba(102,192,244,.05)]'
@@ -396,7 +396,7 @@ function skip() {
             <button
               v-for="c in o.candidates"
               :key="c.root"
-              class="flex items-center gap-2.5 px-3 h-11 rounded-md border text-left transition-colors cursor-pointer"
+              class="flex items-center gap-2.5 px-3 h-11 rounded-card border text-left transition-colors cursor-pointer"
               :class="
                 same(o.manual, c.root)
                   ? 'border-[rgba(102,192,244,.5)] bg-[rgba(102,192,244,.08)]'
@@ -412,7 +412,7 @@ function skip() {
           </div>
 
           <div
-            class="mt-4 flex flex-col gap-2 rounded-lg border p-3 transition-colors"
+            class="mt-4 flex flex-col gap-2 rounded-card border p-3 transition-colors"
             :class="
               mode === 'manual'
                 ? 'border-[rgba(102,192,244,.45)] bg-[rgba(102,192,244,.05)]'
@@ -427,7 +427,7 @@ function skip() {
               <input
                 :value="o.manual"
                 placeholder="D:\SteamSDK"
-                class="flex-1 h-9 px-3 rounded-md bg-surface border text-body font-mono outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                class="flex-1 h-9 px-3 rounded-input bg-surface border text-body font-mono outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
                 :class="mode === 'manual' ? 'border-[rgba(102,192,244,.5)]' : 'border-line'"
                 @input="onManualInput"
               />
@@ -457,7 +457,7 @@ function skip() {
           <!-- 一进来就查到已经登录过：直接给结论，不用再填一遍 -->
           <div
             v-if="alreadyIn"
-            class="mt-3.5 rounded-lg border border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)] px-3.5 py-3"
+            class="mt-3.5 rounded-card border border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)] px-3.5 py-3"
           >
             <div class="flex items-center gap-2 flex-wrap">
               <Check :size="15" class="shrink-0 text-success" />
@@ -496,7 +496,7 @@ function skip() {
               <input
                 :value="o.account"
                 placeholder="例如 my_steam_login"
-                class="h-9 px-3 rounded-md bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
                 @input="o.account = $event.target.value"
               />
             </label>
@@ -506,7 +506,7 @@ function skip() {
                 :value="o.password"
                 type="password"
                 placeholder="留空就先不存"
-                class="h-9 px-3 rounded-md bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
                 @input="o.password = $event.target.value"
               />
             </label>
@@ -521,7 +521,7 @@ function skip() {
                登录与否由主进程读 steamcmd 的 config.vdf 判断，不用用户自己打勾 -->
           <div
             v-if="rowShow"
-            class="mt-3.5 rounded-md border px-3 py-2.5 flex items-start gap-2"
+            class="mt-3.5 rounded-card border px-3 py-2.5 flex items-start gap-2"
             :class="{
               'border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)]': rowTone === 'busy',
               'border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)]': rowTone === 'ok',
@@ -550,7 +550,7 @@ function skip() {
           <!-- 手机令牌：steamcmd 停在那儿等你点确认，什么都别输，去手机上点 -->
           <div
             v-if="mobileWaiting"
-            class="mt-2.5 rounded-md border border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)] px-3 py-2.5"
+            class="mt-2.5 rounded-card border border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)] px-3 py-2.5"
           >
             <div class="text-body text-accent font-semibold mb-1.5">
               Steam 正在等你手机上点确认
@@ -571,7 +571,7 @@ function skip() {
                 v-model="guardCode"
                 placeholder="例如 K4F2B"
                 autocomplete="one-time-code"
-                class="h-9 px-3 rounded-md bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint placeholder:tracking-normal"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint placeholder:tracking-normal"
                 @keyup.enter="next"
               />
             </label>
@@ -584,7 +584,7 @@ function skip() {
 
         <div
           v-if="o.error"
-          class="mt-3 rounded-md border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3 py-2 text-label text-danger"
+          class="mt-3 rounded-card border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3 py-2 text-label text-danger"
         >
           {{ o.error }}
         </div>

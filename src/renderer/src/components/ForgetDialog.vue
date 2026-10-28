@@ -78,7 +78,7 @@ onUnmounted(disarm)
       <div class="p-5 flex flex-col gap-3">
         <!-- 清完了 -->
         <template v-if="result">
-          <div class="rounded-md border border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)] px-3.5 py-3 flex items-start gap-2">
+          <div class="rounded-card border border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)] px-3.5 py-3 flex items-start gap-2">
             <Check :size="15" class="text-success shrink-0 mt-0.5" />
             <div class="min-w-0 text-label leading-relaxed">
               <div class="text-success">已清掉 {{ result.removed.length }} 项</div>
@@ -88,11 +88,11 @@ onUnmounted(disarm)
             </div>
           </div>
 
-          <div v-if="result.skipped?.length" class="rounded-md border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3.5 py-2.5 text-label text-warn">
+          <div v-if="result.skipped?.length" class="rounded-card border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3.5 py-2.5 text-label text-warn">
             <div v-for="(s, i) in result.skipped" :key="i">{{ s }}</div>
           </div>
 
-          <div v-if="result.backupDir" class="rounded-md border border-line bg-[rgba(9,15,23,.5)] px-3.5 py-2.5">
+          <div v-if="result.backupDir" class="rounded-card border border-line bg-[rgba(9,15,23,.5)] px-3.5 py-2.5">
             <div class="text-label text-muted leading-relaxed">
               清之前整份备份在这里，后悔了把里面的文件拷回去就行：
             </div>
@@ -115,7 +115,7 @@ onUnmounted(disarm)
             正在检查…
           </div>
 
-          <div v-else class="rounded-md border border-line divide-y divide-[#22334a]">
+          <div v-else class="rounded-card border border-line divide-y divide-[#22334a]">
             <div v-for="it in items" :key="it.key" class="px-3.5 py-2.5 flex items-start gap-2.5">
               <component :is="it.present ? ShieldOff : Check" :size="14" class="shrink-0 mt-0.5" :class="it.present ? 'text-warn' : 'text-faint'" />
               <div class="min-w-0 flex-1">
@@ -125,19 +125,19 @@ onUnmounted(disarm)
             </div>
           </div>
 
-          <div class="rounded-md border border-line bg-[rgba(9,15,23,.5)] px-3.5 py-2.5 text-label text-muted leading-relaxed">
+          <div class="rounded-card border border-line bg-[rgba(9,15,23,.5)] px-3.5 py-2.5 text-label text-muted leading-relaxed">
             清之前会整份备份到 SDK 根目录下的 <code class="font-mono text-accent">_login-backup-…</code>，后悔了能拷回来。
           </div>
 
           <div
-            class="rounded-md border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3.5 py-2.5 text-label text-warn leading-relaxed"
+            class="rounded-card border border-[rgba(240,169,46,.3)] bg-[rgba(240,169,46,.07)] px-3.5 py-2.5 text-label text-warn leading-relaxed"
             :class="armed ? '' : 'hidden'"
           >
             再点一次下面那个红色按钮才会真的清。关掉窗口就取消。
           </div>
         </template>
 
-        <div v-if="f.error" class="rounded-md border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3.5 py-2.5 text-label text-danger">
+        <div v-if="f.error" class="rounded-card border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3.5 py-2.5 text-label text-danger">
           {{ f.error }}
         </div>
       </div>

@@ -40,7 +40,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
           <h2 id="adopt-title" class="text-lead font-semibold m-0">把游离的 vdf 收进一个 App</h2>
         </div>
         <button
-          class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
+          class="ml-auto w-7 h-7 grid place-items-center rounded-input text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
           @click="closeOrphanDialog"
         >
           <X :size="16" :stroke-width="2" />

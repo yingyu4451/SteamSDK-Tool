@@ -207,7 +207,7 @@ watch(appId, () => {
     >
       <div
         v-if="message"
-        class="mt-3 text-label rounded-lg px-3 py-2 border"
+        class="mt-3 text-label rounded-card px-3 py-2 border"
         :class="
           message.tone === 'ok'
             ? 'text-accent border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)]'

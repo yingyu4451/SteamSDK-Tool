@@ -207,7 +207,7 @@ async function doApply() {
           </p>
         </div>
         <button
-          class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer shrink-0"
+          class="ml-auto w-7 h-7 grid place-items-center rounded-input text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer shrink-0"
           @click="closeDrop"
         >
           <X :size="16" :stroke-width="2" />

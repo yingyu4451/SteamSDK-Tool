@@ -214,7 +214,7 @@ const exitTone = computed(() => {
             ref="promptEl"
             v-model="promptValue"
             :type="state.prompt.kind === 'password' ? 'password' : 'text'"
-            class="flex-1 max-w-[320px] h-9 px-3 rounded-lg bg-surface border border-line text-body outline-none focus:border-[rgba(255,180,84,.5)]"
+            class="flex-1 max-w-[320px] h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(255,180,84,.5)]"
             placeholder="输入后回车"
             @keydown.enter="submitPrompt"
           />
@@ -241,7 +241,7 @@ const exitTone = computed(() => {
         <input
           ref="guardEl"
           v-model="guardValue"
-          class="w-[150px] h-9 px-3 rounded-lg bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-[rgba(240,169,46,.5)]"
+          class="w-[150px] h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-[rgba(240,169,46,.5)]"
           placeholder="验证码"
           autocomplete="one-time-code"
           @keydown.enter="submitGuard"

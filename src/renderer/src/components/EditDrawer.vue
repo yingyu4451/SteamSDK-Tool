@@ -347,7 +347,7 @@ onUnmounted(depotDisarm)
                 <template v-else>
                   <input
                     v-model="nameForm"
-                    class="flex-1 min-w-0 h-9 px-2.5 rounded-lg bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)]"
+                    class="flex-1 min-w-0 h-9 px-2.5 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)]"
                     @keyup.enter="doRename"
                   />
                   <button
@@ -384,7 +384,7 @@ onUnmounted(depotDisarm)
                   <input
                     v-model="editValue"
                     :placeholder="row.placeholder || ''"
-                    class="flex-1 min-w-0 h-9 px-2.5 rounded-lg bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                    class="flex-1 min-w-0 h-9 px-2.5 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                     :class="[row.mono ? 'font-mono' : '', row.num ? 'num' : '']"
                     @keyup.enter="commitEdit(row.key)"
                   />
@@ -510,7 +510,7 @@ onUnmounted(depotDisarm)
                   class="flex-1 bg-transparent border-0 outline-none text-label font-mono text-accent"
                 />
                 <button
-                  class="w-6 h-6 grid place-items-center rounded-md text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer"
+                  class="w-6 h-6 grid place-items-center rounded-card text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer"
                   @click="removeRule(i)"
                 >
                   <X :size="14" :stroke-width="2" />
@@ -525,7 +525,7 @@ onUnmounted(depotDisarm)
               <input
                 v-model="newRule"
                 placeholder="加一条，例如 *.pdb 或 logs\*"
-                class="flex-1 h-9 px-3 rounded-lg bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 @keydown.enter="addRule"
               />
               <button class="btn no-drag" :disabled="!newRule.trim()" @click="addRule">添加</button>
@@ -558,7 +558,7 @@ onUnmounted(depotDisarm)
                   class="flex-1 min-w-0 bg-transparent border-0 outline-none text-label font-mono text-accent placeholder:text-faint"
                 />
                 <button
-                  class="w-6 h-6 grid place-items-center rounded-md text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer shrink-0"
+                  class="w-6 h-6 grid place-items-center rounded-card text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer shrink-0"
                   @click="removeUserConfig(i)"
                 >
                   <X :size="14" :stroke-width="2" />
@@ -573,7 +573,7 @@ onUnmounted(depotDisarm)
               <input
                 v-model="newUserConfig"
                 placeholder="相对内容目录，例如 MyGame_Data/Progress"
-                class="flex-1 h-9 px-3 rounded-lg bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 @keydown.enter="addUserConfig"
               />
               <button class="btn no-drag" :disabled="!newUserConfig.trim()" @click="addUserConfig">

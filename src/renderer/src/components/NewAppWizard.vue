@@ -269,7 +269,7 @@ const descTab = ref('desc')
       <header class="px-6 h-14 border-b border-line flex items-center gap-3">
         <h2 id="new-app-title" class="text-lead font-semibold m-0">新建 App</h2>
         <button
-          class="ml-auto w-7 h-7 grid place-items-center rounded-lg text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
+          class="ml-auto w-7 h-7 grid place-items-center rounded-input text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
           @click="closeWizard"
         >
           <X :size="16" :stroke-width="2" />
@@ -478,13 +478,13 @@ const descTab = ref('desc')
                 :value="w.picks[p.id].depotId"
                 :disabled="!w.picks[p.id].on"
                 placeholder="AppID+1"
-                class="h-7 px-2 rounded-md bg-surface border border-line text-label num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
+                class="h-7 px-2 rounded-input bg-surface border border-line text-label num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
                 @input="wizardSetDepotId(p.id, $event.target.value)"
               />
               <input
                 :value="w.picks[p.id].contentRoot"
                 :disabled="!w.picks[p.id].on"
-                class="h-7 px-2 rounded-md bg-surface border border-line text-micro font-mono outline-none focus:border-[rgba(102,192,244,.45)] disabled:opacity-35 disabled:cursor-not-allowed"
+                class="h-7 px-2 rounded-input bg-surface border border-line text-micro font-mono outline-none focus:border-[rgba(102,192,244,.45)] disabled:opacity-35 disabled:cursor-not-allowed"
                 @input="wizardSetRoot(p.id, $event.target.value)"
               />
               <button

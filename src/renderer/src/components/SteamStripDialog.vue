@@ -93,7 +93,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <button
-          class="shrink-0 w-7 h-7 grid place-items-center rounded-md text-faint hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent disabled:opacity-50"
+          class="shrink-0 w-7 h-7 grid place-items-center rounded-input text-faint hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent disabled:opacity-50"
           :disabled="busy"
           title="关闭"
           @click="closeStripConfirm"
@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
         <div class="flex items-center gap-2 min-w-0">
           <span class="w-16 shrink-0 text-label text-faint">副本位置</span>
           <input
-            class="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-surface-2 border border-line text-label font-mono text-ink outline-none focus:border-accent disabled:opacity-60"
+            class="flex-1 min-w-0 h-8 px-2.5 rounded-input bg-surface-2 border border-line text-label font-mono text-ink outline-none focus:border-accent disabled:opacity-60"
             :value="s.dest"
             :disabled="busy"
             spellcheck="false"
