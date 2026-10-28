@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import gsap from 'gsap'
 import {
   state,
@@ -172,17 +172,24 @@ async function resolveName() {
     resolvedName.value = ''
     return
   }
-  // 已经拉到的名字（密钥权限内 / 用过的 App）直接用，省一次网络请求
-  const known = knownApps.value.find((a) => String(a.appId) === id)
-  if (known?.name) {
-    resolvedName.value = known.name
+  // 只认「游戏名」：密钥权限内的后台名 / 商店公开名。本地文件夹名不是游戏名，只做最后兜底。
+  const backend = knownApps.value.find((a) => String(a.appId) === id && a.from !== 'local')
+  if (backend?.name) {
+    resolvedName.value = backend.name
     return
   }
+  const localOnly = knownApps.value.find((a) => String(a.appId) === id)
   resolvedName.value = ''
   const n = await publicName(id)
   if (String(w.value?.appId || '').trim() !== id) return
-  resolvedName.value = n || ''
+  resolvedName.value = n || localOnly?.localName || ''
 }
+
+// 权限 App 列表是异步拉的：先手填 AppID、列表后到时再补一次名字
+watch(
+  () => state.knownApps,
+  () => resolveName()
+)
 
 const lk = computed(() => w.value?.lookup || null)
 
@@ -286,7 +293,10 @@ const descTab = ref('desc')
         <div class="flex flex-col gap-1.5">
           <span class="text-label text-muted">AppID</span>
           <div class="relative">
-            <div class="flex items-center gap-2">
+            <div
+              class="flex items-center gap-1.5 h-9 px-1 rounded-input bg-surface border transition-colors"
+              :class="w.appId && !appIdOk ? 'border-[rgba(226,75,75,.55)]' : 'border-line'"
+            >
               <input
                 ref="appIdRef"
                 :value="w.appId"
@@ -295,24 +305,31 @@ const descTab = ref('desc')
                 aria-autocomplete="list"
                 :aria-expanded="appPick.open"
                 aria-controls="app-pick-list"
-                class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border text-body num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
-                :class="w.appId && !appIdOk ? 'border-[rgba(226,75,75,.55)]' : 'border-line'"
+                class="flex-1 min-w-0 h-full pl-2.5 rounded-input bg-transparent border-0 text-body num outline-none placeholder:text-faint"
                 @input="onAppIdInput($event.target.value)"
                 @focus="onAppIdFocus"
                 @blur="onAppIdBlur"
                 @keydown="onAppIdKey"
                 @keyup.enter="doLookup"
               />
+              <!-- 游戏名直接显示在输入框里（只显示不可编辑），不再单占一行 -->
+              <span
+                v-if="resolvedName"
+                class="max-w-[52%] shrink-0 truncate text-label text-faint pointer-events-none select-none"
+                :title="resolvedName"
+              >
+                {{ resolvedName }}
+              </span>
               <button
-                class="btn btn-sm px-2 h-9 shrink-0"
+                class="btn btn-sm px-2 h-7 shrink-0"
                 title="展开已知 App 列表"
                 @mousedown.prevent
                 @click="onAppIdFocus()"
               >
                 <ChevronDown :size="14" :stroke-width="2" />
               </button>
-              <button class="btn btn-sm px-3 h-9 shrink-0" @click="openPartner">
-                <ExternalLink :size="14" :stroke-width="2" class="mr-1.5" />
+              <button class="btn btn-sm px-2.5 h-7 shrink-0" @click="openPartner">
+                <ExternalLink :size="13" :stroke-width="2" class="mr-1" />
                 后台
               </button>
             </div>
@@ -354,8 +371,7 @@ const descTab = ref('desc')
             </div>
           </div>
 
-          <span v-if="resolvedName" class="text-label text-accent">{{ resolvedName }}</span>
-          <span v-else-if="appIdOk && !appIdKnown" class="text-micro text-amber">
+          <span v-if="appIdOk && !appIdKnown" class="text-micro text-amber">
             AppID 不在密钥权限内 —— 还能继续建，但「读后台 Depot」「同步 Depot」会 403。
           </span>
 
