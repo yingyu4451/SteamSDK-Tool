@@ -326,9 +326,6 @@ function openExternal(url) {
               <ShieldOff :size="14" />
               忘记账号
             </button>
-            <span class="text-micro text-faint">
-              清掉 steamcmd 的登录令牌、用户档案和本机保存的密码
-            </span>
           </div>
         </section>
 
@@ -377,10 +374,6 @@ function openExternal(url) {
               {{ keyMsg.text }}
             </span>
           </div>
-
-          <div class="mt-2.5 text-micro text-faint">
-            需要 <span class="text-muted">Publisher</span> 级别（普通 App 管理员拿不到）。
-          </div>
         </section>
 
         <!-- 界面缩放 -->
@@ -388,13 +381,11 @@ function openExternal(url) {
           <div class="flex items-center gap-2 flex-wrap">
             <h2 class="text-body font-semibold m-0">界面缩放</h2>
             <span class="pill num">{{ zoomPct }}%</span>
-            <span class="ml-auto text-micro text-faint">Ctrl + = / − / 0</span>
           </div>
           <div class="mt-3 flex items-center gap-2 flex-wrap">
             <button class="btn no-drag" :disabled="zoomPct <= 80" @click="zoomStep(-1)">缩小</button>
             <button class="btn no-drag" @click="zoomReset()">100%</button>
             <button class="btn no-drag" :disabled="zoomPct >= 150" @click="zoomStep(1)">放大</button>
-            <span class="text-label text-faint">整界面一起缩放，重开仍生效。</span>
           </div>
         </section>
 

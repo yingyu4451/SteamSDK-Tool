@@ -19,7 +19,7 @@ import {
   clearPreflight
 } from '../store.js'
 import { fmtSize } from '../format.js'
-import { Check, CheckCircle2, Eye, FolderOpen, LoaderCircle, Lock, PackageSearch, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Upload, X } from '@lucide/vue'
+import { CheckCircle2, Eye, FileCog, FolderOpen, LoaderCircle, Lock, PackageSearch, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Upload, X } from '@lucide/vue'
 import EmptyState from './EmptyState.vue'
 
 const confirming = ref(false)
@@ -159,7 +159,7 @@ watch(
       title="检查配置：跑 check.ps1，核对 vdf 里的 AppID / DepotID / 内容目录 / 排除规则，以及 depot 脚本之间对不对得上。不看实际文件。"
       @click="doCheck"
     >
-      <Check :size="16" :stroke-width="2.2" />
+      <FileCog :size="16" :stroke-width="1.9" />
       检查配置
     </button>
 
@@ -213,6 +213,16 @@ watch(
     >
       <RefreshCw :size="15" :stroke-width="1.9" :class="state.verify.busy ? 'animate-spin' : ''" />
       {{ state.verify.busy ? '读取中…' : '同步 Depot' }}
+    </button>
+
+    <button
+      class="btn no-drag"
+      :disabled="!appId"
+      title="在 Steamworks 后台打开这个 App 的生成版本页面"
+      @click="openExternal(partner('builds'))"
+    >
+      <SquareArrowOutUpRight :size="15" :stroke-width="1.9" />
+      查看生成版本
     </button>
 
     <div class="flex-1" />

@@ -5,21 +5,17 @@ import {
   History,
   Settings,
   RefreshCw,
-  ShieldCheck,
   Plus,
   BookOpen,
   Unplug,
   FolderPlus
 } from '@lucide/vue'
-import { state, selectApp, rescan, openWizard, runCheckAll } from '../store.js'
+import { state, selectApp, rescan, openWizard } from '../store.js'
 import { useListStagger } from '../motion.js'
 import EmptyState from './EmptyState.vue'
 
 const listEl = ref(null)
 const { run } = useListStagger(listEl, (el) => el.dataset.dir)
-
-/** 「全部检查配置」跑起来的时候，图标要亮着 */
-const checkingAll = computed(() => state.running && state.runKind === 'check')
 
 watch(
   () => state.apps.map((a) => a.dirName).join('|'),
@@ -120,23 +116,6 @@ function healthTitle(app) {
           :size="14"
           :stroke-width="2"
           :class="state.scanning && 'animate-spin'"
-        />
-      </button>
-      <button
-        class="w-7 h-7 grid place-items-center rounded-btn transition-colors cursor-pointer border-0 bg-transparent"
-        :class="
-          checkingAll
-            ? 'text-accent'
-            : 'text-faint hover:text-accent hover:bg-surface-2'
-        "
-        title="把所有 App 都跑一遍 check.ps1"
-        aria-label="全部检查配置"
-        @click="runCheckAll"
-      >
-        <ShieldCheck
-          :size="14"
-          :stroke-width="1.8"
-          :class="checkingAll && 'animate-pulse'"
         />
       </button>
       <button

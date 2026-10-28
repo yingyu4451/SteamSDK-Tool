@@ -7,7 +7,6 @@ import StatCard from './StatCard.vue'
 import DepotMatrix from './DepotMatrix.vue'
 import BranchPanel from './BranchPanel.vue'
 import ConsoleLog from './ConsoleLog.vue'
-import BuildPanel from './BuildPanel.vue'
 import EmptyState from './EmptyState.vue'
 import { MousePointerClick, TriangleAlert } from '@lucide/vue'
 
@@ -137,9 +136,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
         />
       </div>
 
-      <!-- 左边 Depot（下面挂分支），右边「构建输出 + 后台构建」。
-           右列是 flex 列：构建输出 flex-1 吃掉剩余高度（日志再长也只在框里滚），
-           后台构建面板按内容取高；这一行的高度仍由较高的那一列决定。
+      <!-- 左边 Depot（下面挂分支），右边构建输出。
            注意：不能直接给卡片加 absolute —— style.css 里的 .card 是**无层**样式，
            `position: relative` 会盖掉 Tailwind 分层里的 .absolute。 -->
       <div class="grid grid-cols-2 gap-4 min-w-0">
@@ -149,7 +146,6 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
         </div>
         <div class="flex flex-col gap-4 min-w-0">
           <ConsoleLog class="flex-1 min-h-[300px]" />
-          <BuildPanel />
         </div>
       </div>
       </div>

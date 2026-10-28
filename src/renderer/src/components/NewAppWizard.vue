@@ -14,14 +14,11 @@ import {
   wizardSetRoot,
   wizardPickRoot,
   wizardLookup,
-  wizardToggleSteamDepot,
-  wizardApplyAllSteam,
-  wizardClearLookup,
   goSettings,
   selectedPicks,
   publicName
 } from '../store.js'
-import { ExternalLink, GripVertical, ListFilter, X, ChevronDown } from '@lucide/vue'
+import { ExternalLink, GripVertical, ListFilter, LoaderCircle, X, ChevronDown } from '@lucide/vue'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
 
 const el = ref(null)
@@ -89,8 +86,6 @@ const willCreate = computed(() => {
   return { scripts, dirs: picked.value.map((p) => String(p.contentRoot ?? '').trim() || '（未填）') }
 })
 
-const platLabel = (id) => w.value?.platforms.find((p) => p.id === id)?.label || id
-
 /* ---- AppID：快捷链接 + 已知 App 下拉 + 公开名称 ---- */
 
 function openPartner() {
@@ -132,7 +127,6 @@ function pickKnownApp(a) {
   wizardAppIdChanged(String(a.appId ?? ''))
   closeAppPick()
   resolveName()
-  maybeLookup()
 }
 
 function onAppIdInput(value) {
@@ -195,21 +189,7 @@ const lk = computed(() => w.value?.lookup || null)
 function onAppIdBlur() {
   // 点下拉选项时先 blur：延迟关，保证 mousedown 能选中
   setTimeout(closeAppPick, 150)
-  const id = String(w.value?.appId || '').trim()
   resolveName()
-  if (!appIdOk.value || !(state.hasApiKey || state.hasPassword)) return
-  if (lookedUp.value === id) return
-  lookedUp.value = id
-  wizardLookup()
-}
-
-/** AppID 定了（输入完 / 从下拉里选）就顺手读一次后台，省一次点击 */
-function maybeLookup() {
-  const id = String(w.value?.appId || '').trim()
-  if (!appIdOk.value || !(state.hasApiKey || state.hasPassword)) return
-  if (lookedUp.value === id) return
-  lookedUp.value = id
-  wizardLookup()
 }
 
 function doLookup(via) {
@@ -217,25 +197,7 @@ function doLookup(via) {
   wizardLookup(via === 'steamcmd' ? 'steamcmd' : undefined)
 }
 
-function fmtSize(n) {
-  const b = Number(n) || 0
-  if (!b) return '0 B'
-  const u = ['B', 'KB', 'MB', 'GB', 'TB']
-  let i = 0
-  let v = b
-  while (v >= 1024 && i < u.length - 1) {
-    v /= 1024
-    i++
-  }
-  return `${v.toFixed(i === 0 ? 0 : 1)} ${u[i]}`
-}
-
-/** 还有哪些后台 depot 没被勾上 */
-const anyUnowned = computed(() => !!lk.value?.depots?.some((d) => !d.on))
-
-function toggleDepot(d) {
-  wizardToggleSteamDepot(d.depotId)
-}
+/** 后台 depot 读回来会直接填进平台行，这里不再保留列表 */
 
 /* ---- 平台行拖拽排序：用指针事件，不用 HTML5 拖放 ----
  * draggable 会触发系统级拖动（鼠标带「移动/复制」光标），窗口里看着像在拖文件。
@@ -409,27 +371,27 @@ const descTab = ref('desc')
           </div>
         </div>
 
-        <!-- 从后台读 Depot -->
+        <!-- 平台 -->
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2 flex-wrap">
-            <button class="btn px-3 " :disabled="!appIdOk || lk?.busy" @click="doLookup">
-              <ListFilter :size="14" :stroke-width="1.8" class="mr-1.5" />
-              {{ lk?.busy ? '读取中…' : '读后台 Depot' }}
-            </button>
+            <span class="text-label text-muted">平台</span>
             <button
-              class="btn px-3 "
-              title="在 Steamworks 后台打开这个 App"
-              @click="openPartner"
+              class="ml-auto btn btn-sm no-drag"
+              :disabled="!appIdOk || lk?.busy"
+              @click="doLookup"
             >
-              <ExternalLink :size="14" :stroke-width="2" class="mr-1.5" />
-              {{ appIdOk ? '打开后台 App 页' : '打开后台 App 列表' }}
-            </button>
-            <button v-if="anyUnowned" class="btn px-3 " @click="wizardApplyAllSteam">
-              全部勾上
+              <LoaderCircle
+                v-if="lk?.busy"
+                :size="14"
+                :stroke-width="1.9"
+                class="mr-1.5 animate-spin"
+              />
+              <ListFilter v-else :size="14" :stroke-width="1.8" class="mr-1.5" />
+              {{ lk?.busy ? '读取中…' : '读后台 Depot' }}
             </button>
           </div>
 
-          <!-- 出错 -->
+          <!-- 读后台出错：原因 + 快捷处理 -->
           <div
             v-if="lk?.error"
             class="rounded-card border px-3.5 py-2.5 text-label leading-relaxed"
@@ -452,54 +414,6 @@ const descTab = ref('desc')
               </button>
             </div>
           </div>
-
-          <!-- 查到了 -->
-          <div v-if="lk?.done" class="card-flat p-3.5">
-            <div class="flex items-center gap-2 mb-2 flex-wrap">
-              <span class="text-micro font-semibold tracking-wider text-faint uppercase">后台 Depot</span>
-              <span v-if="lk.appName" class="text-label text-ink">{{ lk.appName }}</span>
-              <span v-if="!lk.appIdKnown" class="pill pill-warn">不在密钥权限内</span>
-              <button
-                class="ml-auto btn btn-sm px-2  shrink-0"
-                title="收起这块结果"
-                @click="wizardClearLookup"
-              >
-                关闭
-              </button>
-            </div>
-
-            <div v-if="!lk.depots.length" class="text-label text-faint">后台这个 App 下还没有任何 Depot。</div>
-
-            <div v-for="d in lk.depots" :key="d.depotId" class="flex items-center gap-2.5 py-1 min-w-0">
-              <input
-                type="checkbox"
-                :checked="d.on"
-                class="accent-[#66c0f4] w-3.5 h-3.5 shrink-0"
-                @change="toggleDepot(d)"
-              />
-
-              <span class="font-mono num text-label shrink-0">{{ d.depotId }}</span>
-              <span v-if="d.platform" class="text-label shrink-0" :class="d.on ? 'text-accent' : 'text-muted'">
-                {{ d.platformLabel }}
-              </span>
-              <span v-else-if="d.on && d.appliedAs" class="text-label text-accent shrink-0">
-                {{ platLabel(d.appliedAs) }}
-              </span>
-              <span v-else class="text-micro text-faint shrink-0">平台未知</span>
-
-              <span v-if="d.hasBuild" class="text-micro text-faint truncate">
-                build {{ d.buildId || d.manifestId }}<template v-if="d.branch && d.branch !== 'default'"> · {{ d.branch }}</template>
-              </span>
-              <span v-else class="text-micro text-faint truncate">没有构建记录</span>
-
-              <span class="ml-auto text-micro text-faint num shrink-0">{{ fmtSize(d.size) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 平台 -->
-        <div class="flex flex-col gap-2">
-          <span class="text-label text-muted">平台</span>
 
           <div class="rounded-card border border-line overflow-hidden">
             <div

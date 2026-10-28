@@ -12,14 +12,14 @@ const filter = ref('')
 // '__all__' = 所有 App 的构建（保底不丢），其余是某个 App 自己的那份
 const appFilter = ref('__all__')
 
-/** output 下每个 App 一个目录，group 就是 App 名 */
+/** output 下每个 App 一个目录，group 就是 App 名；「最近」排在最前面 */
 const groups = computed(() => {
   const map = new Map()
   for (const h of state.history) {
     if (!map.has(h.group)) map.set(h.group, [])
     map.get(h.group).push(h)
   }
-  return [...map.entries()]
+  return [...map.entries()].sort((a, b) => (a[0] === '最近' ? -1 : b[0] === '最近' ? 1 : 0))
 })
 
 const shown = computed(() => {

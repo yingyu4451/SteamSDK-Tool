@@ -880,6 +880,7 @@ function applySteamDepot(w, d, platform) {
 export async function wizardLookup(via) {
   const w = state.wizard
   if (!w) return
+  if (w.lookup?.busy) return // 连点两次不要各跑一遍，第二次会把 Depot 挤到别的平台行
   const id = String(w.appId || '').trim()
 
   if (!/^\d+$/.test(id)) {
@@ -909,28 +910,48 @@ export async function wizardLookup(via) {
     return
   }
 
+  // 重新读之前先撤掉上一次后台填的行，不然再点一次会把 Depot 挤到 win32 / Linux 上
+  for (const p of cur.platforms) {
+    const k = cur.picks[p.id]
+    if (!k?.fromSteam) continue
+    k.fromSteam = false
+    k.on = false
+    k.depotId = ''
+    k.autoDepot = true
+  }
+
+  // 读回来的 Depot 直接填进平台行（不弹清单、不出现复选框）：
+  // 后台认得平台的按平台填；认不得的（Web API 只给 DepotID）按常见平台顺序找空行。
+  const list = (res.depots || []).map((d) => ({ ...d, on: false, appliedAs: '' }))
+  let filled = 0
+  let unmatched = 0
+  for (const d of list) {
+    const target = d.platform || nextFreePlatform(cur)
+    if (target && cur.picks[target]) {
+      applySteamDepot(cur, d, target)
+      filled++
+    } else {
+      unmatched++
+    }
+  }
+  autoAssign(cur)
+
   cur.lookup = {
     ...emptyLookup(),
-    done: true,
     via: res.via || '',
     appIdKnown: res.appIdKnown !== false,
     appName: res.appName || '',
-    depots: (res.depots || []).map((d) => ({ ...d, on: false, appliedAs: '' }))
+    error: unmatched
+      ? `后台还有 ${unmatched} 个 Depot 没有平台行可放：先在平台表里加一行，再读一次。`
+      : null
   }
 
-  // 后台认得出平台的，读回来就勾上；认不出的（Web API 只给 DepotID）留给用户在行里选平台，
-  // 不能瞎猜 —— 猜错了平台行会和后台 DepotID 撞车。
-  const used = new Set(
-    Object.entries(cur.picks)
-      .filter(([, k]) => k.on)
-      .map(([id]) => id)
+  toast(
+    filled
+      ? `已从后台填入 ${filled} 个 Depot${res.appName ? `（${res.appName}）` : ''}`
+      : '后台这个 App 下还没有 Depot',
+    filled ? 'ok' : 'bad'
   )
-  for (const d of cur.lookup.depots) {
-    if (!d.platform) continue
-    applySteamDepot(cur, d)
-    used.add(d.platform)
-  }
-  autoAssign(cur)
 }
 
 /** 用户改 AppID 之后，之前查到的结果就不再是这个 App 的了 */
