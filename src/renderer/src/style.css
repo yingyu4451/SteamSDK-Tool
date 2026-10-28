@@ -861,11 +861,11 @@ body {
 }
 .s-nav-item:hover,
 .s-nav-item.is-active {
-  background: linear-gradient(-60deg, #3a7391 0%, #2b5a75 100%);
+  background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%);
   color: #fff;
 }
 .s-nav-item.is-active:hover {
-  background: linear-gradient(-60deg, #3f7a97 0%, #2f607c 100%);
+  background: linear-gradient(-60deg, #7acdf8 0%, #4a87a9 100%);
 }
 
 /* 面板：商店内容块 = --light-ctn-bg（半透明淡蓝薄片），3px 圆角，无边框无投影 */
@@ -911,14 +911,14 @@ body {
 .btn-lg { height: 40px; padding: 0 18px; font-size: 14px; }
 
 .btn-primary {
-  background: linear-gradient(90deg, #4e7a14 5%, #3f6410 95%);
-  color: #fff;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+  background: linear-gradient(90deg, #75b022 5%, #588a1b 95%);
+  color: #0a0f06;
+  text-shadow: none;
   box-shadow: none;
   border: 0;
 }
-.btn-primary:hover:not(:disabled) { background: linear-gradient(90deg, #547f13 5%, #44700f 95%); color: #fff; }
-.btn-primary:active:not(:disabled) { background: linear-gradient(90deg, #44680f 5%, #365809 95%); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: linear-gradient(90deg, #8ed629 5%, #6aa621 95%); color: #0a0f06; }
+.btn-primary:active:not(:disabled) { background: linear-gradient(90deg, #4e7a14 5%, #3f6010 95%); color: #fff; }
 
 .btn-danger { background: rgba(0, 0, 0, 0.5); color: #ff8a8a; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3); border: 0; }
 .btn-danger:hover:not(:disabled) { background: rgba(190, 60, 60, 0.45); color: #fff; }
@@ -965,10 +965,10 @@ body {
   font-size: 12px;
   font-weight: 700;
 }
-.chip:hover { background: linear-gradient(-60deg, #3a7391 0%, #2b5a75 100%); color: #fff; }
-.chip-on { background: linear-gradient(-60deg, #3a7391 0%, #2b5a75 100%); color: #fff; box-shadow: none; }
-.chip-on .text-faint,
-.chip-on .num { color: inherit; }
+.chip:hover { background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%); color: #fff; }
+.chip-on { background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%); color: #fff; box-shadow: none; }
+.chip-on .num,
+.chip:hover .num { color: inherit; }
 
 /* 输入框：商店的深色内嵌字段 */
 input[type="text"],
