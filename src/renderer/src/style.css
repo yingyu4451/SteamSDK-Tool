@@ -896,34 +896,34 @@ body {
   padding: 0 15px;
   border: 0;
   border-radius: 2px;
-  background: rgba(0, 0, 0, 0.5);
-  color: #67c1f5;
+  background: rgba(102, 192, 244, 0.4);
+  color: #fff;
   font-size: 13px;
   font-weight: 400;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   box-shadow: none;
   transition: background 0.12s linear, color 0.12s linear;
 }
-.btn:hover:not(:disabled) { background: rgba(102, 192, 244, 0.4); color: #fff; }
+.btn:hover:not(:disabled) { background: rgba(0, 0, 0, 0.5); color: #67c1f5; }
 .btn:active:not(:disabled) { background: rgba(102, 192, 244, 0.2); color: #fff; }
 .btn:disabled { opacity: 0.45; background: rgba(0, 0, 0, 0.3); color: rgba(103, 193, 245, 0.5); text-shadow: none; }
 .btn-sm { height: 26px; padding: 0 12px; font-size: 12px; }
 .btn-lg { height: 40px; padding: 0 18px; font-size: 14px; }
 
 .btn-primary {
-  background: linear-gradient(90deg, #75b022 5%, #588a1b 95%);
-  color: #0a0f06;
-  text-shadow: none;
+  background: linear-gradient(90deg, #8ed629 5%, #6aa621 95%);
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   box-shadow: none;
   border: 0;
 }
-.btn-primary:hover:not(:disabled) { background: linear-gradient(90deg, #8ed629 5%, #6aa621 95%); color: #0a0f06; }
+.btn-primary:hover:not(:disabled) { background: linear-gradient(90deg, #75b022 5%, #588a1b 95%); color: #fff; }
 .btn-primary:active:not(:disabled) { background: linear-gradient(90deg, #4e7a14 5%, #3f6010 95%); color: #fff; }
 
-.btn-danger { background: rgba(0, 0, 0, 0.5); color: #ff8a8a; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3); border: 0; }
-.btn-danger:hover:not(:disabled) { background: rgba(190, 60, 60, 0.45); color: #fff; }
-.btn-danger-solid { background: linear-gradient(90deg, #a63a3a 5%, #7d1f1f 95%); color: #ffd3d3; }
-.btn-danger-solid:hover:not(:disabled) { background: linear-gradient(90deg, #c24b4b 5%, #932a2a 95%); color: #fff; }
+.btn-danger { background: rgba(190, 60, 60, 0.45); color: #fff; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3); border: 0; }
+.btn-danger:hover:not(:disabled) { background: rgba(0, 0, 0, 0.5); color: #ff8a8a; }
+.btn-danger-solid { background: linear-gradient(90deg, #c24b4b 5%, #932a2a 95%); color: #fff; }
+.btn-danger-solid:hover:not(:disabled) { background: linear-gradient(90deg, #a63a3a 5%, #7d1f1f 95%); color: #ffd3d3; }
 
 /* 链接 / 路径 */
 .link-btn { background: transparent; border: 0; color: #67c1f5; text-shadow: none; }
@@ -949,8 +949,8 @@ body {
   text-transform: none;
   box-shadow: 1px 1px 0 0 #000;
 }
-.pill-ok { background: #a4d007; color: #111; }
-.pill-warn { background: #bb9d2f; color: #111; }
+.pill-ok { background: #a4d007; color: #fff; }
+.pill-warn { background: #bb9d2f; color: #fff; }
 .pill-bad { background: #9a3130; color: #fff; }
 .pill-idle { background: #384959; color: #67c1f5; }
 

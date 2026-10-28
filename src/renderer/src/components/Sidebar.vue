@@ -149,13 +149,12 @@ function healthTitle(app) {
           />
           <span class="text-body font-medium truncate">{{ app.dirName }}</span>
         </div>
-        <div class="mt-1.5 flex items-center gap-2 text-micro text-faint num">
+        <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
           <span>App {{ app.appId || '?' }}</span>
-          <span class="text-faint">·</span>
-          <span>{{ app.depots?.length || 0 }} Depot</span>
-          <span v-if="app.setLive" class="ml-auto text-amber truncate max-w-[74px]">
-            {{ app.setLive }}
-          </span>
+          <template v-if="app.setLive">
+            <span class="text-faint">·</span>
+            <span class="text-amber break-all">{{ app.setLive }}</span>
+          </template>
         </div>
       </button>
 
