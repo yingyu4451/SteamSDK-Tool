@@ -109,7 +109,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
         <div class="rounded-card border border-[rgba(255,92,108,.22)] bg-[rgba(255,92,108,.05)] p-3.5">
           <div class="flex items-center gap-2">
             <span class="pill pill-bad">一定会删</span>
-            <span class="text-label font-medium">构建脚本目录</span>
+            <span class="text-label font-normal">构建脚本目录</span>
             <span class="ml-auto num text-label text-faint">
               {{ d.info.scripts.files }} 个文件 · {{ fmtSize(d.info.scripts.bytes) }}
             </span>
@@ -124,7 +124,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
         <div class="rounded-card border border-line bg-surface p-3.5">
           <div class="flex items-center gap-2">
             <span class="pill" :class="deletableContent.length ? 'pill-warn' : 'pill-idle'">可选</span>
-            <span class="text-label font-medium">内容目录</span>
+            <span class="text-label font-normal">内容目录</span>
             <span v-if="deletableContent.length" class="ml-auto num text-label text-faint">
               {{ fmtInt(contentTotals.files) }} 个文件 · {{ fmtSize(contentTotals.bytes) }}
             </span>

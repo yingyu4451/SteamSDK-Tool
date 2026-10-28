@@ -130,7 +130,7 @@ function openRepo() {
 </script>
 
 <template>
-  <div class="p-5 flex flex-col gap-4 min-w-0 max-w-[880px]">
+  <div class="p-5 flex flex-col gap-6 min-w-0 max-w-[720px]">
     <div class="card p-4 flex items-center gap-3" v-reveal>
       <BookOpen :size="20" :stroke-width="1.8" class="text-accent shrink-0" />
       <div class="min-w-0">
@@ -175,7 +175,7 @@ function openRepo() {
 
         <div v-else-if="b.t === 'dl'" class="m-0 mb-3 flex flex-col gap-3.5">
           <div v-for="(pair, k) in b.v" :key="k" class="grid grid-cols-[110px_1fr] gap-x-5 items-baseline">
-            <span class="text-body text-ink font-medium">{{ pair[0] }}</span>
+            <span class="text-body text-ink font-normal">{{ pair[0] }}</span>
             <span class="text-body text-muted leading-[1.75]">{{ pair[1] }}</span>
           </div>
         </div>

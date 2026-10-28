@@ -46,7 +46,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
 </script>
 
 <template>
-  <div class="p-5 flex flex-col gap-4 min-w-0">
+  <div class="p-5 flex flex-col gap-6 min-w-0">
     <!-- scripts 根目录下有游离的 vdf：它们不属于任何 App，列表里看不见 -->
     <div
       v-if="state.orphans.length"
@@ -56,7 +56,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       <div class="flex items-start gap-3">
         <TriangleAlert :size="20" :stroke-width="1.9" class="shrink-0 text-amber mt-0.5" />
         <div class="min-w-0 flex-1">
-          <div class="text-body text-amber font-medium">
+          <div class="text-body text-amber font-normal">
             scripts 根目录下有 {{ state.orphans.length }} 个 vdf 没有被任何 App 管着
           </div>
           <div class="mt-2 flex flex-col gap-0.5">

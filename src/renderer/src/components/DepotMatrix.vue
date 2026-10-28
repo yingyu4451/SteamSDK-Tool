@@ -124,7 +124,7 @@ async function openPath(p) {
             }"
           />
           <span
-            class="text-body font-medium truncate"
+            class="text-body font-normal truncate"
             :class="String(d.id) === String(current?.id) ? 'text-ink' : 'text-muted'"
           >
             {{ platLabel(d.platform) }}
@@ -194,7 +194,7 @@ async function openPath(p) {
 
         <div class="mt-2.5 flex flex-col gap-1">
           <div class="flex items-start gap-2 text-label min-w-0">
-            <span class="shrink-0 w-[64px] pt-1 text-faint">内容目录</span>
+            <span class="shrink-0 w-16 pt-1 text-faint">内容目录</span>
             <PathLink
               v-if="a?.contentRoot"
               :path="a.contentRoot"
@@ -205,17 +205,17 @@ async function openPath(p) {
             <span v-else class="text-faint">未设置</span>
           </div>
           <div class="flex items-start gap-2 text-label min-w-0">
-            <span class="shrink-0 w-[64px] pt-1 text-faint">脚本</span>
+            <span class="shrink-0 w-16 pt-1 text-faint">脚本</span>
             <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
           </div>
           <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-label min-w-0">
-            <span class="shrink-0 w-[64px] text-faint">存档保护</span>
+            <span class="shrink-0 w-16 text-faint">存档保护</span>
             <span class="font-mono break-all text-muted">
               {{ current.userConfig.join('、') }}
             </span>
           </div>
           <div v-else class="flex items-center gap-2 text-label min-w-0">
-            <span class="shrink-0 w-[64px] text-faint">存档保护</span>
+            <span class="shrink-0 w-16 text-faint">存档保护</span>
             <span class="text-amber">没标任何玩家数据文件</span>
           </div>
         </div>
@@ -232,7 +232,7 @@ async function openPath(p) {
         :stroke-width="2.4"
         :class="['text-danger transition-transform', showSuspicious && 'rotate-90']"
       />
-          <span class="text-label font-medium text-danger">会被上传的可疑文件</span>
+          <span class="text-label font-normal text-danger">会被上传的可疑文件</span>
           <span class="num text-label text-faint">{{ a.suspicious.length }}</span>
           <span class="ml-auto text-micro text-faint">这些应该加进 FileExclusion</span>
         </button>
@@ -263,7 +263,7 @@ async function openPath(p) {
         :stroke-width="2.4"
         :class="['text-amber transition-transform', showExcluded && 'rotate-90']"
       />
-          <span class="text-label font-medium text-amber">被 FileExclusion 挡下的文件</span>
+          <span class="text-label font-normal text-amber">被 FileExclusion 挡下的文件</span>
           <span class="num text-label text-faint">{{ a?.excludedCount || 0 }}</span>
           <span class="ml-auto text-micro text-faint">只不上传，本地都还在</span>
         </button>

@@ -105,11 +105,11 @@ onBeforeUnmount(() => {
       <!-- 内容 -->
       <div class="px-5 py-4 flex flex-col gap-3.5 max-h-[62vh] overflow-y-auto scroll-thin">
         <div class="flex items-center gap-2 min-w-0">
-          <span class="w-[64px] shrink-0 text-label text-faint">原文件夹</span>
+          <span class="w-16 shrink-0 text-label text-faint">原文件夹</span>
           <PathLink :path="inspect.root" />
         </div>
         <div class="flex items-center gap-2 min-w-0 text-label text-muted">
-          <span class="w-[64px] shrink-0 text-faint">文件</span>
+          <span class="w-16 shrink-0 text-faint">文件</span>
           <span>
             <span class="num text-ink">{{ fmtInt(inspect.totalFiles) }}</span> 个 ·
             <span class="num text-ink">{{ fmtSize(inspect.totalBytes) }}</span>
@@ -163,7 +163,7 @@ onBeforeUnmount(() => {
           v-if="managed.length"
           class="flex items-start gap-2 text-label leading-relaxed text-faint"
         >
-          <span class="w-[64px] shrink-0">托管 DLL</span>
+          <span class="w-16 shrink-0">托管 DLL</span>
           <span class="min-w-0">
             保留
             <span class="font-mono text-muted">{{ managed.map((f) => f.name).join('、') }}</span>
@@ -173,7 +173,7 @@ onBeforeUnmount(() => {
 
         <!-- 副本位置 -->
         <div class="flex items-center gap-2 min-w-0">
-          <span class="w-[64px] shrink-0 text-label text-faint">副本位置</span>
+          <span class="w-16 shrink-0 text-label text-faint">副本位置</span>
           <input
             class="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-surface-2 border border-line text-label font-mono text-ink outline-none focus:border-accent disabled:opacity-60"
             :value="s.dest"

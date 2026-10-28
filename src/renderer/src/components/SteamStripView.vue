@@ -34,7 +34,7 @@ const pct = computed(() => {
 </script>
 
 <template>
-  <div class="p-5 flex flex-col gap-4 min-w-0 max-w-[1000px]">
+  <div class="p-5 flex flex-col gap-6 min-w-0 max-w-[1000px]">
     <!-- 标题 -->
     <div class="card px-5 py-4 flex items-start gap-3">
       <div
@@ -116,11 +116,11 @@ const pct = computed(() => {
           </div>
           <div class="mt-2 flex flex-col gap-1.5 text-label">
             <div class="flex items-center gap-2 min-w-0">
-              <span class="w-[64px] shrink-0 text-faint">原文件夹</span>
+              <span class="w-16 shrink-0 text-faint">原文件夹</span>
               <PathLink :path="result.src" />
             </div>
             <div class="flex items-center gap-2 min-w-0">
-              <span class="w-[64px] shrink-0 text-faint">副本</span>
+              <span class="w-16 shrink-0 text-faint">副本</span>
               <PathLink :path="result.dest" />
             </div>
           </div>
@@ -222,7 +222,7 @@ const pct = computed(() => {
         >
           <Unplug :size="22" :stroke-width="1.7" />
         </div>
-        <div class="text-copy font-medium text-ink">
+        <div class="text-copy font-normal text-ink">
           {{ dropOver ? '松手就检查这个文件夹' : '把游戏文件夹拖到这里' }}
         </div>
         <div class="text-label text-muted">

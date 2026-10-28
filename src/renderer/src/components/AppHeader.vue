@@ -59,7 +59,7 @@ const dup = computed(() => {
 
         <div class="mt-2.5 flex items-center gap-3 flex-wrap text-label text-muted">
           <span class="num">
-            AppID <span class="text-ink font-medium">{{ app.appId || '—' }}</span>
+            AppID <span class="text-ink font-normal">{{ app.appId || '—' }}</span>
           </span>
           <span class="text-faint">|</span>
           <span class="num">{{ app.depots.length }} 个 Depot</span>
@@ -67,12 +67,12 @@ const dup = computed(() => {
 
         <div class="mt-3 flex flex-col gap-1.5 min-w-0">
           <div class="flex items-start gap-3 min-w-0">
-            <span class="shrink-0 w-[64px] pt-1 text-label text-faint whitespace-nowrap">项目文件夹</span>
+            <span class="shrink-0 w-16 pt-1 text-label text-faint whitespace-nowrap">项目文件夹</span>
             <PathLink :path="app.contentRoot" kind="folder" class="min-w-0" />
           </div>
 
           <div class="flex items-start gap-3 min-w-0">
-            <span class="shrink-0 w-[64px] pt-1 text-label text-faint whitespace-nowrap">构建脚本</span>
+            <span class="shrink-0 w-16 pt-1 text-label text-faint whitespace-nowrap">构建脚本</span>
             <PathLink :path="app.appPath" kind="file" class="min-w-0" />
           </div>
         </div>

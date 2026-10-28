@@ -509,7 +509,7 @@ const descTab = ref('desc')
             <button
               v-for="t in TABS"
               :key="t.id"
-              class="relative pb-1.5 text-body font-medium bg-transparent border-0 px-0 cursor-pointer transition-colors"
+              class="relative pb-1.5 text-body font-normal bg-transparent border-0 px-0 cursor-pointer transition-colors"
               :class="descTab === t.id ? 'text-accent' : 'text-faint hover:text-muted'"
               @click="descTab = t.id"
             >

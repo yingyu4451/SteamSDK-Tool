@@ -60,10 +60,21 @@
     'JetBrains Mono', 'Cascadia Mono', 'SF Mono', ui-monospace, 'Consolas', monospace;
 
   /* 圆角：Steam 的 2px 锐角。well/卡片 4，输入框与按钮 2，徽标 2。 */
-  --radius-card: 4px;
+  --radius-card: 3px;
   --radius-input: 2px;
   --radius-btn: 2px;
   --radius-tag: 2px;
+
+  /* 语义色薄底（同色相浅底 + 同色相字的配对基础，替代就地 rgba()） */
+  --tint-ok: rgba(164, 208, 7, 0.16);
+  --tint-warn: rgba(240, 169, 46, 0.16);
+  --tint-danger: rgba(226, 75, 75, 0.14);
+  --tint-accent: rgba(26, 159, 255, 0.2);
+
+  /* elevation set：浮层 / 模态 / 抽屉，其余不再手写 box-shadow */
+  --shadow-pop: 0 6px 18px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.65);
+  --shadow-drawer: -12px 0 40px rgba(0, 0, 0, 0.5);
 
   /* 字号阶梯（新版商店的 11–26px 类型档）：
      micro 11 / label 12 / body 13 / copy 14 / lead 15 / title 17 / display 21 / stat 26 */
@@ -264,7 +275,7 @@ select:focus {
   color: var(--color-muted);
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
@@ -384,7 +395,7 @@ select:focus {
   border-radius: var(--radius-tag);
   font-family: var(--font-sans);
   font-size: var(--text-micro);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
 }
@@ -419,7 +430,7 @@ select:focus {
   border-radius: var(--radius-tag);
   font-family: var(--font-sans);
   font-size: var(--text-label);
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
   background: rgba(0, 0, 0, 0.2);
   color: var(--color-muted);
@@ -831,8 +842,8 @@ body {
   min-height: 52px;
 }
 .s-brand {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-lead);
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #dcdedf;
@@ -853,20 +864,26 @@ body {
   border-radius: 2px;
   background: transparent;
   color: #d9dadd;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-body);
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
   transition: background 0.12s linear, color 0.12s linear;
 }
-.s-nav-item:hover,
+.s-nav-item:hover {
+  background: rgba(26, 159, 255, 0.12);
+  color: #d9dadd;
+}
 .s-nav-item.is-active {
-  background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%);
-  color: #fff;
+  background: var(--tint-accent);
+  color: #99d4ff;
+  box-shadow: inset 2px 0 0 #1a9fff;
 }
 .s-nav-item.is-active:hover {
-  background: linear-gradient(-60deg, #7acdf8 0%, #4a87a9 100%);
+  background: rgba(26, 159, 255, 0.28);
+  color: #c6e7fb;
 }
+
 
 /* 面板：商店内容块 = --light-ctn-bg（半透明淡蓝薄片），3px 圆角，无边框无投影 */
 .card {
@@ -878,7 +895,7 @@ body {
 }
 .card::before { display: none; }
 .card h2 {
-  font-size: 21px;
+  font-size: var(--text-display);
   font-weight: 600;
   color: #fff;
   letter-spacing: 0;
@@ -898,7 +915,7 @@ body {
   border-radius: 2px;
   background: rgba(102, 192, 244, 0.4);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--text-body);
   font-weight: 400;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   box-shadow: none;
@@ -907,17 +924,17 @@ body {
 .btn:hover:not(:disabled) { background: rgba(0, 0, 0, 0.5); color: #67c1f5; }
 .btn:active:not(:disabled) { background: rgba(102, 192, 244, 0.2); color: #fff; }
 .btn:disabled { opacity: 0.45; background: rgba(0, 0, 0, 0.3); color: rgba(103, 193, 245, 0.5); text-shadow: none; }
-.btn-sm { height: 26px; padding: 0 12px; font-size: 12px; }
-.btn-lg { height: 40px; padding: 0 18px; font-size: 14px; }
+.btn-sm { height: 26px; padding: 0 12px; font-size: var(--text-label); }
+.btn-lg { height: 40px; padding: 0 18px; font-size: var(--text-copy); }
 
 .btn-primary {
-  background: linear-gradient(90deg, #8ed629 5%, #6aa621 95%);
+  background: linear-gradient(90deg, #4e7a14 5%, #3f6410 95%);
   color: #fff;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   box-shadow: none;
   border: 0;
 }
-.btn-primary:hover:not(:disabled) { background: linear-gradient(90deg, #75b022 5%, #588a1b 95%); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: linear-gradient(90deg, #547f13 5%, #44700f 95%); color: #fff; }
 .btn-primary:active:not(:disabled) { background: linear-gradient(90deg, #4e7a14 5%, #3f6010 95%); color: #fff; }
 
 .btn-danger { background: rgba(190, 60, 60, 0.45); color: #fff; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3); border: 0; }
@@ -940,17 +957,17 @@ body {
   line-height: 19px;
   padding: 0 7px;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-tag);
   background: #384959;
   color: #c8c6c2;
-  font-size: 11px;
+  font-size: var(--text-micro);
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
   box-shadow: 1px 1px 0 0 #000;
 }
-.pill-ok { background: #a4d007; color: #fff; }
-.pill-warn { background: #bb9d2f; color: #fff; }
+.pill-ok { background: var(--tint-ok); color: #c4ea4c; }
+.pill-warn { background: var(--tint-warn); color: var(--color-amber); }
 .pill-bad { background: #9a3130; color: #fff; }
 .pill-idle { background: #384959; color: #67c1f5; }
 
@@ -962,11 +979,11 @@ body {
   border-radius: 2px;
   background: transparent;
   color: #d9dadd;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--text-label);
+  font-weight: 600;
 }
-.chip:hover { background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%); color: #fff; }
-.chip-on { background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%); color: #fff; box-shadow: none; }
+.chip:hover { background: rgba(26, 159, 255, 0.16); color: #c6e7fb; }
+.chip-on { background: var(--tint-accent); color: #99d4ff; box-shadow: none; }
 .chip-on .num,
 .chip:hover .num { color: inherit; }
 
@@ -995,17 +1012,17 @@ select:focus {
   background: #171d25;
   border: 1px solid #000;
   border-radius: 3px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-pop);
 }
 /* 弹窗/抽屉：商店的弹层是实底 #171a21 + 黑边 + 深投影（不能用半透明卡片底） */
 .s-modal {
   background: #171d25;
   border: 1px solid #000;
   border-radius: 3px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.65);
+  box-shadow: var(--shadow-modal);
 }
 .s-drawer-panel {
   background: #171d25;
   border-left: 1px solid #000;
-  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-drawer);
 }

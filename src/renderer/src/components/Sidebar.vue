@@ -147,7 +147,7 @@ function healthTitle(app) {
             "
             :title="healthTitle(app)"
           />
-          <span class="text-body font-medium truncate">{{ app.dirName }}</span>
+          <span class="text-body font-normal truncate">{{ app.dirName }}</span>
         </div>
         <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
           <span>App {{ app.appId || '?' }}</span>

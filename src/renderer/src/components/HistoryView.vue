@@ -65,7 +65,7 @@ function openLogDir() {
 </script>
 
 <template>
-  <div class="p-5 flex flex-col gap-4 h-full min-h-0">
+  <div class="p-5 flex flex-col gap-6 h-full min-h-0">
     <div class="flex items-center gap-3">
       <h1 class="text-title font-semibold tracking-tight m-0">构建历史</h1>
       <span class="text-label text-faint">
@@ -124,7 +124,7 @@ function openLogDir() {
             "
             @click="open(h)"
           >
-            <div class="text-body font-medium truncate">{{ h.name }}</div>
+            <div class="text-body font-normal truncate">{{ h.name }}</div>
             <div class="mt-1 flex items-center gap-2 text-micro text-faint num">
               <span>{{ fmtTime(h.mtime) }}</span>
               <span class="text-faint">·</span>
@@ -146,7 +146,7 @@ function openLogDir() {
       <!-- 内容 -->
       <div class="card overflow-hidden flex flex-col min-h-0 min-w-0" v-reveal="{ delay: 0.04 }">
         <header class="px-4 py-2.5 border-b border-line flex items-center gap-3 shrink-0">
-          <span class="text-body font-medium truncate">
+          <span class="text-body font-normal truncate">
             {{ selected?.name || '选一个日志' }}
           </span>
           <span v-if="selected" class="text-micro text-faint font-mono break-all ml-auto" :title="selected.file">

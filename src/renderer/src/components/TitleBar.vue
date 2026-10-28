@@ -80,7 +80,7 @@ const win = window.api.win
           class="flex items-center gap-2 h-6 px-2 rounded-tag bg-[rgba(102,192,244,.1)] border border-[rgba(102,192,244,.28)]"
         >
           <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-          <span class="text-label text-accent font-medium">
+          <span class="text-label text-accent font-normal">
             {{ state.runKind === 'check' ? '检查配置中' : state.runPreview ? 'Preview 中' : '上传中' }}
           </span>
         </div>
