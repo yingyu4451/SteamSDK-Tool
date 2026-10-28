@@ -196,7 +196,7 @@ async function doApply() {
 <template>
   <Transition name="overlay">
   <div v-if="d" class="fixed inset-0 z-[55] grid place-items-center p-6">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeDrop" />
+    <div class="absolute inset-0 bg-black/25" @click="closeDrop" />
 
     <div ref="el" role="dialog" aria-modal="true" aria-labelledby="drop-dialog-title" class="relative card w-full max-w-[680px] max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import gsap from 'gsap'
 import {
   state,
@@ -41,7 +41,25 @@ useDialogA11y(el, closeWizard, { isOpen: () => !!w.value })
 const appIdOk = computed(() => /^\d+$/.test(String(w.value?.appId || '').trim()))
 const picked = computed(() => (w.value ? selectedPicks(w.value) : []))
 
-const knownApps = computed(() => state.knownApps || [])
+const knownApps = computed(() => {
+  // 合并三处来源：密钥权限内的 App（英文名居多）、用过的 App（可能是中文名）、本地已有的 App 文件夹
+  // 本地文件夹名大多是中文，这样输入「阿比亚」也能搜到。
+  const byId = new Map()
+  for (const a of state.knownApps || []) byId.set(String(a.appId), { ...a })
+  for (const app of state.apps || []) {
+    const id = String(app.appId || '')
+    if (!/^\d+$/.test(id)) continue
+    const localName = app.dirName || ''
+    const prev = byId.get(id)
+    if (prev) {
+      if (!prev.localName) prev.localName = localName
+      prev.local = true
+    } else {
+      byId.set(id, { appId: id, name: localName, localName, local: true, from: 'local' })
+    }
+  }
+  return [...byId.values()]
+})
 
 const canSubmit = computed(() => {
   const v = w.value
@@ -91,7 +109,10 @@ const filteredKnownApps = computed(() => {
   const list = knownApps.value
   if (!q || !appPick.value.open) return list
   return list.filter(
-    (a) => String(a.appId).includes(q) || String(a.name || '').toLowerCase().includes(q)
+    (a) =>
+      String(a.appId).includes(q) ||
+      String(a.name || '').toLowerCase().includes(q) ||
+      String(a.localName || '').toLowerCase().includes(q)
   )
 })
 
@@ -157,7 +178,13 @@ async function resolveName() {
     resolvedName.value = ''
     return
   }
-  resolvedName.value = '查询中…'
+  // 已经拉到的名字（密钥权限内 / 用过的 App）直接用，省一次网络请求
+  const known = knownApps.value.find((a) => String(a.appId) === id)
+  if (known?.name) {
+    resolvedName.value = known.name
+    return
+  }
+  resolvedName.value = ''
   const n = await publicName(id)
   if (String(w.value?.appId || '').trim() !== id) return
   resolvedName.value = n || ''
@@ -204,42 +231,42 @@ function fmtSize(n) {
 }
 
 /** 还有哪些后台 depot 没被勾上 */
-const anyUnowned = computed(() => !!lk.value?.depots?.some((d) => d.platform && !d.on))
+const anyUnowned = computed(() => !!lk.value?.depots?.some((d) => !d.on))
 
 function toggleDepot(d) {
   wizardToggleSteamDepot(d.depotId)
 }
 
-function onPickPlatform(d, e) {
-  const plat = e.target.value
-  e.target.value = ''
-  if (plat) wizardToggleSteamDepot(d.depotId, plat)
-}
-
-/* ---- 平台行拖拽排序：从上到下的次序就是 DepotID +1 的次序 ----
- * 拖到哪一行就立刻换到哪一行（实时预览），不然 5 行拖起来完全不知道自己会落在哪。
- * 换完 autoAssign 会重排 DepotID，所以数字也跟着实时变。 */
+/* ---- 平台行拖拽排序：用指针事件，不用 HTML5 拖放 ----
+ * draggable 会触发系统级拖动（鼠标带「移动/复制」光标），窗口里看着像在拖文件。
+ * 从上到下的次序就是 DepotID +1 的次序；拖到哪一行就立刻换到哪一行（实时预览）。 */
 
 const dragId = ref('')
 
-function onDragStart(id, e) {
+function startDrag(id, e) {
+  if (e.button !== 0) return
   dragId.value = id
-  try {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', id)
-  } catch {
-    /* 某些环境不给设，忽略 */
-  }
+  e.preventDefault()
+  window.addEventListener('pointermove', onDragMove)
+  window.addEventListener('pointerup', endDrag)
+  window.addEventListener('pointercancel', endDrag)
 }
 
-function onDragOver(id) {
-  if (!dragId.value || dragId.value === id) return
-  wizardMovePlatform(dragId.value, id)
+function onDragMove(e) {
+  if (!dragId.value) return
+  const row = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('[data-plat-id]')
+  const id = row?.dataset?.platId
+  if (id && id !== dragId.value) wizardMovePlatform(dragId.value, id)
 }
 
-function onDragEnd() {
+function endDrag() {
   dragId.value = ''
+  window.removeEventListener('pointermove', onDragMove)
+  window.removeEventListener('pointerup', endDrag)
+  window.removeEventListener('pointercancel', endDrag)
 }
+
+onBeforeUnmount(endDrag)
 
 /* ---- AppID 撞车：本地已经有 App 用这个 AppID ---- */
 
@@ -267,7 +294,7 @@ const descTab = ref('desc')
 <template>
   <Transition name="overlay">
   <div v-if="w" class="fixed inset-0 z-50 grid place-items-center p-6">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeWizard" />
+    <div class="absolute inset-0 bg-black/25" @click="closeWizard" />
 
     <div ref="el" role="dialog" aria-modal="true" aria-labelledby="new-app-title" class="relative card w-full max-w-[660px] max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-6 h-14 border-b border-line flex items-center gap-3">
@@ -350,6 +377,13 @@ const descTab = ref('desc')
               >
                 <span class="num text-label text-accent shrink-0">{{ a.appId }}</span>
                 <span class="text-label text-muted truncate">{{ a.name || '（没有名字）' }}</span>
+                <span
+                  v-if="a.localName && a.localName !== a.name"
+                  class="text-micro text-faint truncate"
+                  :title="`本地文件夹：${a.localName}`"
+                >
+                  {{ a.localName }}
+                </span>
                 <span v-if="a.local" class="ml-auto shrink-0 text-micro text-faint">本地已有</span>
               </button>
               <div class="px-3 py-1.5 mt-1 border-t border-line-soft text-micro text-faint">
@@ -358,8 +392,7 @@ const descTab = ref('desc')
             </div>
           </div>
 
-          <span v-if="resolvedName === '查询中…'" class="text-micro text-faint">查询中…</span>
-          <span v-else-if="resolvedName" class="text-label text-accent">{{ resolvedName }}</span>
+          <span v-if="resolvedName" class="text-label text-accent">{{ resolvedName }}</span>
           <span v-else-if="appIdOk && !appIdKnown" class="text-micro text-amber">
             AppID 不在密钥权限内 —— 还能继续建，但「读后台 Depot」「同步 Depot」会 403。
           </span>
@@ -439,21 +472,11 @@ const descTab = ref('desc')
 
             <div v-for="d in lk.depots" :key="d.depotId" class="flex items-center gap-2.5 py-1 min-w-0">
               <input
-                v-if="d.platform"
                 type="checkbox"
                 :checked="d.on"
                 class="accent-[#66c0f4] w-3.5 h-3.5 shrink-0"
                 @change="toggleDepot(d)"
               />
-              <select
-                v-else-if="!d.on"
-                class="h-6 px-1.5 rounded-md bg-surface border border-line text-micro shrink-0"
-                @change="onPickPlatform(d, $event)"
-              >
-                <option value="">平台…</option>
-                <option v-for="p in w.platforms" :key="p.id" :value="p.id">{{ p.label }}</option>
-              </select>
-              <span v-else class="text-micro text-accent shrink-0">已加入</span>
 
               <span class="font-mono num text-label shrink-0">{{ d.depotId }}</span>
               <span v-if="d.platform" class="text-label shrink-0" :class="d.on ? 'text-accent' : 'text-muted'">
@@ -494,19 +517,17 @@ const descTab = ref('desc')
               <div
                 v-for="p in w.platforms"
                 :key="p.id"
+                :data-plat-id="p.id"
                 class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-10 border-t border-line-soft transition-colors"
                 :class="[
                   w.picks[p.id].on ? 'bg-[rgba(102,192,244,.035)]' : '',
                   dragId === p.id ? 'bg-[rgba(102,192,244,.09)] opacity-60' : ''
                 ]"
-                @dragover.prevent="onDragOver(p.id)"
               >
                 <span
-                  class="cursor-grab active:cursor-grabbing text-faint hover:text-muted select-none grid place-items-center"
-                  draggable="true"
+                  class="cursor-grab active:cursor-grabbing text-faint hover:text-muted select-none grid place-items-center touch-none"
                   title="拖动排序：从上到下就是 DepotID +1、+2… 的顺序"
-                  @dragstart="onDragStart(p.id, $event)"
-                  @dragend="onDragEnd"
+                  @pointerdown="startDrag(p.id, $event)"
                 >
                 <GripVertical :size="12" :stroke-width="2" />
               </span>

@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
   <Transition name="overlay">
   <div
     v-if="open"
-    class="fixed inset-0 z-[62] grid place-items-center bg-[rgba(6,9,14,.62)] backdrop-blur-[2px] px-6"
+    class="fixed inset-0 z-[62] grid place-items-center bg-black/25 px-6"
     @click.self="!busy && closeStripConfirm()"
   >
     <div ref="el" role="dialog" aria-modal="true" aria-labelledby="strip-dialog-title" class="w-full max-w-[640px] card overflow-hidden">

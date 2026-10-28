@@ -62,7 +62,7 @@ onUnmounted(disarm)
 <template>
   <Transition name="overlay">
   <div v-if="f.open" class="fixed inset-0 z-[60] grid place-items-center p-6 no-drag">
-    <div class="absolute inset-0 bg-[rgba(9,13,19,.82)] backdrop-blur-sm" @click="closeForget" />
+    <div class="absolute inset-0 bg-black/25" @click="closeForget" />
 
     <div ref="el" role="dialog" aria-modal="true" aria-labelledby="forget-title" class="relative card w-full max-w-[540px] max-h-[86vh] overflow-y-auto scroll-thin">
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">

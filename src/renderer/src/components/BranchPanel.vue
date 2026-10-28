@@ -141,6 +141,14 @@ watch(appId, () => {
           新建分支
         </button>
         <button
+          class="btn btn-sm"
+          :disabled="!appId"
+          title="在 Steamworks 后台打开这个 App 的分支页"
+          @click="openExternal(`https://partner.steamgames.com/apps/branches/${appId}`)"
+        >
+          管理分支
+        </button>
+        <button
           v-if="hasKey"
           class="btn btn-sm px-2"
           :disabled="backendBusy || !appId"
@@ -192,16 +200,6 @@ watch(appId, () => {
     <p class="mt-2.5 text-micro text-faint leading-relaxed m-0">
       点分支名即写入本地 vdf 的 SetLive；新分支在这里建，建完后台可能还要在 Steamworks 里配分支。
     </p>
-
-    <div class="mt-3 flex items-center gap-2 flex-wrap">
-      <button
-        class="btn btn-sm no-drag"
-        :disabled="!appId"
-        @click="openExternal(`https://partner.steamgames.com/apps/branches/${appId}`)"
-      >
-        管理分支
-      </button>
-    </div>
 
     <Transition
       enter-active-class="transition duration-200"

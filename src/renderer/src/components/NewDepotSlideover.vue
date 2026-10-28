@@ -64,8 +64,7 @@ const willCreate = computed(() => {
 <template>
   <Transition name="slideover">
     <div v-if="s" class="fixed inset-0 z-50 flex justify-end">
-      <!-- 遮罩不压暗页面：侧边栏直接浮在内容上，靠面板自己的底色和左侧投影分层 -->
-      <div class="absolute inset-0" @click="closeDepotSlide" />
+      <div class="absolute inset-0 bg-black/25" @click="closeDepotSlide" />
 
       <aside
         ref="el"
@@ -88,7 +87,6 @@ const willCreate = computed(() => {
           <div v-if="s.lookupError" class="text-micro text-amber">{{ s.lookupError }}</div>
 
           <div class="flex items-center gap-2">
-            <span class="text-micro font-semibold tracking-wider text-faint uppercase">Steamworks 后台</span>
             <span class="text-micro text-faint">只在本地记录，不会写进 vdf</span>
             <button
               class="ml-auto btn btn-sm px-2.5 no-drag shrink-0"

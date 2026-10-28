@@ -939,10 +939,25 @@ export function wizardClearLookup() {
   if (w) w.lookup = emptyLookup()
 }
 
+/** 后台 depot 没带平台时（Web API 只给 DepotID），按常见平台顺序填进空着的平台行 */
+const WIZARD_STEAM_ORDER = ['win64', 'macos', 'linux', 'win32', 'linuxarm64']
+
+function nextFreePlatform(w) {
+  const used = new Set(
+    Object.entries(w.picks)
+      .filter(([, k]) => k.fromSteam)
+      .map(([id]) => id)
+  )
+  for (const id of WIZARD_STEAM_ORDER) {
+    if (w.picks[id] && !used.has(id)) return id
+  }
+  return w.platforms.map((p) => p.id).find((id) => w.picks[id] && !used.has(id)) || ''
+}
+
 /** 勾 / 取消勾一条后台 depot */
 export function wizardToggleSteamDepot(depotId, platform) {
   const w = state.wizard
-  const d = w?.lookup?.depots?.find((x) => x.depotId === depotId)
+  const d = w?.lookup?.depots?.find((x) => String(x.depotId) === String(depotId))
   if (!d) return
 
   if (d.on) {
@@ -959,10 +974,12 @@ export function wizardToggleSteamDepot(depotId, platform) {
     return
   }
 
-  if (!applySteamDepot(w, d, platform)) {
-    w.lookup.error = '这个平台的 Depot 已经满了'
+  const target = platform || d.platform || nextFreePlatform(w)
+  if (!target || !w.picks[target]) {
+    w.lookup.error = '平台行不够用了：先去平台表里加一行，再勾这个后台 Depot。'
     return
   }
+  applySteamDepot(w, d, target)
   w.lookup.error = null
   autoAssign(w)
 }
@@ -970,7 +987,11 @@ export function wizardToggleSteamDepot(depotId, platform) {
 export function wizardApplyAllSteam() {
   const w = state.wizard
   if (!w?.lookup?.done) return
-  for (const d of w.lookup.depots) if (d.platform && !d.on) applySteamDepot(w, d)
+  for (const d of w.lookup.depots) {
+    if (d.on) continue
+    const target = d.platform || nextFreePlatform(w)
+    if (target) applySteamDepot(w, d, target)
+  }
   autoAssign(w)
 }
 

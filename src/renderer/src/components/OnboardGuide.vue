@@ -283,7 +283,7 @@ function skip() {
 <template>
   <Transition name="overlay">
   <div v-if="o.open" class="fixed inset-0 z-[70] grid place-items-center p-6 no-drag">
-    <div class="absolute inset-0 bg-[rgba(9,13,19,.82)] backdrop-blur-sm" />
+    <div class="absolute inset-0 bg-black/25" />
 
     <div ref="el" role="dialog" aria-modal="true" aria-label="新手教程" class="relative card w-full max-w-[620px] overflow-hidden">
       <!-- 步骤条 -->

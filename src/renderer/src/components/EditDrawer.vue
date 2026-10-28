@@ -301,7 +301,7 @@ onUnmounted(depotDisarm)
 <template>
   <Transition name="overlay">
   <div v-if="drawer" class="fixed inset-0 z-40 flex justify-end">
-    <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="closeDrawer" />
+    <div class="absolute inset-0 bg-black/25" @click="closeDrawer" />
 
     <aside
       ref="el"

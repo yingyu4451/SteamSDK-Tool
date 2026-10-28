@@ -83,7 +83,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
 <template>
   <Transition name="overlay">
   <div v-if="d" class="fixed inset-0 z-[55] grid place-items-center p-6">
-    <div class="absolute inset-0 bg-black/65 backdrop-blur-sm" @click="closeDeleteDialog" />
+    <div class="absolute inset-0 bg-black/25" @click="closeDeleteDialog" />
 
     <div
       ref="el"
