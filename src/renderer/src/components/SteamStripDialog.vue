@@ -78,7 +78,7 @@ onBeforeUnmount(() => {
     class="fixed inset-0 z-[62] grid place-items-center bg-black/25 px-6"
     @click.self="!busy && closeStripConfirm()"
   >
-    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="strip-dialog-title" class="w-full max-w-[640px] card overflow-hidden">
+    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="strip-dialog-title" class="w-full max-w-[640px] card s-modal overflow-hidden">
       <!-- 头 -->
       <div class="flex items-start gap-3 px-5 py-4 border-b border-line-soft">
         <div

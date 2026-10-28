@@ -35,7 +35,7 @@ const win = window.api.win
 
 <template>
   <header
-    class="drag min-h-11 shrink-0 flex items-center gap-3 pl-4 border-b border-line bg-surface-2"
+    class="drag s-header shrink-0 flex items-center gap-3 pl-4"
   >
     <!-- 标记：和 scripts/make-icon.mjs 画的是同一个图形，几何常量一一对应
          （背景 #2f516e→#121a24、立方体顶 #8fd4fa / 左 #3f92c9 / 右 #245c8c、箭头 #eaf6ff；
@@ -57,7 +57,7 @@ const win = window.api.win
         <polygon points="70,152 128,186 128,236 70,202" fill="#3f92c9" />
         <polygon points="186,152 128,186 128,236 186,202" fill="#245c8c" />
       </svg>
-      <span class="text-label font-bold uppercase tracking-[0.09em] text-ink whitespace-nowrap">SteamSDK 上传工作台</span>
+      <span class="s-brand whitespace-nowrap">SteamSDK 上传工作台</span>
     </div>
 
     <div class="h-4 w-px bg-line" />

@@ -77,26 +77,18 @@ function healthTitle(app) {
 </script>
 
 <template>
-  <aside class="w-[236px] shrink-0 border-r border-line bg-surface-2 flex flex-col min-h-0">
+  <aside class="w-[236px] shrink-0 s-sidebar flex flex-col min-h-0">
     <!-- 视图切换 -->
     <nav class="p-3 flex flex-col gap-1" v-stagger="{ each: 0.04 }">
       <button
         v-for="n in nav"
         :key="n.id"
-        class="group flex items-center gap-2.5 h-9 px-3 rounded-input text-body transition-colors cursor-pointer border-0 text-left"
-        :class="
-          state.view === n.id
-            ? 'bg-surface-3 text-ink font-medium'
-            : 'bg-transparent text-muted hover:text-ink hover:bg-surface-3/60'
-        "
+        class="s-nav-item group"
+        :class="state.view === n.id ? 'is-active' : ''"
         @click="state.view = n.id"
       >
         <component :is="n.icon" :size="16" :stroke-width="1.8" class="shrink-0" />
         {{ n.label }}
-        <span
-          v-if="state.view === n.id"
-          class="ml-auto w-1 h-1 rounded-full bg-accent shrink-0"
-        />
       </button>
     </nav>
 

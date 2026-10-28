@@ -71,7 +71,7 @@ const willCreate = computed(() => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-depot-title"
-        class="slideover-panel relative h-full w-[460px] max-w-[92vw] bg-surface border-l border-line shadow-[-18px_0_44px_-24px_rgba(0,0,0,.85)] flex flex-col no-drag"
+        class="slideover-panel s-drawer-panel relative h-full w-[460px] max-w-[92vw] flex flex-col no-drag"
       >
         <header class="px-5 h-14 shrink-0 border-b border-line flex items-center gap-3">
           <h2 id="new-depot-title" class="text-copy font-semibold m-0">新建 Depot</h2>

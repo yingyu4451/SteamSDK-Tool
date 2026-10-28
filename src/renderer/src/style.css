@@ -1,78 +1,78 @@
 @import 'tailwindcss';
 
 /* ==================================================================
-   主题：Steam 商店（store.steampowered.com）的设计语言。
+   主题：新版 Steam 商店（2026 store.steampowered.com）的设计语言。
 
-   取自 Steam DESIGN.md 的四级深蓝阶梯 + 双电压按钮语法：
-     页面 canvas  #1b2838
-     结构 rail    #141f2c（标题栏 / 侧边栏）
-     卡片 tile    #283645
-     内嵌/次要    #384959
-     分隔 hairline #4c6c8c
-     正文 #c6d4df / 次要 #9dabb8 / 白光 #eaf2f8
-     链接蓝 #66c0f4，CTA 蓝 #2881a7 / #06bfff
-     提交动作（上传）用 Steam 的绿：橄榄底 + #beee11 高光线
+   实测自 store.steampowered.com 首页 / 搜索 / 游戏页 / 新闻中心：
+     顶部 chrome  #171d25（header 底，白 logo，正文 #c6d4df）
+     内容 canvas  #1b2838
+     卡片 well    #16202d + 金属冷光渐变 linear-gradient(-60deg, rgba(226,244,255,.3), rgba(84,107,115,.3))
+     正文 #c6d4df / 次要 #8f98a0 / 标题 #fff
+     链接蓝 #66c0f4 / 标签蓝 #67c1f5 / 选中亮蓝 #1a9fff
+     提交动作：Steam 绿渐变（to right, #75b022 → #588a1b）
+     标签：rgba(103,193,245,.2) 底 + #67c1f5 字，2px 圆角，11px
+     标题：页面 26px / 区块 21px，600 字重，白色（不再全大写）
 
-   refactoring-ui 约束（Workflow C，改前先定，不临时发挥）：
-   - 层级：每屏一个主操作（正式上传），其余用次级/文本级按钮。
-   - 字号只用下面 8 档；颜色只有 ink/muted/faint 三档正文色 + 语义色。
-   - 卡片是「平面 + 一档亮度差」，浮层才有投影（Steam 的 elevation 是阶梯不是阴影）。
-   - 圆角 2px 为主（Steam 的锐角签名），没有全胶囊。
-   - 正文对比度全部过 WCAG 4.5:1；颜色不单独承载状态。
+   取舍（refactoring-ui 约束）：
+   - 每屏一个主操作（正式上传 = 绿 CTA），其余为次级/文本级按钮。
+   - 字号只用下面 8 档；正文只有 ink/muted/faint 三档 + 语义色。
+   - 卡片用「冷光渐变 + 1px 暗边 + 顶部 1px 亮线」，浮层单独投影。
+   - 圆角 2px 为主（Steam 的锐角签名），卡片 4px，没有全胶囊。
+   - 正文对比度 ≥ 4.5:1（主按钮绿底白字实测 5.1 / 6.9）。
    ================================================================== */
 @theme {
-  --color-base: #1b2838;
-  --color-surface: #283645;
-  --color-surface-2: #141f2c;
-  --color-surface-3: #384959;
-  --color-line: #33465a;
-  --color-line-soft: #26374a;
+  --color-base: #0f1924;
+  --color-surface: #16202d;
+  --color-surface-2: #171d25;
+  --color-surface-3: #2a475e;
+  --color-line: #22344a;
+  --color-line-soft: #1c2b3c;
 
-  --color-ink: #eaf2f8;
-  /* 三档正文色的实测对比度（surface #283645 / base #1b2838 / surface-2 #141f2c）：
-       ink   #eaf2f8  12.5 / 14.8 / 15.7
-       muted #c6d4df   8.3 /  9.8 / 10.4
-       faint #9dabb8   4.8 /  5.7 /  6.0  */
+  --color-ink: #ffffff;
+  /* 三档正文色的实测对比度（surface #16202d / base #1b2838 / chrome #171d25）：
+       ink   #ffffff  15.9 / 14.3 / 15.6
+       muted #c6d4df  10.2 /  9.2 / 10.0
+       faint #8f98a0   5.2 /  4.7 /  5.1  */
   --color-muted: #c6d4df;
-  --color-faint: #9dabb8;
+  --color-faint: #8f98a0;
 
   /* 结构分隔符（· / | 与细线）专用，低于正文对比度 */
-  --color-rule: #4c6c8c;
+  --color-rule: #3e5a70;
 
   --color-accent: #66c0f4;
-  --color-accent-dim: #2881a7;
+  --color-accent-dim: #1a9fff;
   --color-amber: #f0a92e;
   --color-danger: #ff7d7d;
   --color-success: #a4d007;
 
-  /* Steam 双电压：绿=提交动作，青蓝=导航动作 */
-  --color-cta-top: #a4d007;
-  --color-cta-bottom: #799905;
-  --color-cta-highlight: #beee11;
-  --color-cta-cyan: #06bfff;
-  --color-cta-cyan-mid: #2881a7;
+  /* Steam 新版：绿=提交动作，青蓝=标签/链接 */
+  --color-cta-top: #6b9413;
+  --color-cta-bottom: #4c6b22;
+  --color-cta-highlight: #bdee11;
+  --color-cta-cyan: #67c1f5;
+  --color-cta-cyan-mid: #1a9fff;
   --color-cta-blue: #2d73ff;
 
   --font-sans:
     'Motiva Sans', 'Inter', 'MiSans', 'MiSans Normal', 'Microsoft YaHei UI',
-    'Microsoft YaHei', Arial, sans-serif;
+    'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
   --font-mono:
     'JetBrains Mono', 'Cascadia Mono', 'SF Mono', ui-monospace, 'Consolas', monospace;
 
-  /* 圆角：Steam 的 2px 锐角。卡片/浮层 4，输入框与按钮 2，徽标 2。 */
+  /* 圆角：Steam 的 2px 锐角。well/卡片 4，输入框与按钮 2，徽标 2。 */
   --radius-card: 4px;
   --radius-input: 2px;
   --radius-btn: 2px;
   --radius-tag: 2px;
 
-  /* 字号阶梯（对齐 Steam DESIGN.md 的 11–26px 类型档）：
-     micro 11 / label 12 / body 13 / copy 14 / lead 15 / title 16 / display 21 / stat 26 */
+  /* 字号阶梯（新版商店的 11–26px 类型档）：
+     micro 11 / label 12 / body 13 / copy 14 / lead 15 / title 17 / display 21 / stat 26 */
   --text-micro: 11px;
   --text-label: 12px;
   --text-body: 13px;
   --text-copy: 14px;
   --text-lead: 15px;
-  --text-title: 16px;
+  --text-title: 17px;
   --text-display: 21px;
   --text-stat: 26px;
 }
@@ -91,7 +91,7 @@ body,
 body {
   background: var(--color-base);
   color: var(--color-muted);
-  /* Steam 商店正文字体：Motiva Sans（不可得时用 Inter / MiSans / 雅黑兜底）。
+  /* 新版商店正文字体：Motiva Sans（不可得时用 Segoe UI / MiSans / 雅黑兜底）。
      路径、日志、数字用 --font-mono 单独指定。 */
   font-family: var(--font-sans);
   font-size: var(--text-body);
@@ -100,17 +100,47 @@ body {
   user-select: none;
 }
 
-/* 背景：Steam 商店那层深蓝画布 + 顶部一点冷光，不是纯色也不是大渐变 */
+/* 背景：新版商店是平铺的深蓝画布，只在最顶部压一点暗，不铺大渐变 */
 #app::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(1100px 620px at 14% -16%, rgba(102, 192, 244, 0.1), transparent 60%),
-    linear-gradient(180deg, #1f3045 0%, #1b2838 42%, #16202b 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 220px);
   z-index: 0;
 }
+
+/* ---------- 表单控件的默认外观（新版商店的深色输入框） ---------- */
+@layer base {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    background-color: #0e1721;
+    border: 1px solid rgba(0, 0, 0, 0.55);
+    border-radius: var(--radius-input);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  input:not([type='checkbox']):not([type='radio']):focus,
+  select:focus,
+  textarea:focus {
+    border-color: rgba(102, 192, 244, 0.7);
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.35),
+      0 0 0 2px rgba(26, 159, 255, 0.22);
+    outline: none;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-faint);
+  }
+}
+
 
 input,
 textarea {
@@ -131,20 +161,51 @@ textarea {
   -webkit-app-region: no-drag;
 }
 
-/* ---------- 卡片 ----------
-   Steam 的 elevation 是「换一档底色」，不是投影：
-   tile #283645 比 canvas 亮一档，1px hairline 收边，不压阴影。 */
+/* ---------- 卡片 / well ----------
+   新版商店的 well：深色底 + 一层斜向金属冷光 + 1px 暗边 + 顶部 1px 亮线。
+   圆角 4px，不堆投影（只有浮层才有明显投影）。 */
 .card {
   position: relative;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  background:
+    linear-gradient(-60deg, rgba(226, 244, 255, 0.06) 5%, rgba(84, 107, 115, 0.06) 95%),
+    var(--color-surface);
+  border: 1px solid rgba(0, 0, 0, 0.45);
   border-radius: var(--radius-card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .card-flat {
-  background: rgba(20, 31, 44, 0.62);
-  border: 1px solid var(--color-line-soft);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(0, 0, 0, 0.4);
   border-radius: var(--radius-btn);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* 卡片标题：新版商店的区块标题是「正常大小写、600、白色」，
+   不是全大写小标签。这段覆盖 Tailwind 工具类。 */
+.card h2 {
+  font-size: var(--text-title);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+}
+
+/* 输入框统一成新版商店的暗底内嵌样式（组件里的 bg-surface/border-line 工具类
+   会被这里的无层样式压过，所以焦点态也在这里一并定义）。 */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+textarea,
+select {
+  background-color: rgba(0, 0, 0, 0.25);
+  border-color: rgba(0, 0, 0, 0.5);
+  color: var(--color-ink);
+  border-radius: var(--radius-input);
+}
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(102, 192, 244, 0.6);
+  outline: none;
 }
 
 /* ---------- 切换 App 的过渡 ---------- */
@@ -188,25 +249,26 @@ textarea {
 }
 
 /* ---------- 按钮 ----------
-   Steam 的次要按钮是「平涂 #384959」，主按钮才是绿色提交电压。
-   主按钮取 Steam 绿（橄榄底 + #beee11 高光边），白字过 4.5:1。 */
+   新版商店的次级按钮：深蓝竖向渐变 + 1px 黑边 + 顶部亮线；
+   悬停换成偏亮的蓝灰，主按钮才是 Steam 绿（提交动作）。 */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 0 12px;
-  height: 34px;
+  padding: 0 13px;
+  height: 32px;
   border-radius: var(--radius-btn);
-  border: 1px solid rgba(76, 108, 140, 0.35);
-  background: var(--color-surface-3);
-  color: var(--color-ink);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, #2f4865 5%, #1a293a 95%);
+  color: var(--color-muted);
   font-family: var(--font-sans);
   font-size: var(--text-body);
   font-weight: 500;
   letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition:
     background 0.14s ease,
     border-color 0.14s ease,
@@ -214,8 +276,9 @@ textarea {
     transform 0.08s ease;
 }
 .btn:hover:not(:disabled) {
-  background: #4c6c8c;
-  border-color: rgba(102, 192, 244, 0.45);
+  background: linear-gradient(180deg, #3d5c7d 5%, #22374d 95%);
+  border-color: rgba(0, 0, 0, 0.55);
+  color: var(--color-ink);
 }
 .btn:active:not(:disabled) {
   transform: translateY(1px);
@@ -240,20 +303,22 @@ textarea {
   font-size: var(--text-copy);
 }
 
-/* 主按钮 = Steam 的绿色提交动作（正式上传）。
-   #beee11 只出现在 1px 高光线里 —— Steam 的 lime 是「边缘光」，不是大面积底。 */
+/* 主按钮 = 新版商店的 Steam 绿 CTA（正式上传 / 创建 App）。
+   绿色横向渐变 + 白字（实测 5.1 / 6.9），悬停稍微提亮。 */
 .btn-primary {
-  background: linear-gradient(180deg, var(--color-cta-top), var(--color-cta-bottom));
-  border-color: rgba(190, 238, 17, 0.65);
-  color: var(--color-base);
-  font-weight: 700;
-  text-shadow: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  background: linear-gradient(90deg, var(--color-cta-top) 5%, var(--color-cta-bottom) 95%);
+  border-color: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.25);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #b6e51a, #86a908);
-  border-color: rgba(190, 238, 17, 0.85);
-  color: var(--color-base);
+  background: linear-gradient(90deg, #7ba327 5%, #587a22 95%);
+  border-color: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
 }
 
 /* 危险动作：低调描边红，不跟主按钮抢 */
@@ -281,7 +346,7 @@ textarea {
   color: #ffffff;
 }
 
-/* 面板里的「不抢戏」文字按钮：Steam 的链接蓝 */
+/* 面板里的「不抢戏」文字按钮：新版商店的标签蓝 */
 .link-btn {
   background: transparent;
   border: 0;
@@ -290,7 +355,7 @@ textarea {
   font-family: var(--font-sans);
   font-size: var(--text-label);
   line-height: 1.5;
-  color: var(--color-accent);
+  color: var(--color-cta-cyan);
   cursor: pointer;
   white-space: nowrap;
   transition:
@@ -298,8 +363,8 @@ textarea {
     background-color 0.15s;
 }
 .link-btn:hover {
-  color: #a8d8f0;
-  background: rgba(102, 192, 244, 0.12);
+  color: #99d4ff;
+  background: rgba(103, 193, 245, 0.12);
 }
 .link-btn.is-danger {
   color: #ff9a9a;
@@ -310,7 +375,7 @@ textarea {
 }
 
 /* ---------- 徽标 / 标签 ----------
-   Steam 没有全胶囊：标签也是 2px 锐角小方牌。 */
+   新版商店的标签：2px 圆角、11px、浅蓝底浅蓝字；状态色只做语义区分。 */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -318,34 +383,34 @@ textarea {
   padding: 2px 7px;
   border-radius: var(--radius-tag);
   font-family: var(--font-sans);
-  font-size: var(--text-label);
-  font-weight: 600;
+  font-size: var(--text-micro);
+  font-weight: 500;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
 }
 .pill-ok {
-  background: rgba(164, 208, 7, 0.1);
-  color: var(--color-success);
-  border-color: rgba(164, 208, 7, 0.26);
+  background: rgba(164, 208, 7, 0.12);
+  color: #c4ea4c;
+  border-color: rgba(164, 208, 7, 0.3);
 }
 .pill-warn {
-  background: rgba(240, 169, 46, 0.1);
+  background: rgba(240, 169, 46, 0.12);
   color: var(--color-amber);
-  border-color: rgba(240, 169, 46, 0.26);
+  border-color: rgba(240, 169, 46, 0.3);
 }
 .pill-bad {
-  background: rgba(226, 75, 75, 0.1);
+  background: rgba(226, 75, 75, 0.14);
   color: var(--color-danger);
-  border-color: rgba(226, 75, 75, 0.26);
+  border-color: rgba(226, 75, 75, 0.32);
 }
 .pill-idle {
-  background: rgba(157, 171, 184, 0.09);
-  color: var(--color-muted);
-  border-color: rgba(157, 171, 184, 0.22);
+  background: rgba(103, 193, 245, 0.1);
+  color: var(--color-cta-cyan);
+  border-color: rgba(103, 193, 245, 0.22);
 }
 
-/* ---------- 筛选标签（构建历史） ----------
-   Steam 的分类筛选：未选是平涂，选中换成 CTA 蓝底 + 白字。 */
+/* ---------- 筛选标签（构建历史 / 平台切换） ----------
+   新版商店的筛选：未选是暗底细边，选中换成亮蓝底 + 白字（#1a9fff）。 */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -356,9 +421,9 @@ textarea {
   font-size: var(--text-label);
   font-weight: 500;
   cursor: pointer;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.2);
   color: var(--color-muted);
-  border: 1px solid var(--color-line);
+  border: 1px solid rgba(0, 0, 0, 0.4);
   transition:
     background 0.14s,
     color 0.14s,
@@ -366,12 +431,13 @@ textarea {
 }
 .chip:hover {
   color: var(--color-ink);
-  border-color: rgba(102, 192, 244, 0.35);
+  border-color: rgba(102, 192, 244, 0.45);
 }
 .chip-on {
   background: var(--color-cta-cyan-mid);
   color: #ffffff;
-  border-color: var(--color-cta-cyan);
+  border-color: var(--color-cta-cyan-mid);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 /* ---------- 目录 / 文件路径 ----------
@@ -385,9 +451,9 @@ textarea {
   min-width: 0;
   padding: 3px 8px;
   border-radius: var(--radius-input);
-  border: 1px solid rgba(102, 192, 244, 0.2);
-  background: rgba(20, 31, 44, 0.5);
-  color: #a8d8f0;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.22);
+  color: #99d4ff;
   font-family: var(--font-mono);
   font-size: var(--text-label);
   line-height: 1.6;
@@ -399,9 +465,9 @@ textarea {
     color 0.14s;
 }
 .path-link:hover {
-  background: rgba(102, 192, 244, 0.13);
+  background: rgba(103, 193, 245, 0.1);
   border-color: rgba(102, 192, 244, 0.5);
-  color: #d3ecfa;
+  color: #c6e7fb;
 }
 .path-link:active {
   background: rgba(102, 192, 244, 0.2);
@@ -492,9 +558,9 @@ textarea {
   height: 38px;
   margin-bottom: 4px;
   border-radius: var(--radius-input);
-  border: 1px solid rgba(102, 192, 244, 0.22);
-  background: rgba(20, 31, 44, 0.55);
-  color: var(--color-accent);
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--color-cta-cyan);
 }
 .empty-state-compact .empty-icon {
   width: 28px;
@@ -571,7 +637,7 @@ textarea {
 }
 
 /* ---------- 工具条浮层 ----------
-   绝对定位、不占布局；Steam 的下拉是深色 tile + 细边 + 一道投影。 */
+   绝对定位、不占布局；新版商店的下拉是深色 well + 1px 黑边 + 一道投影。 */
 .bar-pop {
   position: absolute;
   top: calc(100% + 10px);
@@ -582,11 +648,11 @@ textarea {
   overscroll-behavior: contain;
   scrollbar-width: thin;
   border-radius: var(--radius-card);
-  border: 1px solid var(--color-line);
-  background: #22303f;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  background: var(--color-surface);
   box-shadow:
-    0 18px 40px -16px rgba(0, 0, 0, 0.85),
-    0 2px 6px -2px rgba(0, 0, 0, 0.6);
+    0 18px 40px -14px rgba(0, 0, 0, 0.9),
+    0 4px 12px -4px rgba(0, 0, 0, 0.6);
 }
 
 .bar-pop-wide {
@@ -737,4 +803,207 @@ textarea {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ============================================================
+   照抄 Steam 商店（store.steampowered.com v7）组件层
+   规则来源：home.css / store.css / global.css / buttons.css 实际值
+   （#171d25 header、--light-ctn-bg rgba(179,218,255,.08)、
+     btn_grey_black、btn_green_steamui、app_tag、store nav tab）
+   ============================================================ */
+
+/* 页面底：商店在页面顶部有一道钢蓝（94,174,255）径向光，向下淡出 */
+body {
+  background-color: #0f1924;
+  background-image: radial-gradient(circle at 50% 5%, rgba(94, 174, 255, 0.35) 0%, rgba(94, 174, 255, 0.08) 30%, rgba(94, 174, 255, 0) 70%);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  color: #c6d4df;
+}
+#app::before { display: none; }
+
+/* 顶栏：Steam 全局 header #171d25 */
+.s-header {
+  background: #171d25;
+  border-bottom: 1px solid #171a21;
+  min-height: 52px;
+}
+.s-brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #dcdedf;
+}
+
+/* 侧栏：与顶栏同色的 Steam 客户端左栏；导航项照抄商店 nav tab */
+.s-sidebar {
+  background: #171d25;
+  border-right: 1px solid #171a21;
+}
+.s-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: #d9dadd;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s linear, color 0.12s linear;
+}
+.s-nav-item:hover,
+.s-nav-item.is-active {
+  background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%);
+  color: #fff;
+}
+.s-nav-item.is-active:hover {
+  background: linear-gradient(-60deg, #7acdf8 0%, #4a87a9 100%);
+}
+
+/* 面板：商店内容块 = --light-ctn-bg（半透明淡蓝薄片），3px 圆角，无边框无投影 */
+.card {
+  background: rgba(179, 218, 255, 0.08);
+  background-image: none;
+  border: 0;
+  border-radius: 3px;
+  box-shadow: none;
+}
+.card::before { display: none; }
+.card h2 {
+  font-size: 21px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.card-flat {
+  background: rgba(0, 0, 0, 0.2);
+  border: 0;
+  border-radius: 3px;
+}
+
+/* 按钮：btn_grey_black / btn_green_steamui / btn_red */
+.btn {
+  height: 32px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #67c1f5;
+  font-size: 13px;
+  font-weight: 400;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: none;
+  transition: background 0.12s linear, color 0.12s linear;
+}
+.btn:hover:not(:disabled) { background: rgba(102, 192, 244, 0.4); color: #fff; }
+.btn:active:not(:disabled) { background: rgba(102, 192, 244, 0.2); color: #fff; }
+.btn:disabled { opacity: 0.45; background: rgba(0, 0, 0, 0.3); color: rgba(103, 193, 245, 0.5); text-shadow: none; }
+.btn-sm { height: 26px; padding: 0 12px; font-size: 12px; }
+.btn-lg { height: 40px; padding: 0 18px; font-size: 14px; }
+
+.btn-primary {
+  background: linear-gradient(90deg, #75b022 5%, #588a1b 95%);
+  color: #d2efa9;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: none;
+  border: 0;
+}
+.btn-primary:hover:not(:disabled) { background: linear-gradient(90deg, #8ed629 5%, #6aa621 95%); color: #fff; }
+.btn-primary:active:not(:disabled) { background: linear-gradient(90deg, #4e7a14 5%, #3f6010 95%); color: #fff; }
+
+.btn-danger { background: rgba(0, 0, 0, 0.5); color: #ff8a8a; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3); border: 0; }
+.btn-danger:hover:not(:disabled) { background: rgba(190, 60, 60, 0.45); color: #fff; }
+.btn-danger-solid { background: linear-gradient(90deg, #a63a3a 5%, #7d1f1f 95%); color: #ffd3d3; }
+.btn-danger-solid:hover:not(:disabled) { background: linear-gradient(90deg, #c24b4b 5%, #932a2a 95%); color: #fff; }
+
+/* 链接 / 路径 */
+.link-btn { background: transparent; border: 0; color: #67c1f5; text-shadow: none; }
+.link-btn:hover { color: #fff; background: transparent; }
+.link-btn.is-danger { color: #ff8a8a; }
+.link-btn.is-danger:hover { color: #fff; background: transparent; }
+.path-link { background: rgba(0, 0, 0, 0.2); border: 0; border-radius: 2px; color: #67c1f5; }
+.path-link:hover { background: rgba(0, 0, 0, 0.35); border: 0; color: #fff; }
+.path-link .path-text { color: inherit; }
+
+/* 标签：Steam app_tag（#384959 底 + #b0aeac 字 + 3px 圆角 + 1px 1px 0 #000 硬投影） */
+.pill {
+  height: 19px;
+  line-height: 19px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 3px;
+  background: #384959;
+  color: #b0aeac;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 1px 1px 0 0 #000;
+}
+.pill-ok { background: #a4d007; color: #111; }
+.pill-warn { background: #bb9d2f; color: #111; }
+.pill-bad { background: #9a3130; color: #fff; }
+.pill-idle { background: #384959; color: #67c1f5; }
+
+/* 筛选 chip：商店导航 tab 行为 */
+.chip {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: #d9dadd;
+  font-size: 12px;
+  font-weight: 700;
+}
+.chip:hover { background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%); color: #fff; }
+.chip-on { background: linear-gradient(-60deg, #67c1f5 0%, #417a9b 100%); color: #fff; box-shadow: none; }
+
+/* 输入框：商店的深色内嵌字段 */
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input:not([type]),
+textarea,
+select {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  color: #fff;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(103, 193, 245, 0.7);
+}
+
+/* 浮层：商店下拉/弹层 = #171a21 底 + 黑边 + 深投影 */
+.bar-pop {
+  background: #171d25;
+  border: 1px solid #000;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+}
+/* 弹窗/抽屉：商店的弹层是实底 #171a21 + 黑边 + 深投影（不能用半透明卡片底） */
+.s-modal {
+  background: #171d25;
+  border: 1px solid #000;
+  border-radius: 3px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.65);
+}
+.s-drawer-panel {
+  background: #171d25;
+  border-left: 1px solid #000;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5);
 }

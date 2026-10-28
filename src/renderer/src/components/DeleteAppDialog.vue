@@ -90,7 +90,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-app-title"
-      class="relative card w-full max-w-[560px] max-h-[88vh] overflow-y-auto scroll-thin transition-colors duration-200"
+      class="relative card s-modal w-full max-w-[560px] max-h-[88vh] overflow-y-auto scroll-thin transition-colors duration-200"
       :class="armed ? 'border-danger' : 'border-[rgba(226,75,75,.35)]'"
     >
       <header class="px-6 pt-5 pb-4 border-b border-line">

@@ -285,7 +285,7 @@ function skip() {
   <div v-if="o.open" class="fixed inset-0 z-[70] grid place-items-center p-6 no-drag">
     <div class="absolute inset-0 bg-black/25" />
 
-    <div ref="el" role="dialog" aria-modal="true" aria-label="新手教程" class="relative card w-full max-w-[620px] overflow-hidden">
+    <div ref="el" role="dialog" aria-modal="true" aria-label="新手教程" class="relative card s-modal w-full max-w-[620px] overflow-hidden">
       <!-- 步骤条 -->
       <div class="flex items-center gap-2 px-6 pt-5">
         <button

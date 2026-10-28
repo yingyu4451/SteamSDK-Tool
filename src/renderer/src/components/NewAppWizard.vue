@@ -265,7 +265,7 @@ const descTab = ref('desc')
   <div v-if="w" class="fixed inset-0 z-50 grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/25" @click="closeWizard" />
 
-    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="new-app-title" class="relative card w-full max-w-[660px] max-h-[88vh] overflow-y-auto scroll-thin no-drag">
+    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="new-app-title" class="relative card s-modal w-full max-w-[660px] max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-6 h-14 border-b border-line flex items-center gap-3">
         <h2 id="new-app-title" class="text-lead font-semibold m-0">新建 App</h2>
         <button

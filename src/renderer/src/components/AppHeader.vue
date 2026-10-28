@@ -46,7 +46,7 @@ const dup = computed(() => {
     <div class="flex items-start gap-4 flex-wrap min-w-0">
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-          <h1 class="text-display font-semibold tracking-tight m-0 break-words min-w-0">{{ app.dirName }}</h1>
+          <h1 class="text-stat font-normal tracking-tight m-0 break-words min-w-0 text-ink">{{ app.dirName }}</h1>
           <span class="pill" :class="status.tone">{{ status.text }}</span>
           <span v-if="app.setLive" class="pill pill-warn">SetLive · {{ app.setLive }}</span>
           <button class="btn btn-sm no-drag" title="改 AppID / 描述 / 项目文件夹 / 构建缓存目录" @click="openDrawer('app')">

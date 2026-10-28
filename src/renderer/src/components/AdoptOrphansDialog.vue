@@ -34,7 +34,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
   <div v-if="d" class="fixed inset-0 z-50 grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/25" @click="closeOrphanDialog" />
 
-    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="adopt-title" class="relative card w-full max-w-[560px] max-h-[86vh] overflow-y-auto scroll-thin no-drag">
+    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="adopt-title" class="relative card s-modal w-full max-w-[560px] max-h-[86vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-6 pt-5 pb-4 border-b border-line flex items-start gap-3">
         <div>
           <h2 id="adopt-title" class="text-lead font-semibold m-0">把游离的 vdf 收进一个 App</h2>
