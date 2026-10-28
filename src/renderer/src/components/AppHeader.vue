@@ -61,7 +61,7 @@ const dup = computed(() => {
           <span class="num">
             AppID <span class="text-ink font-medium">{{ app.appId || '—' }}</span>
           </span>
-          <span class="text-rule">|</span>
+          <span class="text-faint">|</span>
           <span class="num">{{ app.depots.length }} 个 Depot</span>
         </div>
 

@@ -151,7 +151,7 @@ function healthTitle(app) {
         </div>
         <div class="mt-1.5 flex items-center gap-2 text-micro text-faint num">
           <span>App {{ app.appId || '?' }}</span>
-          <span class="text-rule">·</span>
+          <span class="text-faint">·</span>
           <span>{{ app.depots?.length || 0 }} Depot</span>
           <span v-if="app.setLive" class="ml-auto text-amber truncate max-w-[74px]">
             {{ app.setLive }}

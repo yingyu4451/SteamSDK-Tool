@@ -127,7 +127,7 @@ function openLogDir() {
             <div class="text-body font-medium truncate">{{ h.name }}</div>
             <div class="mt-1 flex items-center gap-2 text-micro text-faint num">
               <span>{{ fmtTime(h.mtime) }}</span>
-              <span class="text-rule">·</span>
+              <span class="text-faint">·</span>
               <span>{{ fmtSize(h.size) }}</span>
             </div>
           </button>

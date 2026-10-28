@@ -132,7 +132,7 @@ async function openPath(p) {
         </div>
         <div class="mt-1 flex items-center gap-1.5 text-micro text-faint num min-w-0">
           <span class="font-mono truncate">{{ d.id }}</span>
-          <span class="text-rule">·</span>
+          <span class="text-faint">·</span>
           <span class="shrink-0">{{ fmtSize(d.analysis?.totalBytes) }}</span>
         </div>
       </button>
