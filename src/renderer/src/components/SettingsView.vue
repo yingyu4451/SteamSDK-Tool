@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { Download, ShieldOff, Wrench, Minus, Plus } from '@lucide/vue'
+import ChangelogDialog from './ChangelogDialog.vue'
 import {
   state,
   rescan,
@@ -40,6 +41,8 @@ const accountDraft = ref('')
 const passwordDraft = ref('')
 const saving = ref(false)
 const message = ref(null)
+/** 更新日志弹窗 */
+const changelogOpen = ref(false)
 
 /* ---- Web API 密钥 ---- */
 const apiKeyDraft = ref('')
@@ -524,9 +527,12 @@ function openExternal(url) {
               Steamworks 构建页
             </button>
             <button class="btn no-drag" @click="openReleases()">GitHub 仓库</button>
+            <button class="btn no-drag" @click="changelogOpen = true">更新日志</button>
           </div>
         </section>
       </div>
     </div>
   </div>
+
+  <ChangelogDialog :open="changelogOpen" @close="changelogOpen = false" />
 </template>
