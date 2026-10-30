@@ -130,17 +130,17 @@ function openRepo() {
 </script>
 
 <template>
-  <div class="p-5 flex flex-col gap-6 min-w-0 max-w-[720px]">
-    <div class="card p-4 flex items-center gap-3" v-reveal>
+  <div class="p-5 flex flex-col gap-6 min-w-0 max-w-215">
+    <div class="card px-5 py-4 flex items-center gap-3" v-reveal>
       <BookOpen :size="20" :stroke-width="1.8" class="text-accent shrink-0" />
       <div class="min-w-0">
-        <h1 class="text-lead font-semibold m-0">使用手册</h1>
-        <p class="mt-1 mb-0 text-label text-faint">每个按钮是干什么的、怎么开始。</p>
+        <h1 class="text-display font-semibold m-0 text-ink">使用手册</h1>
+        <p class="mt-1 mb-0 text-body text-muted">每个按钮是干什么的、怎么开始。</p>
       </div>
       <input
         v-model="q"
         placeholder="搜…"
-        class="ml-auto w-[180px] h-9 px-3 rounded-input bg-surface border border-line text-label outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+        class="ml-auto w-45 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
       />
       <button class="btn no-drag shrink-0" title="从头走一遍设置流程" @click="startOnboard">
         <GraduationCap :size="14" :stroke-width="1.9" />
@@ -154,7 +154,7 @@ function openRepo() {
       class="card px-5 py-4"
       v-reveal="{ delay: Math.min(i * 0.03, 0.18) }"
     >
-      <h2 class="text-copy font-semibold m-0 mb-3.5">{{ sec.title }}</h2>
+      <h2 class="font-semibold m-0 mb-3.5">{{ sec.title }}</h2>
 
       <template v-for="(b, j) in sec.blocks" :key="j">
         <p v-if="b.t === 'p'" class="m-0 mb-3 text-body text-muted leading-[1.75]">
@@ -174,15 +174,15 @@ function openRepo() {
         </ol>
 
         <div v-else-if="b.t === 'dl'" class="m-0 mb-3 flex flex-col gap-3.5">
-          <div v-for="(pair, k) in b.v" :key="k" class="grid grid-cols-[110px_1fr] gap-x-5 items-baseline">
-            <span class="text-body text-ink font-normal">{{ pair[0] }}</span>
+          <div v-for="(pair, k) in b.v" :key="k" class="grid grid-cols-[150px_1fr] gap-x-5 items-baseline">
+            <span class="text-body text-ink">{{ pair[0] }}</span>
             <span class="text-body text-muted leading-[1.75]">{{ pair[1] }}</span>
           </div>
         </div>
 
         <div
           v-else-if="b.t === 'note'"
-          class="mt-1.5 mb-2 rounded-input border border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)] px-3.5 py-2.5 text-body text-accent leading-[1.7]"
+          class="mt-1.5 mb-2 rounded-input border border-accent/22 bg-accent/5 px-3.5 py-2.5 text-body text-accent leading-[1.7]"
         >
           {{ b.v }}
         </div>
@@ -193,7 +193,7 @@ function openRepo() {
       没有匹配「{{ q }}」的章节。
     </div>
 
-    <div class="card p-4 flex items-center gap-3" v-reveal>
+    <div class="card px-5 py-4 flex items-center gap-3" v-reveal>
       <div class="min-w-0">
         <div class="text-body text-ink">完整文档在仓库里</div>
         <div class="mt-0.5 text-label text-faint">中文和 English README 内容更全，含已知限制和开发说明。</div>

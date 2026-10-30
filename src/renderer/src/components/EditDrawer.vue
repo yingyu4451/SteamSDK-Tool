@@ -308,14 +308,14 @@ onUnmounted(depotDisarm)
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-drawer-title"
-      class="overlay-drawer relative w-[500px] max-w-[92vw] h-full bg-surface border-l border-line flex flex-col min-h-0"
+      class="overlay-drawer relative w-125 max-w-[92vw] h-full bg-surface border-l border-line flex flex-col min-h-0"
     >
       <header class="px-5 py-4 border-b border-line flex items-center gap-3 shrink-0">
         <div>
-          <h2 id="edit-drawer-title" class="text-copy font-semibold m-0">
+          <h2 id="edit-drawer-title" class="text-title font-semibold m-0">
             {{ isDepot ? `编辑 Depot ${depot?.id ?? ''}` : '编辑 App' }}
           </h2>
-          <div class="mt-1 text-micro font-mono text-faint break-all max-w-[360px]">
+          <div class="mt-1 text-micro font-mono text-faint break-all max-w-90">
             {{ isDepot ? drawer.depotFile : detail?.appFile }}
           </div>
         </div>
@@ -331,10 +331,10 @@ onUnmounted(depotDisarm)
         <!-- ============ App ============ -->
         <template v-if="!isDepot">
           <!-- 一行一条：平时只读，点右边的按钮才进编辑态 -->
-          <div class="card-flat divide-y divide-[#22334a]">
+          <div class="card-flat divide-y divide-line">
             <div class="px-3 py-2.5">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="w-[88px] shrink-0 text-label text-faint">App 名字</span>
+                <span class="w-22 shrink-0 text-label text-faint">App 名字</span>
                 <template v-if="editing !== 'name'">
                   <span class="min-w-0 flex-1 text-body truncate">{{ detail?.dirName }}</span>
                   <button
@@ -347,7 +347,7 @@ onUnmounted(depotDisarm)
                 <template v-else>
                   <input
                     v-model="nameForm"
-                    class="flex-1 min-w-0 h-9 px-2.5 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)]"
+                    class="flex-1 min-w-0 h-9 px-2.5 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
                     @keyup.enter="doRename"
                   />
                   <button
@@ -360,7 +360,7 @@ onUnmounted(depotDisarm)
                   <button class="btn btn-sm px-2.5  no-drag shrink-0" @click="cancelEdit">取消</button>
                 </template>
               </div>
-              <div v-if="editing === 'name' && nameDirty" class="mt-1.5 pl-[96px] text-micro text-faint leading-relaxed">
+              <div v-if="editing === 'name' && nameDirty" class="mt-1.5 pl-24 text-micro text-faint leading-relaxed">
                 会把 <span class="font-mono">scripts\{{ detail?.dirName }}</span> 整个文件夹改成
                 <span class="font-mono">scripts\{{ nameForm.trim() }}</span>，脚本文件跟着重命名。内容目录<strong class="text-muted">不动</strong>。
               </div>
@@ -368,7 +368,7 @@ onUnmounted(depotDisarm)
 
             <div v-for="row in appRows" :key="row.key" class="px-3 py-2.5">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="w-[88px] shrink-0 text-label text-faint">{{ row.label }}</span>
+                <span class="w-22 shrink-0 text-label text-faint">{{ row.label }}</span>
                 <template v-if="editing !== row.key">
                   <span
                     class="min-w-0 flex-1 text-body"
@@ -384,7 +384,7 @@ onUnmounted(depotDisarm)
                   <input
                     v-model="editValue"
                     :placeholder="row.placeholder || ''"
-                    class="flex-1 min-w-0 h-9 px-2.5 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                    class="flex-1 min-w-0 h-9 px-2.5 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
                     :class="[row.mono ? 'font-mono' : '', row.num ? 'num' : '']"
                     @keyup.enter="commitEdit(row.key)"
                   />
@@ -403,7 +403,7 @@ onUnmounted(depotDisarm)
               </div>
 
               <template v-if="row.key === 'contentRoot' && editing !== 'contentRoot'">
-                <div v-if="detail?.depots?.length" class="mt-2 pl-[96px] flex flex-col gap-1">
+                <div v-if="detail?.depots?.length" class="mt-2 pl-24 flex flex-col gap-1">
                   <div v-for="d in detail.depots" :key="'pd' + d.id" class="flex items-center gap-2 min-w-0">
                     <span class="w-[74px] shrink-0 text-micro text-faint">{{ d.platform || d.id }}</span>
                     <PathLink :path="d.contentRoot" kind="folder" class="min-w-0 flex-1" />
@@ -419,7 +419,7 @@ onUnmounted(depotDisarm)
                 </button>
                 <div
                   v-if="syncMsg"
-                  class="mt-1.5 pl-[96px] text-micro"
+                  class="mt-1.5 pl-24 text-micro"
                   :class="syncMsg.ok ? 'text-accent/90' : 'text-danger'"
                 >
                   {{ syncMsg.text }}
@@ -437,7 +437,7 @@ onUnmounted(depotDisarm)
             <div class="flex flex-col gap-1.5">
               <div v-for="(r, i) in ignoredRows" :key="i" class="flex items-start gap-2">
                 <span class="text-label leading-relaxed min-w-0 flex-1 text-faint">{{ r.text }}</span>
-                <span class="text-micro shrink-0 text-faint pt-[2px]">
+                <span class="text-micro shrink-0 text-faint pt-0.5">
                   {{ r.perm ? '永久忽略' : '本次忽略' }}
                 </span>
                 <button
@@ -464,14 +464,14 @@ onUnmounted(depotDisarm)
               <span class="text-label text-muted">DepotID</span>
               <input
                 v-model="depotForm.depotId"
-                class="h-9 px-3 rounded-input bg-surface border border-line text-body num outline-none focus:border-[rgba(102,192,244,.45)]"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body num outline-none focus:border-accent/45"
               />
             </label>
             <label class="flex flex-col gap-1.5">
               <span class="text-label text-muted">平台</span>
               <select
                 v-model="depotForm.platform"
-                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)]"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
               >
                 <option v-for="p in platforms" :key="p.id" :value="p.id">{{ p.label }}</option>
               </select>
@@ -486,7 +486,7 @@ onUnmounted(depotDisarm)
             <div class="flex gap-2">
               <input
                 v-model="depotForm.contentRoot"
-                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-accent/45"
               />
               <button class="btn no-drag" @click="pickRoot">选择…</button>
             </div>
@@ -499,7 +499,7 @@ onUnmounted(depotDisarm)
               <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="resetRules">恢复默认</button>
             </div>
 
-            <div class="card-flat divide-y divide-[#22334a] max-h-[260px] overflow-y-auto scroll-thin">
+            <div class="card-flat divide-y divide-line max-h-65 overflow-y-auto scroll-thin">
               <div
                 v-for="(rule, i) in depotForm.exclusions"
                 :key="i"
@@ -510,7 +510,7 @@ onUnmounted(depotDisarm)
                   class="flex-1 bg-transparent border-0 outline-none text-label font-mono text-accent"
                 />
                 <button
-                  class="w-6 h-6 grid place-items-center rounded-card text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer"
+                  class="w-6 h-6 grid place-items-center rounded-card text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-danger/10 transition-all bg-transparent border-0 cursor-pointer"
                   @click="removeRule(i)"
                 >
                   <X :size="14" :stroke-width="2" />
@@ -525,7 +525,7 @@ onUnmounted(depotDisarm)
               <input
                 v-model="newRule"
                 placeholder="加一条，例如 *.pdb 或 logs\*"
-                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-accent/45 placeholder:text-faint"
                 @keydown.enter="addRule"
               />
               <button class="btn no-drag" :disabled="!newRule.trim()" @click="addRule">添加</button>
@@ -546,7 +546,7 @@ onUnmounted(depotDisarm)
               </span>
             </div>
 
-            <div class="card-flat divide-y divide-[#22334a] max-h-[200px] overflow-y-auto scroll-thin">
+            <div class="card-flat divide-y divide-line max-h-50 overflow-y-auto scroll-thin">
               <div
                 v-for="(row, i) in depotForm.userConfig"
                 :key="'uc' + i"
@@ -558,7 +558,7 @@ onUnmounted(depotDisarm)
                   class="flex-1 min-w-0 bg-transparent border-0 outline-none text-label font-mono text-accent placeholder:text-faint"
                 />
                 <button
-                  class="w-6 h-6 grid place-items-center rounded-card text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-[rgba(255,92,108,.1)] transition-all bg-transparent border-0 cursor-pointer shrink-0"
+                  class="w-6 h-6 grid place-items-center rounded-card text-faint opacity-0 group-hover:opacity-100 hover:text-danger hover:bg-danger/10 transition-all bg-transparent border-0 cursor-pointer shrink-0"
                   @click="removeUserConfig(i)"
                 >
                   <X :size="14" :stroke-width="2" />
@@ -573,7 +573,7 @@ onUnmounted(depotDisarm)
               <input
                 v-model="newUserConfig"
                 placeholder="相对内容目录，例如 MyGame_Data/Progress"
-                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-accent/45 placeholder:text-faint"
                 @keydown.enter="addUserConfig"
               />
               <button class="btn no-drag" :disabled="!newUserConfig.trim()" @click="addUserConfig">

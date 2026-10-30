@@ -78,11 +78,11 @@ onBeforeUnmount(() => {
     class="fixed inset-0 z-[62] grid place-items-center bg-black/25 px-6"
     @click.self="!busy && closeStripConfirm()"
   >
-    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="strip-dialog-title" class="w-full max-w-[640px] card s-modal overflow-hidden">
+    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="strip-dialog-title" class="w-full max-w-160 card s-modal overflow-hidden">
       <!-- 头 -->
       <div class="flex items-start gap-3 px-5 py-4 border-b border-line-soft">
         <div
-          class="shrink-0 w-9 h-9 rounded-input grid place-items-center bg-[rgba(102,192,244,.1)] text-accent border border-[rgba(102,192,244,.18)]"
+          class="shrink-0 w-9 h-9 rounded-input grid place-items-center bg-accent/10 text-accent border border-accent/18"
         >
           <Unplug :size="17" :stroke-width="1.8" />
         </div>
@@ -146,7 +146,7 @@ onBeforeUnmount(() => {
           >
             <input
               type="checkbox"
-              class="mt-0.5 accent-[#66c0f4]"
+              class="mt-0.5 accent-accent"
               :checked="removeConfig"
               :disabled="busy"
               @change="setStripRemoveConfig($event.target.checked)"
@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
             选择…
           </button>
         </div>
-        <div class="text-micro text-faint pl-[72px]">
+        <div class="text-micro text-faint pl-18">
           「选择…」选一个父文件夹，副本自动命名成
           <span class="font-mono">{{ inspect.name }}{{ inspect.destSuffix || '_NoSteam' }}</span>
           ；重名会加 -2、-3。
@@ -232,7 +232,7 @@ onBeforeUnmount(() => {
 
       <!-- 底栏 -->
       <div
-        class="flex items-center gap-2 px-5 py-3.5 border-t border-line-soft bg-[rgba(9,15,23,.35)]"
+        class="flex items-center gap-2 px-5 py-3.5 border-t border-line-soft bg-black/35"
       >
         <span class="text-micro text-faint">只复制内容目录，不改 vdf</span>
         <button class="btn ml-auto" :disabled="busy" @click="closeStripConfirm">取消</button>

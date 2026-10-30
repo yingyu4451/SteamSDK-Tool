@@ -239,19 +239,23 @@ function openExternal(url) {
 </script>
 
 <template>
-  <div class="p-5 max-w-[1200px]">
+  <div class="p-5 max-w-300">
+    <header class="mb-4 flex items-end gap-3 flex-wrap">
+      <h1 class="text-display font-semibold m-0 text-ink">设置</h1>
+      <p class="m-0 text-body text-muted">SDK 路径、登录凭据、Web API 密钥和界面缩放。</p>
+    </header>
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
 
       <!-- 左栏：路径 + 凭据 -->
       <div class="flex flex-col gap-4 min-w-0">
         <!-- 路径 -->
         <section class="card p-5" v-reveal>
-          <h2 class="text-body font-semibold m-0">SDK 路径</h2>
+          <h2 class="font-semibold m-0">SDK 路径</h2>
 
           <div class="mt-3.5 flex gap-2">
             <input
               v-model="sdkDraft"
-              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
               placeholder="D:\SteamSDK"
             />
             <button class="btn no-drag" @click="pick">选择…</button>
@@ -274,7 +278,7 @@ function openExternal(url) {
           <div class="mt-4 grid grid-cols-1 gap-1.5">
             <div v-for="c in checks" :key="c.label" class="flex items-start gap-2.5 text-label">
               <span class="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" :class="c.ok ? 'bg-success' : 'bg-danger'" />
-              <span class="w-[110px] shrink-0 pt-0.5" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
+              <span class="w-28 shrink-0 pt-0.5" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
               <span class="font-mono text-faint break-all min-w-0 flex-1">{{ c.path }}</span>
             </div>
           </div>
@@ -306,7 +310,7 @@ function openExternal(url) {
         <!-- 凭据 -->
         <section class="card p-5" v-reveal="{ delay: 0.04 }">
           <div class="flex items-center gap-2.5">
-            <h2 class="text-body font-semibold m-0">登录凭据</h2>
+            <h2 class="font-semibold m-0">登录凭据</h2>
             <span class="pill" :class="state.hasPassword ? 'pill-ok' : 'pill-idle'">
               {{ state.hasPassword ? '已保存' : '未保存' }}
             </span>
@@ -316,18 +320,18 @@ function openExternal(url) {
           <div class="mt-3.5 flex gap-2">
             <input
               v-model="accountDraft"
-              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-[rgba(102,192,244,.45)]"
+              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
               placeholder="Steam 构建账号名"
               @keydown.enter="saveAccount"
             />
-            <button class="btn btn-primary no-drag" :disabled="saving" @click="saveAccount">保存</button>
+            <button class="btn no-drag" :disabled="saving" @click="saveAccount">保存</button>
           </div>
 
           <div class="mt-2.5 flex gap-2">
             <input
               v-model="passwordDraft"
               type="password"
-              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)]"
+              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
               placeholder="Steam 账号密码"
               @keydown.enter="savePw"
             />
@@ -350,12 +354,12 @@ function openExternal(url) {
         <!-- Steamworks Web API -->
         <section class="card p-5" v-reveal="{ delay: 0.06 }">
           <div class="flex items-center gap-2">
-            <h2 class="text-body font-semibold m-0">Steamworks Web API 密钥</h2>
+            <h2 class="font-semibold m-0">Steamworks Web API 密钥</h2>
             <span
-              class="px-2 py-[3px] rounded-full text-micro border"
+              class="px-2 py-0.5 rounded-full text-micro border"
               :class="
                 keyState.has
-                  ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
+                  ? 'text-accent border-accent/30 bg-accent/7'
                   : 'text-faint border-line'
               "
             >
@@ -368,7 +372,7 @@ function openExternal(url) {
               v-model="apiKeyDraft"
               type="password"
               placeholder="32 位十六进制 Publisher 密钥"
-              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45 placeholder:text-faint"
             />
             <button class="btn no-drag" :disabled="!apiKeyDraft.trim()" @click="saveKey">加密保存</button>
             <button class="btn no-drag" :disabled="!keyState.has" @click="clearKey">清除</button>
@@ -392,7 +396,7 @@ function openExternal(url) {
 
         <!-- 界面缩放 -->
         <section class="card p-5" v-reveal="{ delay: 0.07 }">
-          <h2 class="text-body font-semibold m-0">界面缩放</h2>
+          <h2 class="font-semibold m-0">界面缩放</h2>
           <div class="mt-3 flex items-center gap-2">
             <button
               class="btn btn-square no-drag w-9"
@@ -429,7 +433,7 @@ function openExternal(url) {
         <!-- 关于 & 更新 -->
         <section class="card p-5" v-reveal="{ delay: 0.08 }">
           <div class="flex items-center gap-2.5 flex-wrap">
-            <h2 class="text-body font-semibold m-0">关于</h2>
+            <h2 class="font-semibold m-0">关于</h2>
             <span class="pill">{{ u.current ? `v${u.current}` : '读取版本中…' }}</span>
             <span v-if="u.data?.hasUpdate" class="pill pill-warn">有新版本 v{{ u.data.latest }}</span>
             <span v-else-if="u.checked && u.data" class="pill pill-ok">已是最新</span>
@@ -446,7 +450,7 @@ function openExternal(url) {
 
           <div
             v-if="u.data?.hasUpdate"
-            class="mt-3 rounded-card border border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.06)] p-3"
+            class="mt-3 rounded-card border border-amber/30 bg-amber/6 p-3"
           >
             <div class="text-label text-muted">
               新版本 <b>v{{ u.data.latest }}</b>（当前 v{{ u.current }}）<template v-if="u.data.publishedAt">

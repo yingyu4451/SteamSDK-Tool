@@ -384,7 +384,7 @@ function healthTitle(app) {
 </script>
 
 <template>
-  <aside class="w-[236px] shrink-0 s-sidebar flex flex-col min-h-0">
+  <aside class="w-59 shrink-0 s-sidebar flex flex-col min-h-0">
     <!-- 视图切换 -->
     <nav class="p-3 flex flex-col gap-1" v-stagger="{ each: 0.04 }">
       <button
@@ -439,7 +439,7 @@ function healthTitle(app) {
       <!-- 新建文件夹：内联输入 -->
       <div
         v-if="creatingFolder"
-        class="mb-1.5 flex items-center gap-1.5 h-8 px-2 rounded-card border border-[rgba(102,192,244,.6)] bg-[rgba(102,192,244,.1)]"
+        class="mb-1.5 flex items-center gap-1.5 h-8 px-2 rounded-card border border-accent/60 bg-accent/10"
       >
         <FolderClosed :size="13" class="shrink-0 text-accent" :stroke-width="1.9" />
         <input
@@ -463,8 +463,8 @@ function healthTitle(app) {
             class="rounded-card border overflow-hidden transition-colors"
             :class="
               drag.active && drag.dropFolder === row.folder.id
-                ? 'border-[#66c0f4] bg-[rgba(102,192,244,.14)]'
-                : 'border-line/70 bg-[rgba(0,0,0,.18)]'
+                ? 'border-accent bg-accent/14'
+                : 'border-line/70 bg-black/18'
             "
           >
             <div
@@ -472,7 +472,7 @@ function healthTitle(app) {
               class="group flex items-center gap-1.5 h-8 px-2 transition-colors select-none"
               :class="[
                 drag.active ? 'cursor-copy' : 'cursor-pointer hover:bg-surface-3/35',
-                drag.active && drag.dropFolder === row.folder.id ? 'bg-[rgba(102,192,244,.12)]' : ''
+                drag.active && drag.dropFolder === row.folder.id ? 'bg-accent/12' : ''
               ]"
               :title="'点击折叠/展开；把 App 拖到这里分类'"
               @click="toggleFolder(row.folder.id)"
@@ -506,7 +506,7 @@ function healthTitle(app) {
                     <Pencil :size="12" :stroke-width="2" />
                   </button>
                   <button
-                    class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-danger hover:bg-[rgba(226,75,75,.14)] border-0 bg-transparent cursor-pointer"
+                    class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-danger hover:bg-danger/14 border-0 bg-transparent cursor-pointer"
                     title="删除文件夹（里面的 App 回到未分类）"
                     @click.stop="deleteFolder(row.folder.id)"
                   >
@@ -566,7 +566,7 @@ function healthTitle(app) {
     <!-- 拖动时跟随指针的浮层（原卡片留在列表里占位并透明） -->
     <div
       v-if="drag.active && dragApp"
-      class="fixed z-[60] pointer-events-none rounded-card border border-[#66c0f4] bg-[#1f3347] px-3 py-2.5 shadow-[0_12px_30px_rgba(0,0,0,.6)]"
+      class="fixed z-[60] pointer-events-none rounded-card border border-accent bg-surface-3 px-3 py-2.5 shadow-pop"
       :style="{ left: drag.ghostX + 'px', top: drag.ghostY + 'px', width: drag.w + 'px' }"
     >
       <div class="flex items-center gap-2 min-w-0">
@@ -602,7 +602,7 @@ function healthTitle(app) {
         <div
           v-for="(e, i) in state.scanErrors"
           :key="i"
-          class="text-micro text-danger/80 bg-[rgba(255,92,108,.07)] border border-[rgba(255,92,108,.2)] rounded-btn px-2.5 py-2"
+          class="text-micro text-danger/80 bg-danger/7 border border-danger/20 rounded-btn px-2.5 py-2"
         >
           {{ e.error }}
         </div>

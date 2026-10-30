@@ -52,6 +52,8 @@
   --color-cta-cyan: #67c1f5;
   --color-cta-cyan-mid: #1a9fff;
   --color-cta-blue: #2d73ff;
+  --color-console: #080d14;
+  --color-close: #c33a3a;
 
   --font-sans:
     'Motiva Sans', 'Inter', 'MiSans', 'MiSans Normal', 'Microsoft YaHei UI',
@@ -59,8 +61,8 @@
   --font-mono:
     'JetBrains Mono', 'Cascadia Mono', 'SF Mono', ui-monospace, 'Consolas', monospace;
 
-  /* 圆角：Steam 的 2px 锐角。well/卡片 4，输入框与按钮 2，徽标 2。 */
-  --radius-card: 3px;
+  /* 圆角：控件 2px 锐角，well/卡片 4px（拉开一个可感知台阶）。 */
+  --radius-card: 4px;
   --radius-input: 2px;
   --radius-btn: 2px;
   --radius-tag: 2px;
@@ -78,14 +80,14 @@
 
   /* 字号阶梯（新版商店的 11–26px 类型档）：
      micro 11 / label 12 / body 13 / copy 14 / lead 15 / title 17 / display 21 / stat 26 */
-  --text-micro: 11px;
+  --text-micro: 12px;
   --text-label: 12px;
-  --text-body: 13px;
+  --text-body: 14px;
   --text-copy: 14px;
-  --text-lead: 15px;
-  --text-title: 17px;
-  --text-display: 21px;
-  --text-stat: 26px;
+  --text-lead: 14px;
+  --text-title: 18px;
+  --text-display: 24px;
+  --text-stat: 30px;
 }
 
 * {
@@ -921,9 +923,9 @@ body {
 }
 .card::before { display: none; }
 .card h2 {
-  font-size: var(--text-display);
+  font-size: var(--text-title);
   font-weight: 600;
-  color: #fff;
+  color: var(--color-ink);
   letter-spacing: 0;
   text-transform: none;
 }
@@ -951,6 +953,14 @@ body {
 .btn:active:not(:disabled) { background: rgba(102, 192, 244, 0.2); color: #fff; }
 .btn:disabled { opacity: 0.45; background: rgba(0, 0, 0, 0.3); color: rgba(103, 193, 245, 0.5); text-shadow: none; }
 .btn-sm { height: 26px; padding: 0 12px; font-size: var(--text-label); }
+/* 选中态（分支、平台等“状态”）：蓝底描边，绝不复用 .btn-primary 的提交色 */
+.btn-selected {
+  background: var(--tint-accent);
+  color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px rgba(102, 192, 244, 0.55);
+  text-shadow: none;
+}
+.btn-selected:hover:not(:disabled) { background: rgba(26, 159, 255, 0.28); color: #eaf6ff; }
 .btn-lg { height: 40px; padding: 0 18px; font-size: var(--text-copy); }
 
 /* 界面缩放：按钮保持默认大小，只把加号/减号图标放大；输入框单层样式，% 叠在框内 */
@@ -1005,7 +1015,7 @@ body {
 .pill-ok { background: var(--tint-ok); color: #c4ea4c; }
 .pill-warn { background: var(--tint-warn); color: var(--color-amber); }
 .pill-bad { background: #9a3130; color: #fff; }
-.pill-idle { background: #384959; color: #67c1f5; }
+.pill-idle { background: #384959; color: var(--color-accent); }
 
 /* 筛选 chip：商店导航 tab 行为 */
 .chip {
@@ -1019,7 +1029,8 @@ body {
   font-weight: 600;
 }
 .chip:hover { background: rgba(26, 159, 255, 0.16); color: #c6e7fb; }
-.chip-on { background: var(--tint-accent); color: #99d4ff; box-shadow: none; }
+.chip-on { background: var(--tint-accent); color: var(--color-accent); box-shadow: none; }
+.chip .num { color: inherit; }
 .chip-on .num,
 .chip:hover .num { color: inherit; }
 

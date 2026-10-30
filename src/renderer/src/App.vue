@@ -143,7 +143,7 @@ function onLeave(el, done) {
       <main class="flex-1 min-w-0 min-h-0 relative">
         <!-- 启动失败 -->
         <div v-if="state.booted && state.bootError" class="p-8">
-          <div class="card p-6 border-[rgba(226,75,75,.35)]">
+          <div class="card p-6 border-danger/35">
             <div class="text-lead font-semibold text-danger mb-2">启动失败</div>
             <div class="text-body text-muted">{{ state.bootError }}</div>
           </div>
@@ -197,7 +197,7 @@ function onLeave(el, done) {
         v-if="state.drop.over && !state.drop.data"
         class="fixed inset-0 z-[58] grid place-items-center pointer-events-none"
       >
-        <div class="absolute inset-3 rounded-card border-2 border-dashed border-[rgba(102,192,244,.5)] bg-[rgba(11,15,22,.72)] backdrop-blur-sm" />
+        <div class="absolute inset-3 rounded-card border-2 border-dashed border-accent/50 bg-black/70 backdrop-blur-sm" />
         <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
           <Upload :size="32" :stroke-width="1.8" />
           <div class="text-body font-semibold">
@@ -221,8 +221,8 @@ function onLeave(el, done) {
         class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-card border text-body shadow-2xl max-w-[80vw] truncate"
         :class="
           state.toast.tone === 'bad'
-            ? 'border-[rgba(255,92,108,.3)] bg-[rgba(226,75,75,.12)] text-danger'
-            : 'border-[rgba(102,192,244,.3)] bg-surface-2 text-accent'
+            ? 'border-danger/30 bg-danger/12 text-danger'
+            : 'border-accent/30 bg-surface-2 text-accent'
         "
       >
         {{ state.toast.text }}

@@ -285,7 +285,7 @@ function skip() {
   <div v-if="o.open" class="fixed inset-0 z-[70] grid place-items-center p-6 no-drag">
     <div class="absolute inset-0 bg-black/25" />
 
-    <div ref="el" role="dialog" aria-modal="true" aria-label="新手教程" class="relative card s-modal w-full max-w-[620px] overflow-hidden">
+    <div ref="el" role="dialog" aria-modal="true" aria-label="新手教程" class="relative card s-modal w-full max-w-155 overflow-hidden">
       <!-- 步骤条 -->
       <div class="flex items-center gap-2 px-6 pt-5">
         <button
@@ -298,9 +298,9 @@ function skip() {
             class="w-6 h-6 grid place-items-center rounded-full text-micro font-semibold transition-colors"
             :class="
               i === o.step
-                ? 'bg-accent text-[#0d1a26]'
+                ? 'bg-accent text-base'
                 : i < o.step
-                  ? 'bg-[rgba(102,192,244,.18)] text-accent'
+                  ? 'bg-accent/18 text-accent'
                   : 'bg-surface-3 text-faint'
             "
           >
@@ -368,7 +368,7 @@ function skip() {
         <!-- ── 1 SDK 路径 ── -->
         <template v-else-if="o.step === 1">
           <div class="flex items-center gap-3">
-            <h2 class="text-lead font-semibold m-0">SteamSDK 路径</h2>
+            <h2 class="text-title font-semibold m-0">SteamSDK 路径</h2>
             <button
               class="ml-auto btn px-3 "
               :disabled="o.busy"
@@ -385,7 +385,7 @@ function skip() {
             class="mt-3.5 flex flex-col gap-1.5 rounded-card border p-3 transition-colors"
             :class="
               mode === 'auto'
-                ? 'border-[rgba(102,192,244,.45)] bg-[rgba(102,192,244,.05)]'
+                ? 'border-accent/45 bg-accent/5'
                 : 'border-line bg-transparent'
             "
           >
@@ -399,7 +399,7 @@ function skip() {
               class="flex items-center gap-2.5 px-3 h-11 rounded-card border text-left transition-colors cursor-pointer"
               :class="
                 same(o.manual, c.root)
-                  ? 'border-[rgba(102,192,244,.5)] bg-[rgba(102,192,244,.08)]'
+                  ? 'border-accent/50 bg-accent/8'
                   : 'border-line bg-surface hover:border-rule'
               "
               @click="useCandidate(c)"
@@ -415,7 +415,7 @@ function skip() {
             class="mt-4 flex flex-col gap-2 rounded-card border p-3 transition-colors"
             :class="
               mode === 'manual'
-                ? 'border-[rgba(102,192,244,.45)] bg-[rgba(102,192,244,.05)]'
+                ? 'border-accent/45 bg-accent/5'
                 : 'border-line bg-transparent'
             "
           >
@@ -427,8 +427,8 @@ function skip() {
               <input
                 :value="o.manual"
                 placeholder="D:\SteamSDK"
-                class="flex-1 h-9 px-3 rounded-input bg-surface border text-body font-mono outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
-                :class="mode === 'manual' ? 'border-[rgba(102,192,244,.5)]' : 'border-line'"
+                class="flex-1 h-9 px-3 rounded-input bg-surface border text-body font-mono outline-none focus:border-accent/50 placeholder:text-faint"
+                :class="mode === 'manual' ? 'border-accent/50' : 'border-line'"
                 @input="onManualInput"
               />
               <button class="btn" @click="pickAndApply">选择…</button>
@@ -452,12 +452,12 @@ function skip() {
 
         <!-- ── 2 Steam 账号 ── -->
         <template v-else>
-          <h2 class="text-lead font-semibold m-0">Steam 账号</h2>
+          <h2 class="text-title font-semibold m-0">Steam 账号</h2>
 
           <!-- 一进来就查到已经登录过：直接给结论，不用再填一遍 -->
           <div
             v-if="alreadyIn"
-            class="mt-3.5 rounded-card border border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)] px-3.5 py-3"
+            class="mt-3.5 rounded-card border border-success/30 bg-success/[0.07] px-3.5 py-3"
           >
             <div class="flex items-center gap-2 flex-wrap">
               <Check :size="15" class="shrink-0 text-success" />
@@ -496,7 +496,7 @@ function skip() {
               <input
                 :value="o.account"
                 placeholder="例如 my_steam_login"
-                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/50 placeholder:text-faint"
                 @input="o.account = $event.target.value"
               />
             </label>
@@ -506,7 +506,7 @@ function skip() {
                 :value="o.password"
                 type="password"
                 placeholder="留空就先不存"
-                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.5)] placeholder:text-faint"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/50 placeholder:text-faint"
                 @input="o.password = $event.target.value"
               />
             </label>
@@ -523,9 +523,9 @@ function skip() {
             v-if="rowShow"
             class="mt-3.5 rounded-card border px-3 py-2.5 flex items-start gap-2"
             :class="{
-              'border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)]': rowTone === 'busy',
-              'border-[rgba(139,197,63,.3)] bg-[rgba(139,197,63,.07)]': rowTone === 'ok',
-              'border-[rgba(240,169,46,.28)] bg-[rgba(240,169,46,.06)]': rowTone === 'bad'
+              'border-accent/34 bg-accent/7': rowTone === 'busy',
+              'border-success/30 bg-success/[0.07]': rowTone === 'ok',
+              'border-amber/28 bg-amber/6': rowTone === 'bad'
             }"
           >
             <LoaderCircle
@@ -550,7 +550,7 @@ function skip() {
           <!-- 手机令牌：steamcmd 停在那儿等你点确认，什么都别输，去手机上点 -->
           <div
             v-if="mobileWaiting"
-            class="mt-2.5 rounded-card border border-[rgba(102,192,244,.34)] bg-[rgba(102,192,244,.07)] px-3 py-2.5"
+            class="mt-2.5 rounded-card border border-accent/34 bg-accent/7 px-3 py-2.5"
           >
             <div class="text-body text-accent font-semibold mb-1.5">
               Steam 正在等你手机上点确认
@@ -571,7 +571,7 @@ function skip() {
                 v-model="guardCode"
                 placeholder="例如 K4F2B"
                 autocomplete="one-time-code"
-                class="h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint placeholder:tracking-normal"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-accent/45 placeholder:text-faint placeholder:tracking-normal"
                 @keyup.enter="next"
               />
             </label>
@@ -584,7 +584,7 @@ function skip() {
 
         <div
           v-if="o.error"
-          class="mt-3 rounded-card border border-[rgba(226,75,75,.3)] bg-[rgba(226,75,75,.07)] px-3 py-2 text-label text-danger"
+          class="mt-3 rounded-card border border-danger/30 bg-danger/7 px-3 py-2 text-label text-danger"
         >
           {{ o.error }}
         </div>

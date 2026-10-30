@@ -67,7 +67,7 @@ function openLogDir() {
 <template>
   <div class="p-5 flex flex-col gap-6 h-full min-h-0">
     <div class="flex items-center gap-3">
-      <h1 class="text-title font-semibold tracking-tight m-0">构建历史</h1>
+      <h1 class="text-display font-semibold tracking-tight m-0 text-ink">构建历史</h1>
       <span class="text-label text-faint">
         <span class="font-mono">ContentBuilder\output\</span> 下的所有构建日志
       </span>
@@ -75,7 +75,7 @@ function openLogDir() {
       <input
         v-model="filter"
         placeholder="筛选文件名"
-        class="h-9 w-[200px] px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+        class="h-9 w-50 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
       />
       <button class="btn no-drag" :disabled="!logDir" title="在资源管理器里打开日志所在文件夹" @click="openLogDir">
         <FolderOpen :size="14" :stroke-width="1.9" />
@@ -119,7 +119,7 @@ function openLogDir() {
             class="w-full text-left px-2.5 py-2 rounded-card transition-colors cursor-pointer border-0 bg-transparent"
             :class="
               selected?.file === h.file
-                ? 'bg-[rgba(102,192,244,.07)] ring-1 ring-[rgba(102,192,244,.3)]'
+                ? 'bg-accent/7 ring-1 ring-accent/30'
                 : 'hover:bg-surface-2'
             "
             @click="open(h)"

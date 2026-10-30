@@ -90,7 +90,7 @@ async function openPath(p) {
 <template>
   <section class="card overflow-hidden min-w-0" v-reveal="{ delay: 0.04 }">
     <header class="px-5 pt-4 pb-3 flex items-center gap-3 flex-wrap">
-      <h2 class="text-body font-semibold tracking-tight m-0">Depot</h2>
+      <h2 class="font-semibold tracking-tight m-0">Depot</h2>
       <span class="text-label text-faint num">{{ sortedDepots.length }}</span>
       <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="openDepotSlide()">
         ＋ 新建 Depot
@@ -108,8 +108,8 @@ async function openPath(p) {
           class="w-full text-left rounded-card border px-3 py-2 pr-8 transition-colors cursor-pointer min-w-0"
           :class="
             String(d.id) === String(current?.id)
-              ? 'border-[rgba(102,192,244,.95)] bg-[rgba(102,192,244,.1)] shadow-[inset_0_0_0_1px_rgba(102,192,244,.35)]'
-              : 'border-[rgba(120,160,200,.4)] bg-[rgba(179,218,255,.05)] hover:bg-[rgba(179,218,255,.1)] hover:border-[rgba(120,160,200,.62)]'
+              ? 'border-accent/95 bg-accent/10 shadow-[inset_0_0_0_1px_rgba(102,192,244,.35)]'
+              : 'border-rule/40 bg-accent/[0.05] hover:bg-accent/10 hover:border-rule/60'
           "
           @click="setActiveDepot(d.id)"
         >
@@ -141,8 +141,8 @@ async function openPath(p) {
           class="absolute top-1 right-1 w-6 h-6 grid place-items-center rounded-btn border-0 cursor-pointer no-drag transition-all active:translate-y-px active:brightness-90"
           :class="
             depotUploadEnabled(state.selectedDir, d.id)
-              ? 'bg-[rgba(102,192,244,.22)] text-accent hover:bg-[rgba(102,192,244,.38)]'
-              : 'bg-[rgba(0,0,0,.45)] text-faint hover:bg-surface-3/80 hover:text-ink'
+              ? 'bg-accent/22 text-accent hover:bg-accent/38'
+              : 'bg-black/45 text-faint hover:bg-surface-3/80 hover:text-ink'
           "
           :title="
             depotUploadEnabled(state.selectedDir, d.id)
@@ -183,7 +183,7 @@ async function openPath(p) {
           <div class="ml-auto flex items-center gap-1.5">
             <button
               v-if="a && !a.exists"
-              class="btn btn-sm px-2.5  no-drag border-[rgba(255,180,84,.3)] text-amber hover:bg-[rgba(255,180,84,.08)]"
+              class="btn btn-sm px-2.5  no-drag border-amber/30 text-amber hover:bg-amber/8"
               @click="createDir(current)"
             >
               创建目录
@@ -262,7 +262,7 @@ async function openPath(p) {
         </button>
         <div class="collapsible" :class="{ 'is-open': showSuspicious }">
           <div>
-            <div class="px-5 pb-3 max-h-[200px] overflow-y-auto scroll-thin">
+            <div class="px-5 pb-3 max-h-50 overflow-y-auto scroll-thin">
               <div
                 v-for="(f, i) in a.suspicious"
                 :key="i"
@@ -293,10 +293,10 @@ async function openPath(p) {
         </button>
         <div class="collapsible" :class="{ 'is-open': showExcluded }">
           <div>
-            <div class="px-5 pb-3 max-h-[240px] overflow-y-auto scroll-thin">
+            <div class="px-5 pb-3 max-h-60 overflow-y-auto scroll-thin">
               <div v-for="[rule, files] in excludedByRule" :key="rule" class="mb-2.5 last:mb-0">
                 <div class="flex items-center gap-2 mb-1">
-                  <code class="text-micro text-accent bg-[rgba(102,192,244,.07)] border border-[rgba(102,192,244,.18)] rounded px-1.5 py-0.5">
+                  <code class="text-micro text-accent bg-accent/7 border border-accent/18 rounded px-1.5 py-0.5">
                     {{ rule }}
                   </code>
                   <span class="num text-micro text-faint">{{ files.length }} 个</span>

@@ -34,17 +34,17 @@ const pct = computed(() => {
 </script>
 
 <template>
-  <div class="p-5 flex flex-col gap-6 min-w-0 max-w-[1000px]">
+  <div class="p-5 flex flex-col gap-6 min-w-0 max-w-250">
     <!-- 标题 -->
     <div class="card px-5 py-4 flex items-start gap-3">
       <div
-        class="shrink-0 w-9 h-9 rounded-input grid place-items-center bg-[rgba(102,192,244,.1)] text-accent border border-[rgba(102,192,244,.18)]"
+        class="shrink-0 w-9 h-9 rounded-input grid place-items-center bg-accent/10 text-accent border border-accent/18"
       >
         <Unplug :size="17" :stroke-width="1.8" />
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
-          <h1 class="text-title font-semibold text-ink">剥离 Steam</h1>
+          <h1 class="text-display font-semibold text-ink">剥离 Steam</h1>
           <span class="pill pill-idle">复制后剥离</span>
         </div>
         <p class="mt-1 text-label leading-relaxed text-muted">
@@ -203,21 +203,21 @@ const pct = computed(() => {
     <!-- 起始：拖拽区 -->
     <div
       v-else
-      class="card p-8 min-h-[320px] grid place-items-center relative overflow-hidden cursor-pointer"
+      class="card p-8 min-h-80 grid place-items-center relative overflow-hidden cursor-pointer"
       :class="dropOver && 'border-accent'"
       @click="pickStripFolder"
     >
       <div
         class="absolute inset-2 rounded-card border-2 border-dashed transition-colors"
-        :class="dropOver ? 'border-[rgba(102,192,244,.6)]' : 'border-[rgba(102,192,244,.16)]'"
+        :class="dropOver ? 'border-accent/60' : 'border-accent/16'"
       />
       <div class="relative flex flex-col items-center gap-3 text-center">
         <div
           class="w-12 h-12 rounded-full grid place-items-center"
           :class="
             dropOver
-              ? 'bg-[rgba(102,192,244,.18)] text-accent'
-              : 'bg-[rgba(102,192,244,.08)] text-faint'
+              ? 'bg-accent/18 text-accent'
+              : 'bg-accent/8 text-faint'
           "
         >
           <Unplug :size="22" :stroke-width="1.7" />

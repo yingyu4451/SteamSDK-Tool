@@ -134,7 +134,10 @@ onMounted(() => window.addEventListener('resize', reanchor))
 watch(
   () => state.askPassword,
   (v) => {
-    if (v) nextTick(() => anchorTo('pwd'))
+    if (!v) return
+    clearVerify()
+    clearPreflight()
+    nextTick(() => anchorTo('pwd'))
   }
 )
 
@@ -168,7 +171,7 @@ watch(
       title="检查文件：扫一遍真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app bundle。配置没问题但文件有问题时，只有这一关能发现。"
       :aria-expanded="state.preflight.busy || !!state.preflight.error || !!pf"
       aria-controls="pop-preflight"
-      @click="(e) => { anchorTo('pf', e.currentTarget); runPreflight() }"
+      @click="(e) => { clearVerify(); anchorTo('pf', e.currentTarget); runPreflight() }"
     >
       <ShieldCheck :size="16" :stroke-width="1.8" />
       {{ state.preflight.busy ? '检查中…' : '检查文件' }}
@@ -207,14 +210,14 @@ watch(
       data-pop="verify"
       :aria-expanded="state.verify.busy || !!state.verify.error || !!vd"
       aria-controls="pop-verify"
-      @click="(e) => { anchorTo('verify', e.currentTarget); verifyAgainstSteam() }"
+      @click="(e) => { clearPreflight(); anchorTo('verify', e.currentTarget); verifyAgainstSteam() }"
     >
       <RefreshCw :size="15" :stroke-width="1.9" :class="state.verify.busy ? 'animate-spin' : ''" />
       {{ state.verify.busy ? '读取中…' : '同步 Depot' }}
     </button>
 
     <button
-      class="btn no-drag"
+      class="btn btn-sm no-drag"
       :disabled="!appId"
       title="在 Steamworks 后台打开这个 App 的生成版本页面"
       @click="openExternal(partner('builds'))"
@@ -225,10 +228,10 @@ watch(
 
     <div class="flex-1" />
     <div class="flex items-center gap-1.5">
-      <button class="btn no-drag" :disabled="!state.sdk?.contentBuilder" @click="openPath(state.sdk.contentBuilder)">
+      <button class="btn btn-sm no-drag" :disabled="!state.sdk?.contentBuilder" @click="openPath(state.sdk.contentBuilder)">
         <FolderOpen :size="14" class="mr-1.5" /> 构建目录
       </button>
-      <button class="btn no-drag" :disabled="!appId" @click="openExternal(partner('builds'))">
+      <button class="btn btn-sm no-drag" :disabled="!appId" @click="openExternal(partner('builds'))">
         <SquareArrowOutUpRight :size="14" class="mr-1.5" /> Steamworks
       </button>
     </div>
@@ -241,7 +244,7 @@ watch(
     >
       <div
         v-if="state.askPassword"
-        class="bar-pop rounded-card border border-[rgba(255,180,84,.3)] px-3 py-2.5"
+        class="bar-pop rounded-card border border-amber/30 px-3 py-2.5"
         :style="anchors.pwd"
       >
         <div class="flex items-center gap-2 text-label text-amber">
@@ -255,11 +258,11 @@ watch(
             type="password"
             autofocus
             placeholder="Steam 账号密码"
-            class="flex-1 min-w-[200px] h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(255,180,84,.5)]"
+            class="flex-1 min-w-50 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-amber/50"
             @keydown.enter="submitPw"
           />
           <label class="flex items-center gap-1.5 text-label text-muted cursor-pointer select-none">
-            <input type="checkbox" v-model="pwRemember" class="accent-[#66c0f4]" />
+            <input type="checkbox" v-model="pwRemember" class="accent-accent" />
             加密保存
           </label>
           <button class="btn btn-primary no-drag" :disabled="!pwDraft" @click="submitPw">
@@ -286,7 +289,7 @@ watch(
         :style="anchors.verify"
         :class="
           state.verify.error
-            ? 'border-[rgba(255,180,84,.3)]'
+            ? 'border-amber/30'
             : 'border-line'
         "
       >
@@ -316,15 +319,15 @@ watch(
         <template v-else-if="vd">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="font-semibold text-label">同步 Depot</span>
-            <span class="px-2 py-[3px] rounded-full text-micro border text-muted border-line">
+            <span class="px-2 py-0.5 rounded-full text-micro border text-muted border-line">
               {{ viaLabel }}
             </span>
             <span
-              class="px-2 py-[3px] rounded-full text-micro border"
+              class="px-2 py-0.5 rounded-full text-micro border"
               :class="
                 vd.appIdKnown
-                  ? 'text-accent border-[rgba(102,192,244,.3)] bg-[rgba(102,192,244,.07)]'
-                  : 'text-amber border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.07)]'
+                  ? 'text-accent border-accent/30 bg-accent/7'
+                  : 'text-amber border-amber/30 bg-amber/7'
               "
             >
               {{ vd.appName ? `AppID ${vd.appId} · ${vd.appName}` : `AppID ${vd.appId}` }}
@@ -348,7 +351,7 @@ watch(
             >
               <input
                 type="checkbox"
-                class="accent-[#66c0f4] w-3.5 h-3.5 shrink-0"
+                class="accent-accent w-3.5 h-3.5 shrink-0"
                 :checked="!!state.syncPicks[String(d.depotId)]"
                 :disabled="localIds.has(String(d.depotId))"
                 @change="toggleSyncPick(d.depotId)"
@@ -393,7 +396,7 @@ watch(
               <span
                 v-for="b in branchList"
                 :key="b.key"
-                class="px-2 py-[3px] rounded-full text-micro border text-muted border-line"
+                class="px-2 py-0.5 rounded-full text-micro border text-muted border-line"
                 :title="b.description || ''"
               >
                 {{ b.key }}
@@ -420,7 +423,7 @@ watch(
         :style="anchors.pf"
         :class="
           state.preflight.error
-            ? 'border-[rgba(255,180,84,.3)]'
+            ? 'border-amber/30'
             : 'border-line'
         "
       >
@@ -446,7 +449,7 @@ watch(
         <div v-else-if="pf" class="mt-2 flex flex-col gap-2">
           <div v-for="(p, i) in pf.problems" :key="i" class="flex items-start gap-2 min-w-0">
             <span
-              class="pill shrink-0 mt-[1px]"
+              class="pill shrink-0 mt-px"
               :class="p.level === 'error' ? 'pill-bad' : p.level === 'warn' ? 'pill-warn' : 'pill-idle'"
             >
               {{ p.level === 'error' ? '拦住' : p.level === 'warn' ? '警告' : '提示' }}

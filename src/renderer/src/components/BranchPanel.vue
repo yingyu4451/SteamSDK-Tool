@@ -118,7 +118,7 @@ watch(appId, () => {
 <template>
   <section class="card p-5 flex flex-col min-w-0" v-reveal="{ delay: 0.05 }">
     <header class="flex items-center gap-2 flex-wrap">
-      <h2 class="text-body font-semibold tracking-tight m-0">分支 / SetLive</h2>
+      <h2 class="font-semibold tracking-tight m-0">分支 / SetLive</h2>
       <span
         class="pill"
         :class="current ? 'pill-warn' : 'pill-idle'"
@@ -130,6 +130,40 @@ watch(appId, () => {
         <span v-if="hasKey" class="text-micro text-faint">
           {{ backendBusy ? '读取后台分支…' : backendBetas.length ? `${backendBetas.length} 个后台分支` : '后台分支未读到' }}
         </span>
+        <button
+          v-if="hasKey"
+          class="btn btn-sm px-2"
+          :disabled="backendBusy || !appId"
+          title="从后台刷新分支（Web API GetAppBetas）"
+          @click="loadBuildPanel(true)"
+        >
+          <RefreshCw :size="13" :stroke-width="1.9" :class="backendBusy ? 'animate-spin' : ''" />
+        </button>
+      </span>
+    </header>
+
+    <div class="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="分支">
+      <button
+        v-for="b in branches"
+        :key="b.key"
+        class="btn btn-sm no-drag"
+        :class="b.key === current ? 'btn-selected' : ''"
+        :disabled="busy"
+        :title="branchTitle(b)"
+        @click="apply(b.key)"
+      >
+        {{ b.key }}
+      </button>
+      <button
+        class="btn btn-sm no-drag"
+        :class="!current ? 'btn-selected' : ''"
+        :disabled="busy"
+        title="清空 SetLive：构建只生成，不自动设到任何分支（default 分支要在后台网页手动设 live）"
+        @click="apply('')"
+      >
+        不设分支
+      </button>
+      <span class="ml-auto flex items-center gap-1.5">
         <button
           class="btn btn-sm"
           :class="creating ? 'border-accent text-accent' : ''"
@@ -148,39 +182,7 @@ watch(appId, () => {
         >
           管理分支
         </button>
-        <button
-          v-if="hasKey"
-          class="btn btn-sm px-2"
-          :disabled="backendBusy || !appId"
-          title="从后台刷新分支（Web API GetAppBetas）"
-          @click="loadBuildPanel(true)"
-        >
-          <RefreshCw :size="13" :stroke-width="1.9" :class="backendBusy ? 'animate-spin' : ''" />
-        </button>
       </span>
-    </header>
-
-    <div class="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="分支">
-      <button
-        v-for="b in branches"
-        :key="b.key"
-        class="btn btn-sm no-drag"
-        :class="b.key === current ? 'btn-primary' : ''"
-        :disabled="busy"
-        :title="branchTitle(b)"
-        @click="apply(b.key)"
-      >
-        {{ b.key }}
-      </button>
-      <button
-        class="btn btn-sm no-drag"
-        :class="!current ? 'btn-primary' : ''"
-        :disabled="busy"
-        title="清空 SetLive：构建只生成，不自动设到任何分支（default 分支要在后台网页手动设 live）"
-        @click="apply('')"
-      >
-        不设分支
-      </button>
     </div>
 
     <div v-if="creating" class="mt-3 flex gap-2">
@@ -189,7 +191,7 @@ watch(appId, () => {
         v-model="draft"
         type="text"
         placeholder="新分支名，例如 qa / internal"
-        class="flex-1 h-8 px-3 rounded-input bg-surface border border-line text-body text-ink placeholder:text-faint outline-none focus:border-[rgba(102,192,244,.45)] transition-colors"
+        class="flex-1 h-8 px-3 rounded-input bg-surface border border-line text-body text-ink placeholder:text-faint outline-none focus:border-accent/45 transition-colors"
         @keydown.enter="confirmNew"
         @keydown.esc="creating = false"
       />
@@ -206,8 +208,8 @@ watch(appId, () => {
         class="mt-3 text-label rounded-card px-3 py-2 border"
         :class="
           message.tone === 'ok'
-            ? 'text-accent border-[rgba(102,192,244,.22)] bg-[rgba(102,192,244,.05)]'
-            : 'text-danger border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)]'
+            ? 'text-accent border-accent/22 bg-accent/5'
+            : 'text-danger border-danger/24 bg-danger/6'
         "
       >
         {{ message.text }}

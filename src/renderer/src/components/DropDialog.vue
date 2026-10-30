@@ -93,18 +93,18 @@ const canApply = computed(() => {
 
 const willDo = computed(() => {
   if (!d.value?.ok) return ''
-  const src = d.value.kind === 'archive' ? `先解压到 ${state.settings?.buildsRoot || ''}，再把` : '把这个文件夹'
+  const what = d.value.kind === 'archive' ? '解压后的内容' : '这个文件夹'
   if (effPick.value) return ''
   if (!target.value) {
     return newContentRoot.value
-      ? `${src}复制进 ${newContentRoot.value}，并作为新 Depot ${newDepotId.value.trim()} 的内容目录`
-      : `${src}当作新 Depot ${newDepotId.value.trim()} 的内容目录`
+      ? `把${what}复制进 ${newContentRoot.value}，并作为新 Depot ${newDepotId.value.trim()} 的内容目录`
+      : `把${what}当作新 Depot ${newDepotId.value.trim()} 的内容目录`
   }
   const dep = depots.value.find((x) => x.file === target.value)
   if (mode.value === 'copy') {
-    return `把里面的内容复制进 ${dep?.contentRoot || '（没内容目录）'}`
+    return `把${what}复制进 ${dep?.contentRoot || '（没内容目录）'}`
   }
-  return `把 ${dep?.platformId ? PLATFORM_LABEL[dep.platformId] : ''} Depot ${dep?.id || ''} 的内容目录改成 ${d.value.dir}`
+  return `把 ${dep?.platformId ? PLATFORM_LABEL[dep.platformId] : ''} Depot ${dep?.id || ''} 的内容目录指向${what}（不复制）`
 })
 
 /** 会新写出来的脚本文件名 */
@@ -220,10 +220,10 @@ async function doApply() {
   <div v-if="d" class="fixed inset-0 z-[55] grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/25" @click="closeDrop" />
 
-    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="drop-dialog-title" class="relative card s-modal w-full max-w-[680px] max-h-[88vh] overflow-y-auto scroll-thin no-drag">
+    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="drop-dialog-title" class="relative card s-modal w-full max-w-170 max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
         <div class="min-w-0">
-          <h2 id="drop-dialog-title" class="text-lead font-semibold m-0">文件导入</h2>
+          <h2 id="drop-dialog-title" class="text-title font-semibold m-0">文件导入</h2>
           <p class="mt-1 mb-0 text-label text-faint font-mono break-all" :title="d.target">
             {{ d.target }}
           </p>
@@ -243,7 +243,7 @@ async function doApply() {
           <div v-if="d.pending" class="flex flex-col items-center gap-3 py-10">
             <span class="drop-spinner" />
             <div class="text-body text-ink num">{{ phaseText }}</div>
-            <div class="text-label text-faint text-center leading-relaxed max-w-[360px]">
+            <div class="text-label text-faint text-center leading-relaxed max-w-90">
               压缩包会先在这里解开再数一遍。包大的话要等几分钟 —— 别关窗口，也别再拖一次。
             </div>
           </div>
@@ -252,7 +252,7 @@ async function doApply() {
         <!-- 看错了就直接说 -->
         <div
           v-if="state.drop.error"
-          class="fade-in-up rounded-card border border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)] px-3.5 py-2.5 text-label text-danger whitespace-pre-wrap"
+          class="fade-in-up rounded-card border border-danger/24 bg-danger/6 px-3.5 py-2.5 text-label text-danger whitespace-pre-wrap"
         >
           {{ state.drop.error }}
         </div>
@@ -298,11 +298,11 @@ async function doApply() {
                 class="flex items-center gap-2.5 px-3 py-2 rounded-card border cursor-pointer transition-colors"
                 :class="
                   target === dep.file
-                    ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]'
+                    ? 'border-accent/40 bg-accent/5'
                     : 'border-line hover:border-rule'
                 "
               >
-                <input type="radio" value="" :checked="target === dep.file" class="accent-[#66c0f4]" @change="newPick = false; target = dep.file; backendPick = null" />
+                <input type="radio" value="" :checked="target === dep.file" class="accent-accent" @change="newPick = false; target = dep.file; backendPick = null" />
                 <span class="text-body text-ink">{{ PLATFORM_LABEL[dep.platformId] || dep.platformId }}</span>
                 <span class="font-mono num text-label text-faint">{{ dep.id }}</span>
                 <span
@@ -311,7 +311,7 @@ async function doApply() {
                 >
                   平台一致
                 </span>
-                <span class="ml-auto font-mono text-micro text-faint break-all max-w-[240px] text-right" :title="dep.contentRoot">
+                <span class="ml-auto font-mono text-micro text-faint break-all max-w-60 text-right" :title="dep.contentRoot">
                   {{ dep.contentRoot || '（没有内容目录）' }}
                 </span>
               </label>
@@ -323,14 +323,14 @@ async function doApply() {
                 class="flex items-center gap-2.5 px-3 py-2 rounded-card border cursor-pointer transition-colors"
                 :class="
                   effPick?.depotId === row.depotId
-                    ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]'
+                    ? 'border-accent/40 bg-accent/5'
                     : 'border-line hover:border-rule'
                 "
               >
                 <input
                   type="radio"
                   :checked="effPick?.depotId === row.depotId"
-                  class="accent-[#66c0f4]"
+                  class="accent-accent"
                   @change="pickBackend(row)"
                 />
                 <span class="text-body text-ink">{{ row.platformLabel || PLATFORM_LABEL[row.platform] }}</span>
@@ -343,10 +343,10 @@ async function doApply() {
               <label
                 class="flex items-center gap-2.5 px-3 py-2 rounded-card border cursor-pointer transition-colors"
                 :class="
-                  !target && !effPick ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.05)]' : 'border-line hover:border-rule'
+                  !target && !effPick ? 'border-accent/40 bg-accent/5' : 'border-line hover:border-rule'
                 "
               >
-                <input type="radio" :checked="!target && !effPick" class="accent-[#66c0f4]" @change="newPick = true; target = ''; backendPick = null" />
+                <input type="radio" :checked="!target && !effPick" class="accent-accent" @change="newPick = true; target = ''; backendPick = null" />
                 <span class="text-body text-ink">新建一个 Depot</span>
                 <span v-if="!depots.length" class="text-label text-faint">（这个 App 还没有 Depot）</span>
               </label>
@@ -369,7 +369,7 @@ async function doApply() {
                 <input
                   v-model="newDepotId"
                   placeholder="AppID+1"
-                  class="h-9 px-3 rounded-input bg-surface border border-line text-body num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                  class="h-9 px-3 rounded-input bg-surface border border-line text-body num outline-none focus:border-accent/45 placeholder:text-faint"
                 />
               </label>
               <div class="flex flex-col gap-1.5">
@@ -379,7 +379,7 @@ async function doApply() {
                     v-for="p in platformChoices"
                     :key="p.id"
                     class="btn btn-sm px-2.5"
-                    :class="platform === p.id ? 'btn-primary' : ''"
+                    :class="platform === p.id ? 'btn-selected' : ''"
                     :aria-pressed="platform === p.id"
                     @click="pickPlatform(p.id)"
                   >
@@ -392,7 +392,7 @@ async function doApply() {
                 <input
                   v-model="depotName"
                   :placeholder="`${state.selectedDir || ''} Content`"
-                  class="h-9 px-3 rounded-input bg-surface border border-line text-label outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+                  class="h-9 px-3 rounded-input bg-surface border border-line text-label outline-none focus:border-accent/45 placeholder:text-faint"
                 />
               </label>
             </div>
@@ -400,11 +400,11 @@ async function doApply() {
             <!-- 已经有了：直接指过去 or 复制进去 -->
             <div v-if="target" class="flex items-center gap-2 flex-wrap pl-3">
               <label class="flex items-center gap-1.5 text-label text-muted cursor-pointer select-none">
-                <input type="radio" value="bind" :checked="mode === 'bind'" class="accent-[#66c0f4]" @change="mode = 'bind'" />
+                <input type="radio" value="bind" :checked="mode === 'bind'" class="accent-accent" @change="mode = 'bind'" />
                 直接指过去（不复制）
               </label>
               <label class="flex items-center gap-1.5 text-label text-muted cursor-pointer select-none">
-                <input type="radio" value="copy" :checked="mode === 'copy'" class="accent-[#66c0f4]" @change="mode = 'copy'" />
+                <input type="radio" value="copy" :checked="mode === 'copy'" class="accent-accent" @change="mode = 'copy'" />
                 复制进现有内容目录
               </label>
             </div>

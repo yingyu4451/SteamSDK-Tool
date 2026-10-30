@@ -90,11 +90,11 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-app-title"
-      class="relative card s-modal w-full max-w-[560px] max-h-[88vh] overflow-y-auto scroll-thin transition-colors duration-200"
-      :class="armed ? 'border-danger' : 'border-[rgba(226,75,75,.35)]'"
+      class="relative card s-modal w-full max-w-140 max-h-[88vh] overflow-y-auto scroll-thin transition-colors duration-200"
+      :class="armed ? 'border-danger' : 'border-danger/35'"
     >
       <header class="px-6 pt-5 pb-4 border-b border-line">
-        <h2 id="delete-app-title" class="text-lead font-semibold m-0 text-danger">
+        <h2 id="delete-app-title" class="text-title font-semibold m-0 text-danger">
           删除 App「{{ d.dirName }}」
         </h2>
         <p class="mt-1.5 mb-0 text-label text-danger">不可撤销。Steam 上已传的构建不受影响。</p>
@@ -106,7 +106,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
 
       <div v-else class="p-6 flex flex-col gap-4">
         <!-- 脚本目录（一定会删） -->
-        <div class="rounded-card border border-[rgba(255,92,108,.22)] bg-[rgba(255,92,108,.05)] p-3.5">
+        <div class="rounded-card border border-danger/22 bg-danger/5 p-3.5">
           <div class="flex items-center gap-2">
             <span class="pill pill-bad">一定会删</span>
             <span class="text-label font-normal">构建脚本目录</span>
@@ -167,7 +167,7 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
         <!-- 上膛后的提示条 -->
         <div
           v-if="armed"
-          class="rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] px-3.5 py-2.5 text-label text-danger"
+          class="rounded-card border border-danger/30 bg-danger/7 px-3.5 py-2.5 text-label text-danger"
         >
           再点一次底下那个红色按钮才会真的删。改勾选或关掉窗口都会取消。
         </div>

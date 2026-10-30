@@ -43,7 +43,7 @@ const win = window.api.win
          箭头三角 (96,74)(160,74)(128,22)）。箭头先画、立方体压上去，看着就是从箱子里升出来。
          这里用矢量重画而不是贴 build/icon.png —— 22px 下位图会糊。 -->
     <div class="flex items-center gap-2.5 no-drag">
-      <svg viewBox="0 0 256 256" class="w-[20px] h-[20px] shrink-0" aria-hidden="true">
+      <svg viewBox="0 0 256 256" class="w-5 h-5 shrink-0" aria-hidden="true">
         <defs>
           <linearGradient id="tb-logo-bg" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#2f516e" />
@@ -77,7 +77,7 @@ const win = window.api.win
       >
         <div
           v-if="state.running"
-          class="flex items-center gap-2 h-6 px-2 rounded-tag bg-[rgba(102,192,244,.1)] border border-[rgba(102,192,244,.28)]"
+          class="flex items-center gap-2 h-6 px-2 rounded-tag bg-accent/10 border border-accent/28"
         >
           <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
           <span class="text-label text-accent font-normal">
@@ -114,7 +114,7 @@ const win = window.api.win
       </button>
       <button
         :class="WBTN"
-        class="hover:bg-[#c33a3a] hover:text-white"
+        class="hover:bg-close hover:text-white"
         title="关闭"
         @click="win.close()"
       >

@@ -147,7 +147,7 @@ const exitTone = computed(() => {
     <div v-if="state.running" class="scanline" />
 
     <header class="px-5 py-3 flex items-center gap-2.5 border-b border-line shrink-0">
-      <h2 class="text-body font-semibold tracking-tight m-0 shrink-0 whitespace-nowrap">构建输出</h2>
+      <h2 class="font-semibold tracking-tight m-0 shrink-0 whitespace-nowrap">构建输出</h2>
 
       <span v-if="state.running" class="pill pill-warn">
         <span class="w-1.5 h-1.5 rounded-full bg-amber animate-pulse" />
@@ -168,14 +168,14 @@ const exitTone = computed(() => {
           type="checkbox"
           :checked="verbose"
           :disabled="verboseBusy || !state.detail"
-          class="accent-[#66c0f4]"
+          class="accent-accent"
           @change="toggleVerbose"
         />
         详细日志
       </label>
 
       <label class="flex items-center gap-1.5 text-label text-faint cursor-pointer select-none shrink-0 whitespace-nowrap">
-        <input type="checkbox" v-model="autoScroll" class="accent-[#66c0f4]" />
+        <input type="checkbox" v-model="autoScroll" class="accent-accent" />
         自动滚动
       </label>
 
@@ -199,7 +199,7 @@ const exitTone = computed(() => {
     >
       <div
         v-if="state.prompt"
-        class="px-5 py-2.5 border-b border-[rgba(255,180,84,.24)] bg-[rgba(255,180,84,.06)] flex items-center gap-3 shrink-0"
+        class="px-5 py-2.5 border-b border-amber/24 bg-amber/6 flex items-center gap-3 shrink-0"
       >
         <TriangleAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
         <span class="text-body text-amber">{{ state.prompt.hint }}</span>
@@ -213,7 +213,7 @@ const exitTone = computed(() => {
             ref="promptEl"
             v-model="promptValue"
             :type="state.prompt.kind === 'password' ? 'password' : 'text'"
-            class="flex-1 max-w-[320px] h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(255,180,84,.5)]"
+            class="flex-1 max-w-80 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-amber/50"
             placeholder="输入后回车"
             @keydown.enter="submitPrompt"
           />
@@ -231,7 +231,7 @@ const exitTone = computed(() => {
     >
       <div
         v-if="state.askGuard && !state.running"
-        class="px-5 py-2.5 border-b border-[rgba(240,169,46,.24)] bg-[rgba(240,169,46,.06)] flex items-center gap-3 shrink-0 flex-wrap"
+        class="px-5 py-2.5 border-b border-amber/24 bg-amber/6 flex items-center gap-3 shrink-0 flex-wrap"
       >
         <ShieldAlert :size="16" :stroke-width="1.9" class="text-amber shrink-0" />
         <span class="text-body text-amber">
@@ -240,7 +240,7 @@ const exitTone = computed(() => {
         <input
           ref="guardEl"
           v-model="guardValue"
-          class="w-[150px] h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-[rgba(240,169,46,.5)]"
+          class="w-[150px] h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-amber/50"
           placeholder="验证码"
           autocomplete="one-time-code"
           @keydown.enter="submitGuard"
@@ -259,7 +259,7 @@ const exitTone = computed(() => {
     >
       <div
         v-if="state.uploaded"
-        class="px-5 py-2.5 border-b border-[rgba(74,222,128,.24)] bg-[rgba(74,222,128,.06)] flex items-center gap-3 shrink-0"
+        class="px-5 py-2.5 border-b border-success/25 bg-success/[0.06] flex items-center gap-3 shrink-0"
       >
         <Check :size="16" :stroke-width="2.4" class="text-success shrink-0" />
         <span class="text-body text-success">
@@ -273,7 +273,7 @@ const exitTone = computed(() => {
 
     <div
       ref="bodyEl"
-      class="flex-1 min-h-0 overflow-y-auto scroll-thin px-5 py-3 bg-[#080d14] select-text"
+      class="flex-1 min-h-0 overflow-y-auto scroll-thin px-5 py-3 bg-console select-text"
       role="log"
       aria-label="构建输出"
       @scroll="onScroll"

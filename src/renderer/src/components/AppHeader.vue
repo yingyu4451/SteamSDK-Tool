@@ -46,7 +46,7 @@ const dup = computed(() => {
     <div class="flex items-start gap-4 flex-wrap min-w-0">
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-          <h1 class="text-stat font-normal tracking-tight m-0 break-words min-w-0 text-ink">{{ app.dirName }}</h1>
+          <h1 class="text-display font-semibold tracking-tight m-0 break-words min-w-0 text-ink">{{ app.dirName }}</h1>
           <span class="pill" :class="status.tone">{{ status.text }}</span>
           <span v-if="app.setLive" class="pill pill-warn">SetLive · {{ app.setLive }}</span>
           <button class="btn btn-sm no-drag" title="改 AppID / 描述 / 项目文件夹 / 构建缓存目录" @click="openDrawer('app')">
@@ -82,7 +82,7 @@ const dup = computed(() => {
     <!-- AppID 跨 App 冲突 -->
     <div
       v-if="dup"
-      class="fade-in-up mt-4 rounded-card border border-[rgba(255,92,108,.3)] bg-[rgba(255,92,108,.07)] p-3"
+      class="fade-in-up mt-4 rounded-card border border-danger/30 bg-danger/7 p-3"
     >
       <div class="text-label font-semibold text-danger mb-1.5">AppID 冲突</div>
       <div class="text-label text-muted leading-relaxed">
@@ -96,7 +96,7 @@ const dup = computed(() => {
     <!-- 问题清单：只列还没被忽略的。全忽略完这块整个消失，不留空壳 -->
     <div
       v-if="activeRows.length"
-      class="fade-in-up mt-4 rounded-card border border-[rgba(240,169,46,.22)] bg-[rgba(240,169,46,.05)] p-3"
+      class="fade-in-up mt-4 rounded-card border border-amber/22 bg-amber/5 p-3"
     >
       <div class="flex items-center gap-2 mb-1.5">
         <span class="text-label font-semibold text-amber">待处理</span>
@@ -129,7 +129,7 @@ const dup = computed(() => {
     </div>
   </div>
 
-  <div v-else-if="app?.error" class="card p-5 border-[rgba(226,75,75,.35)]">
+  <div v-else-if="app?.error" class="card p-5 border-danger/35">
     <div class="text-copy font-semibold text-danger">读取 App 失败</div>
     <div class="text-body text-muted mt-1.5">{{ app.error }}</div>
   </div>

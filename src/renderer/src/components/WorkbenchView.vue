@@ -55,7 +55,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
     <!-- scripts 根目录下有游离的 vdf：它们不属于任何 App，列表里看不见 -->
     <div
       v-if="state.orphans.length"
-      class="card p-4 border-[rgba(255,180,84,.3)] bg-[rgba(255,180,84,.045)]"
+      class="card p-4 border-amber/30 bg-amber/45"
       v-reveal
     >
       <div class="flex items-start gap-3">
@@ -147,7 +147,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       <!-- 左边 Depot（下面挂分支），右边构建输出：右列用 absolute 铺满左列的高度，
            这样行高只由左列决定，日志再多也只会在卡片内部滚动，不会把两列撑高。 -->
       <div class="grid grid-cols-2 gap-4 min-w-0">
-        <div class="flex flex-col gap-4 min-w-0 min-h-[320px]">
+        <div class="flex flex-col gap-4 min-w-0 min-h-80">
           <DepotMatrix :depots="detail.depots || []" />
           <BranchPanel />
         </div>

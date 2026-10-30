@@ -34,10 +34,10 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
   <div v-if="d" class="fixed inset-0 z-50 grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/25" @click="closeOrphanDialog" />
 
-    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="adopt-title" class="relative card s-modal w-full max-w-[560px] max-h-[86vh] overflow-y-auto scroll-thin no-drag">
+    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="adopt-title" class="relative card s-modal w-full max-w-140 max-h-[86vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-6 pt-5 pb-4 border-b border-line flex items-start gap-3">
         <div>
-          <h2 id="adopt-title" class="text-lead font-semibold m-0">把游离的 vdf 收进一个 App</h2>
+          <h2 id="adopt-title" class="text-title font-semibold m-0">把游离的 vdf 收进一个 App</h2>
         </div>
         <button
           class="ml-auto w-7 h-7 grid place-items-center rounded-input text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
@@ -54,7 +54,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
             ref="input"
             :value="d.name"
             placeholder="例如 MyGame"
-            class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+            class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
             @input="d.name = $event.target.value"
             @keydown.enter="canSubmit && submitOrphanDialog()"
           />
@@ -83,7 +83,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
 
         <div
           v-if="d.error"
-          class="rounded-card border border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)] px-3.5 py-2.5 text-label text-danger"
+          class="rounded-card border border-danger/24 bg-danger/6 px-3.5 py-2.5 text-label text-danger"
         >
           {{ d.error }}
         </div>

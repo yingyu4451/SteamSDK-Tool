@@ -265,9 +265,9 @@ const descTab = ref('desc')
   <div v-if="w" class="fixed inset-0 z-50 grid place-items-center p-6">
     <div class="absolute inset-0 bg-black/25" @click="closeWizard" />
 
-    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="new-app-title" class="relative card s-modal w-full max-w-[660px] max-h-[88vh] overflow-y-auto scroll-thin no-drag">
+    <div ref="el" role="dialog" aria-modal="true" aria-labelledby="new-app-title" class="relative card s-modal w-full max-w-165 max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-6 h-14 border-b border-line flex items-center gap-3">
-        <h2 id="new-app-title" class="text-lead font-semibold m-0">新建 App</h2>
+        <h2 id="new-app-title" class="text-title font-semibold m-0">新建 App</h2>
         <button
           class="ml-auto w-7 h-7 grid place-items-center rounded-input text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
           @click="closeWizard"
@@ -284,7 +284,7 @@ const descTab = ref('desc')
             ref="nameInput"
             :value="w.name"
             placeholder="例如 MyGame"
-            class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+            class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
             @input="wizardNameChanged($event.target.value)"
           />
         </label>
@@ -295,7 +295,7 @@ const descTab = ref('desc')
           <div class="relative">
             <div
               class="flex items-center gap-1.5 h-9 px-1 rounded-input bg-surface border transition-colors"
-              :class="w.appId && !appIdOk ? 'border-[rgba(226,75,75,.55)]' : 'border-line'"
+              :class="w.appId && !appIdOk ? 'border-danger/55' : 'border-line'"
             >
               <input
                 ref="appIdRef"
@@ -339,7 +339,7 @@ const descTab = ref('desc')
               id="app-pick-list"
               role="listbox"
               aria-label="已知 App"
-              class="absolute left-0 right-0 top-full mt-1 z-30 max-h-[240px] overflow-y-auto scroll-thin rounded-card border border-line bg-surface-2 py-1 shadow-[0_16px_40px_rgba(0,0,0,.5)]"
+              class="absolute left-0 right-0 top-full mt-1 z-30 max-h-60 overflow-y-auto scroll-thin rounded-card border border-line bg-surface-2 py-1 shadow-modal"
             >
               <div v-if="!filteredKnownApps.length" class="px-3 py-2 text-label text-faint">
                 没有匹配的 App —— 可以继续手填 AppID
@@ -377,7 +377,7 @@ const descTab = ref('desc')
 
           <div
             v-if="appIdConflict.length"
-            class="rounded-card border border-[rgba(255,180,84,.26)] bg-[rgba(255,180,84,.06)] px-3 py-2 flex items-center gap-2 flex-wrap"
+            class="rounded-card border border-amber/26 bg-amber/6 px-3 py-2 flex items-center gap-2 flex-wrap"
           >
             <span class="text-label text-amber">
               AppID {{ w.appId }} 已经被本地 App「{{ appIdConflict.join('、') }}」用了 ——
@@ -413,8 +413,8 @@ const descTab = ref('desc')
             class="rounded-card border px-3.5 py-2.5 text-label leading-relaxed"
             :class="
               lk.needsKey || lk.needsPassword
-                ? 'border-[rgba(255,180,84,.26)] bg-[rgba(255,180,84,.06)] text-amber'
-                : 'border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)] text-danger'
+                ? 'border-amber/26 bg-amber/6 text-amber'
+                : 'border-danger/24 bg-danger/6 text-danger'
             "
           >
             <div class="whitespace-pre-wrap">{{ lk.error }}</div>
@@ -433,7 +433,7 @@ const descTab = ref('desc')
 
           <div class="rounded-card border border-line overflow-hidden">
             <div
-              class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-7 bg-[rgba(255,255,255,.022)] text-micro text-faint tracking-wider uppercase"
+              class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-7 bg-white/22 text-micro text-faint tracking-wider uppercase"
             >
               <span />
               <span />
@@ -450,8 +450,8 @@ const descTab = ref('desc')
                 :data-plat-id="p.id"
                 class="grid grid-cols-[14px_18px_96px_108px_1fr_62px] items-center gap-2 px-3 h-10 border-t border-line-soft transition-colors"
                 :class="[
-                  w.picks[p.id].on ? 'bg-[rgba(102,192,244,.035)]' : '',
-                  dragId === p.id ? 'bg-[rgba(102,192,244,.09)] opacity-60' : ''
+                  w.picks[p.id].on ? 'bg-accent/35' : '',
+                  dragId === p.id ? 'bg-accent/9 opacity-60' : ''
                 ]"
               >
                 <span
@@ -464,7 +464,7 @@ const descTab = ref('desc')
               <input
                 type="checkbox"
                 :checked="w.picks[p.id].on"
-                class="accent-[#66c0f4] w-3.5 h-3.5"
+                class="accent-accent w-3.5 h-3.5"
                 @change="wizardTogglePlatform(p.id)"
               />
               <label
@@ -478,13 +478,13 @@ const descTab = ref('desc')
                 :value="w.picks[p.id].depotId"
                 :disabled="!w.picks[p.id].on"
                 placeholder="AppID+1"
-                class="h-7 px-2 rounded-input bg-surface border border-line text-label num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
+                class="h-7 px-2 rounded-input bg-surface border border-line text-label num outline-none focus:border-accent/45 placeholder:text-faint disabled:opacity-35 disabled:cursor-not-allowed"
                 @input="wizardSetDepotId(p.id, $event.target.value)"
               />
               <input
                 :value="w.picks[p.id].contentRoot"
                 :disabled="!w.picks[p.id].on"
-                class="h-7 px-2 rounded-input bg-surface border border-line text-micro font-mono outline-none focus:border-[rgba(102,192,244,.45)] disabled:opacity-35 disabled:cursor-not-allowed"
+                class="h-7 px-2 rounded-input bg-surface border border-line text-micro font-mono outline-none focus:border-accent/45 disabled:opacity-35 disabled:cursor-not-allowed"
                 @input="wizardSetRoot(p.id, $event.target.value)"
               />
               <button
@@ -516,7 +516,7 @@ const descTab = ref('desc')
               {{ t.label }}
               <span
                 v-if="descTab === t.id"
-                class="absolute left-0 right-0 -bottom-px h-[2px] rounded-full bg-accent"
+                class="absolute left-0 right-0 -bottom-px h-0.5 rounded-full bg-accent"
               />
             </button>
             <span v-if="descTab === 'will'" class="ml-auto text-label text-faint num">
@@ -532,7 +532,7 @@ const descTab = ref('desc')
               key="desc"
               :value="w.desc"
               placeholder="例如 MyGame 正式版"
-              class="w-full h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
+              class="w-full h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
               @input="w.desc = $event.target.value"
             />
 
@@ -575,7 +575,7 @@ const descTab = ref('desc')
 
         <div
           v-if="w.error"
-          class="rounded-card border border-[rgba(255,92,108,.24)] bg-[rgba(255,92,108,.06)] px-3.5 py-2.5 text-label text-danger"
+          class="rounded-card border border-danger/24 bg-danger/6 px-3.5 py-2.5 text-label text-danger"
         >
           {{ w.error }}
         </div>
