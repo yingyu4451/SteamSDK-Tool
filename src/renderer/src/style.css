@@ -248,6 +248,31 @@ select:focus {
 .app-reorder-move {
   transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+.app-reorder-enter-active,
+.app-reorder-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.app-reorder-enter-from,
+.app-reorder-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ---------- Apps 文件夹：容器内缩 + 展开/折叠高度过渡 ---------- */
+.folder-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.folder-body.is-collapsed {
+  grid-template-rows: 0fr;
+}
+.folder-inner {
+  overflow: hidden;
+  min-height: 0;
+}
 
 /* ---------- 侧边栏（新建 Depot）进出场 ---------- */
 .slideover-enter-active,

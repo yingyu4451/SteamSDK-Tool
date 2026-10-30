@@ -10,7 +10,6 @@ import {
   Unplug,
   FolderPlus,
   FolderClosed,
-  ChevronRight,
   ChevronDown,
   Pencil,
   Trash2,
@@ -30,6 +29,7 @@ import {
 } from '../store.js'
 import { useListStagger } from '../motion.js'
 import EmptyState from './EmptyState.vue'
+import AppCard from './AppCard.vue'
 
 const listEl = ref(null)
 const { run } = useListStagger(listEl, (el) => el.dataset.dir)
@@ -111,21 +111,17 @@ const folderGroups = computed(() =>
 const looseApps = computed(() => containerApps(''))
 const hasFolders = computed(() => state.folders.length > 0)
 
-/** 展开成一行一行的渲染清单（文件夹头 / 未分类小标题 / App 卡片），交给 TransitionGroup 做 FLIP */
+/** 渲染清单：文件夹（含子卡片）+ 未分类小标题 + 未分类卡片，交给 TransitionGroup 做 FLIP */
 const rows = computed(() => {
   const out = []
   for (const g of folderGroups.value) {
     out.push({ type: 'folder', key: 'f:' + g.folder.id, folder: g.folder, items: g.items })
-    if (!g.folder.collapsed) {
-      for (const a of g.items) out.push({ type: 'app', key: a.dirName, app: a })
-    }
   }
-  if (hasFolders.value) {
-    out.push({ type: 'loose', key: 'loose-head' })
-    for (const a of looseApps.value) out.push({ type: 'app', key: a.dirName, app: a })
-  } else {
-    for (const a of looseApps.value) out.push({ type: 'app', key: a.dirName, app: a })
+  // 没有未分类 App 时不占一行；拖动中仍显示，好让「拖出来」有落点
+  if (hasFolders.value && (looseApps.value.length > 0 || drag.value.active)) {
+    out.push({ type: 'loose-head', key: 'loose-head' })
   }
+  for (const a of looseApps.value) out.push({ type: 'app', key: a.dirName, app: a })
   return out
 })
 
@@ -199,6 +195,17 @@ function insertionIn(folderId, clientY) {
   return cards.length
 }
 
+/** 指针落在哪个文件夹容器的矩形里（含空白区，卡片之间也能判定） */
+function folderBoxAt(clientY) {
+  const list = listEl.value
+  if (!list) return null
+  for (const el of list.querySelectorAll('[data-folder-box]')) {
+    const r = el.getBoundingClientRect()
+    if (clientY >= r.top && clientY <= r.bottom) return el.dataset.folderBox
+  }
+  return null
+}
+
 /** 指针落在哪张卡上（返回它属于哪个容器、以及该容器里的插入槽位） */
 function containerAt(clientY) {
   for (const el of cardEls()) {
@@ -208,12 +215,20 @@ function containerAt(clientY) {
       return { folderId, index: insertionIn(folderId, clientY) }
     }
   }
+  // 卡片之间的空隙：算在所在文件夹容器里，槽位按 Y 推算
+  const box = folderBoxAt(clientY)
+  if (box !== null && box !== undefined) return { folderId: box, index: insertionIn(box, clientY) }
   return null
 }
 
 function onCardPointerDown(e, app) {
   if (e.button !== 0) return
-  const rect = e.currentTarget.getBoundingClientRect()
+  // 事件经 AppCard 透传，currentTarget 可能为空；退回按坐标找卡片根元素
+  const rootEl = e.currentTarget?.getBoundingClientRect
+    ? e.currentTarget
+    : e.target?.closest?.('[data-dir]')
+  if (!rootEl) return
+  const rect = rootEl.getBoundingClientRect()
   const fromFolder = folderOf(app)
   drag.value = {
     active: false,
@@ -439,65 +454,90 @@ function healthTitle(app) {
       </div>
 
       <TransitionGroup name="app-reorder" tag="div" class="flex flex-col gap-1.5">
+        <!-- 文件夹：容器包住子卡片，展开/折叠用 grid-rows 过渡 -->
         <template v-for="row in rows" :key="row.key">
-          <!-- 文件夹头：点击折叠/展开；把 App 拖到这一行上即归类 -->
           <div
             v-if="row.type === 'folder'"
-            :data-folder-head="row.folder.id"
-            class="group flex items-center gap-1.5 h-8 px-2 rounded-card border transition-colors cursor-pointer select-none"
-            :class="[
+            :key="row.key"
+            :data-folder-box="row.folder.id"
+            class="rounded-card border overflow-hidden transition-colors"
+            :class="
               drag.active && drag.dropFolder === row.folder.id
-                ? 'border-[#66c0f4] bg-[rgba(102,192,244,.2)]'
-                : 'border-line/60 bg-surface/45 hover:bg-surface-3/40',
-              drag.active ? 'cursor-copy' : ''
-            ]"
-            :title="'点击折叠/展开；把 App 拖到这里分类'"
-            @click="toggleFolder(row.folder.id)"
+                ? 'border-[#66c0f4] bg-[rgba(102,192,244,.14)]'
+                : 'border-line/70 bg-[rgba(0,0,0,.18)]'
+            "
           >
-            <component
-              :is="row.folder.collapsed ? ChevronRight : ChevronDown"
-              :size="13"
-              class="shrink-0 text-faint"
-              :stroke-width="2"
-            />
-            <FolderClosed :size="13" class="shrink-0 text-accent/85" :stroke-width="1.9" />
-            <input
-              v-if="editingFolder === row.folder.id"
-              v-model="editName"
-              data-edit-folder="1"
-              class="flex-1 min-w-0 bg-transparent border-0 outline-none text-body text-ink"
-              @click.stop
-              @keydown.enter.prevent="confirmRenameFolder"
-              @keydown.esc.prevent="cancelRenameFolder"
-              @blur="confirmRenameFolder"
-            />
-            <template v-else>
-              <span class="text-body font-normal truncate">{{ row.folder.name }}</span>
-              <span class="num text-micro text-faint">{{ row.items.length }}</span>
-              <span
-                class="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <button
-                  class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 border-0 bg-transparent cursor-pointer"
-                  title="重命名文件夹"
-                  @click.stop="beginRenameFolder(row.folder)"
-                >
-                  <Pencil :size="12" :stroke-width="2" />
-                </button>
-                <button
-                  class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-danger hover:bg-[rgba(226,75,75,.14)] border-0 bg-transparent cursor-pointer"
-                  title="删除文件夹（里面的 App 回到未分类）"
-                  @click.stop="deleteFolder(row.folder.id)"
-                >
-                  <Trash2 :size="12" :stroke-width="2" />
-                </button>
-              </span>
-            </template>
+            <div
+              :data-folder-head="row.folder.id"
+              class="group flex items-center gap-1.5 h-8 px-2 transition-colors select-none"
+              :class="[
+                drag.active ? 'cursor-copy' : 'cursor-pointer hover:bg-surface-3/35',
+                drag.active && drag.dropFolder === row.folder.id ? 'bg-[rgba(102,192,244,.12)]' : ''
+              ]"
+              :title="'点击折叠/展开；把 App 拖到这里分类'"
+              @click="toggleFolder(row.folder.id)"
+            >
+              <ChevronDown
+                :size="13"
+                class="shrink-0 text-faint transition-transform duration-200"
+                :class="row.folder.collapsed ? '-rotate-90' : ''"
+                :stroke-width="2"
+              />
+              <FolderClosed :size="13" class="shrink-0 text-accent/85" :stroke-width="1.9" />
+              <input
+                v-if="editingFolder === row.folder.id"
+                v-model="editName"
+                data-edit-folder="1"
+                class="flex-1 min-w-0 bg-transparent border-0 outline-none text-body text-ink"
+                @click.stop
+                @keydown.enter.prevent="confirmRenameFolder"
+                @keydown.esc.prevent="cancelRenameFolder"
+                @blur="confirmRenameFolder"
+              />
+              <template v-else>
+                <span class="text-body font-normal truncate">{{ row.folder.name }}</span>
+                <span class="num text-micro text-faint">{{ row.items.length }}</span>
+                <span class="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 border-0 bg-transparent cursor-pointer"
+                    title="重命名文件夹"
+                    @click.stop="beginRenameFolder(row.folder)"
+                  >
+                    <Pencil :size="12" :stroke-width="2" />
+                  </button>
+                  <button
+                    class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-danger hover:bg-[rgba(226,75,75,.14)] border-0 bg-transparent cursor-pointer"
+                    title="删除文件夹（里面的 App 回到未分类）"
+                    @click.stop="deleteFolder(row.folder.id)"
+                  >
+                    <Trash2 :size="12" :stroke-width="2" />
+                  </button>
+                </span>
+              </template>
+            </div>
+
+            <div class="folder-body" :class="row.folder.collapsed ? 'is-collapsed' : ''">
+              <div class="folder-inner">
+                <div class="flex flex-col gap-1 px-1.5 pb-1.5">
+                  <AppCard
+                    v-for="app in row.items"
+                    :key="app.dirName"
+                    :app="app"
+                    :folder="row.folder.id"
+                    :selected="state.selectedDir === app.dirName"
+                    :dimmed="drag.active && drag.dir === app.dirName"
+                    @pointerdown="(e) => onCardPointerDown(e, app)"
+                    @click="onCardClick(app)"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 未分类小标题（有文件夹时才显示，也作为拖出文件夹的落点） -->
           <div
-            v-else-if="row.type === 'loose'"
+            v-else-if="row.type === 'loose-head'"
+            :key="row.key"
             data-folder-head=""
             class="flex items-center gap-1.5 h-6 px-1 mt-1 text-micro text-faint select-none"
             :class="drag.active && drag.dropFolder === '' ? 'text-accent' : ''"
@@ -507,48 +547,19 @@ function healthTitle(app) {
             <span class="ml-auto text-faint/70">{{ drag.active ? '拖到这里移出文件夹' : '' }}</span>
           </div>
 
-          <!-- App 卡片 -->
-          <button
+          <!-- 未分类的 App 卡片 -->
+          <AppCard
             v-else
-            :data-dir="row.app.dirName"
-            :data-folder="folderOf(row.app)"
-            class="text-left rounded-card border px-3 py-2.5 transition-colors cursor-pointer select-none"
-            :class="[
-              state.selectedDir === row.app.dirName
-                ? 'border-[#66c0f4] bg-[rgba(102,192,244,.16)]'
-                : 'border-line bg-surface hover:bg-surface-3/45',
-              drag.active && drag.dir === row.app.dirName ? 'opacity-0' : ''
-            ]"
-            :aria-current="state.selectedDir === row.app.dirName ? 'true' : undefined"
-            :title="'拖动调整顺序/分类；点击切换到 ' + row.app.dirName"
-            @pointerdown="onCardPointerDown($event, row.app)"
+            :key="row.key"
+            :app="row.app"
+            folder=""
+            :selected="state.selectedDir === row.app.dirName"
+            :dimmed="drag.active && drag.dir === row.app.dirName"
+            @pointerdown="(e) => onCardPointerDown(e, row.app)"
             @click="onCardClick(row.app)"
-          >
-            <div class="flex items-center gap-2 min-w-0">
-              <!-- 三态一律是圆点，只有颜色不同；语义写在 title 里 -->
-              <span
-                class="w-2 h-2 rounded-full shrink-0"
-                :class="
-                  healthOf(row.app) === 'bad'
-                    ? 'bg-danger'
-                    : healthOf(row.app) === 'warn'
-                      ? 'bg-amber'
-                      : 'bg-success'
-                "
-                :title="healthTitle(row.app)"
-              />
-              <span class="text-body font-normal truncate">{{ row.app.dirName }}</span>
-              <GripVertical class="ml-auto shrink-0 text-faint/60" :size="12" :stroke-width="2" />
-            </div>
-            <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
-              <span>App {{ row.app.appId || '?' }}</span>
-              <template v-if="row.app.setLive">
-                <span class="text-faint">·</span>
-                <span class="text-amber break-all">{{ row.app.setLive }}</span>
-              </template>
-            </div>
-          </button>
+          />
         </template>
+
       </TransitionGroup>
     </div>
 
