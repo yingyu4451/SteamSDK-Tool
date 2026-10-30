@@ -94,7 +94,8 @@ import {
   resolveBundledScriptsDir,
   setBundledScriptsDir,
   ensureScripts,
-  installScripts
+  installScripts,
+  inspectScripts
 } from './scripts.js'
 
 let mainWindow = null
@@ -727,6 +728,28 @@ function registerIpc() {
     const paths = getPaths(s)
     const result = installScripts(paths.contentBuilder, { force: true })
     return { ...result, status: sdkStatus(s) }
+  })
+
+  // 顶栏的「构建脚本需更新」提示用：SDK 里那份和工具自带的比，
+  // 缺了 / 版本旧了 / 被改过都算需要更新（点提示会强制同步成自带版本）。
+  ipcMain.handle('sdk:scriptsState', () => {
+    const s = loadSettings()
+    const paths = getPaths(s)
+    try {
+      const report = inspectScripts(paths.contentBuilder)
+      const names = [...report.missing, ...report.stale]
+      return {
+        ok: true,
+        bundledReady: report.bundledReady,
+        needsUpdate: report.bundledReady && names.length > 0,
+        missing: report.missing,
+        stale: report.stale,
+        files: names,
+        dir: paths.contentBuilder
+      }
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
   })
   ipcMain.handle('sdk:scan', () => scanApps(loadSettings()))
   ipcMain.handle('sdk:app', (_e, dirName) => readApp(dirName, loadSettings()))

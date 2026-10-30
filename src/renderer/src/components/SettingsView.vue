@@ -11,7 +11,8 @@ import {
   installUpdateNow,
   openReleases,
   zoomStep,
-  setZoomPercent
+  setZoomPercent,
+  refreshScriptUpdate
 } from '../store.js'
 
 /** 当前界面缩放百分比 */
@@ -144,6 +145,8 @@ async function repairScripts() {
     }
     const n = (res.written || []).length
     scriptMsg.value = { text: n ? `已写入 ${n} 个脚本` : '脚本已是最新', tone: 'ok' }
+    // 顶栏那条「构建脚本需更新」跟着收起来
+    await refreshScriptUpdate()
     // 状态刷新后这一行会收起来，成功提示自己留 4 秒，别让按钮点完就「无影无踪」
     setTimeout(() => (scriptMsg.value = null), 4000)
   } catch (e) {
@@ -164,6 +167,7 @@ async function reloadSettings() {
   state.hasPassword = s.hasPassword
   state.encryptionAvailable = s.encryptionAvailable
   state.sdk = await window.api.sdk.status()
+  await refreshScriptUpdate()
 }
 
 async function pick() {

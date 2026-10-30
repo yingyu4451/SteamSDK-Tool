@@ -28,7 +28,8 @@ const api = {
     app: (dirName) => ipcRenderer.invoke('sdk:app', dirName),
     history: () => ipcRenderer.invoke('sdk:history'),
     log: (file) => ipcRenderer.invoke('sdk:log', file),
-    installScripts: () => ipcRenderer.invoke('sdk:installScripts')
+    installScripts: () => ipcRenderer.invoke('sdk:installScripts'),
+    scriptsState: () => ipcRenderer.invoke('sdk:scriptsState')
   },
 
   login: {

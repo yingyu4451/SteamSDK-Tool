@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { Minus, Square, Copy, X } from '@lucide/vue'
-import { state, goSettings } from '../store.js'
+import { state, goSettings, updateBuildScripts } from '../store.js'
 
 const upd = computed(() => state.update?.data || null)
 
@@ -85,6 +85,18 @@ const win = window.api.win
           </span>
         </div>
       </Transition>
+
+      <!-- SDK 里的构建脚本旧了/缺了/被改过：点一下同步成工具自带版本 -->
+      <button
+        v-if="state.scriptUpdate?.needsUpdate"
+        class="pill pill-warn no-drag cursor-pointer border-0"
+        :title="`SDK 里的构建脚本和工具自带的版本不一致（${[...state.scriptUpdate.missing, ...state.scriptUpdate.stale].join('、')}）。点这里同步成工具自带版本 —— 不更新的话，上传时「关掉某个 Depot」之类的开关可能不生效。`"
+        :disabled="state.running"
+        @click="updateBuildScripts()"
+      >
+        <span class="w-1.5 h-1.5 rounded-full bg-amber" />
+        构建脚本需更新
+      </button>
 
       <!-- 有新版本就点一下，直接去设置页 -->
       <button

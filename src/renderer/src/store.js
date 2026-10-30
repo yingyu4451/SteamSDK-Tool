@@ -45,6 +45,10 @@ export const state = reactive({
 
   history: [],
 
+  // 顶栏提示用：SDK 里的 build.ps1 / check.ps1 和工具自带的比，
+  // 缺了 / 版本旧了 / 被改过 -> needsUpdate = true；点提示同步成自带版本。
+  scriptUpdate: { needsUpdate: false, missing: [], stale: [] },
+
   view: 'workbench', // workbench | history | settings
 
   // 首次运行引导
@@ -239,6 +243,7 @@ export async function boot() {
     state.hasPassword = s.hasPassword
     state.encryptionAvailable = s.encryptionAvailable
     state.sdk = status
+    await refreshScriptUpdate()
     await rescan()
     const ks = await api.steam.keyState().catch(() => ({ has: false }))
     state.hasApiKey = !!ks?.has
@@ -582,6 +587,36 @@ export async function rescan() {
     }
   } finally {
     state.scanning = false
+  }
+}
+
+/* ---- SDK 里的构建脚本是否需要更新（顶栏提示） ---- */
+export async function refreshScriptUpdate() {
+  try {
+    const r = await api.sdk.scriptsState()
+    if (r?.ok) {
+      state.scriptUpdate = {
+        needsUpdate: !!r.needsUpdate,
+        missing: Array.isArray(r.missing) ? r.missing : [],
+        stale: Array.isArray(r.stale) ? r.stale : []
+      }
+    }
+  } catch {
+    /* 只是提示，读不到就算了 */
+  }
+}
+
+export async function updateBuildScripts() {
+  if (state.running) return toast('先等这次任务跑完再更新脚本', 'bad')
+  try {
+    const r = await api.sdk.installScripts()
+    if (r?.status) state.sdk = r.status
+    if (!r?.ok) return toast(r?.error || '构建脚本写入失败', 'bad')
+    await refreshScriptUpdate()
+    const n = (r.written || []).length
+    toast(n ? `已更新 ${n} 个构建脚本` : '构建脚本已是最新')
+  } catch (e) {
+    toast(e.message, 'bad')
   }
 }
 
