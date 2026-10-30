@@ -108,7 +108,7 @@ async function openPath(p) {
           class="w-full text-left rounded-card border px-3 py-2 pr-8 transition-colors cursor-pointer min-w-0"
           :class="
             String(d.id) === String(current?.id)
-              ? 'border-[rgba(102,192,244,.95)] bg-[rgba(102,192,244,.22)] shadow-[inset_0_0_0_1px_rgba(102,192,244,.35)]'
+              ? 'border-[rgba(102,192,244,.95)] bg-[rgba(102,192,244,.1)] shadow-[inset_0_0_0_1px_rgba(102,192,244,.35)]'
               : 'border-[rgba(120,160,200,.4)] bg-[rgba(179,218,255,.05)] hover:bg-[rgba(179,218,255,.1)] hover:border-[rgba(120,160,200,.62)]'
           "
           @click="setActiveDepot(d.id)"
