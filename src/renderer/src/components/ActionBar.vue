@@ -217,7 +217,7 @@ watch(
     </button>
 
     <button
-      class="btn btn-sm no-drag"
+      class="btn no-drag"
       :disabled="!appId"
       title="在 Steamworks 后台打开这个 App 的生成版本页面"
       @click="openExternal(partner('builds'))"
@@ -228,10 +228,10 @@ watch(
 
     <div class="flex-1" />
     <div class="flex items-center gap-1.5">
-      <button class="btn btn-sm no-drag" :disabled="!state.sdk?.contentBuilder" @click="openPath(state.sdk.contentBuilder)">
+      <button class="btn no-drag" :disabled="!state.sdk?.contentBuilder" @click="openPath(state.sdk.contentBuilder)">
         <FolderOpen :size="14" class="mr-1.5" /> 构建目录
       </button>
-      <button class="btn btn-sm no-drag" :disabled="!appId" @click="openExternal(partner('builds'))">
+      <button class="btn no-drag" :disabled="!appId" @click="openExternal(partner('builds'))">
         <SquareArrowOutUpRight :size="14" class="mr-1.5" /> Steamworks
       </button>
     </div>
