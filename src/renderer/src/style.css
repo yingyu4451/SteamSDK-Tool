@@ -928,17 +928,12 @@ body {
 .btn-sm { height: 26px; padding: 0 12px; font-size: var(--text-label); }
 .btn-lg { height: 40px; padding: 0 18px; font-size: var(--text-copy); }
 
-/* 界面缩放：加减号按钮比普通按钮大一号；输入框直接用全局 input 样式（单层边框/底色），不再套外壳 */
-.btn-zoom {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: var(--radius-btn);
-}
+/* 界面缩放：按钮保持默认大小，只把加号/减号图标放大；输入框单层样式，% 叠在框内 */
+.btn-square { padding: 0; }
 .zoom-input {
-  width: 56px;
-  height: 40px;
-  padding: 0 6px;
+  width: 62px;
+  height: 32px;
+  padding: 0 18px 0 6px;
   text-align: center;
   box-shadow: none;
 }

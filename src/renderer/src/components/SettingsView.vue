@@ -395,7 +395,7 @@ function openExternal(url) {
           <h2 class="text-body font-semibold m-0">界面缩放</h2>
           <div class="mt-3 flex items-center gap-2">
             <button
-              class="btn btn-zoom no-drag"
+              class="btn btn-square no-drag w-9"
               aria-label="缩小 5%"
               title="缩小 5%"
               :disabled="zoomPct <= 80"
@@ -403,7 +403,7 @@ function openExternal(url) {
             >
               <Minus :size="18" :stroke-width="2.2" />
             </button>
-            <span class="flex items-center gap-1">
+            <label class="relative inline-flex items-center">
               <input
                 v-model="zoomText"
                 class="zoom-input text-center text-body num text-ink"
@@ -412,10 +412,10 @@ function openExternal(url) {
                 @keydown.enter.prevent="commitZoomText"
                 @blur="commitZoomText"
               />
-              <span class="text-label text-faint">%</span>
-            </span>
+              <span class="absolute right-2 text-label text-faint pointer-events-none">%</span>
+            </label>
             <button
-              class="btn btn-zoom no-drag"
+              class="btn btn-square no-drag w-9"
               aria-label="放大 5%"
               title="放大 5%"
               :disabled="zoomPct >= 150"
