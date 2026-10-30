@@ -269,8 +269,12 @@ function toggleColorPopover(id, event) {
   const r = event && event.currentTarget ? event.currentTarget.getBoundingClientRect() : null
   if (r) {
     const width = 236
-    const left = Math.min(Math.max(8, r.right - width + 6), window.innerWidth - width - 8)
-    const top = Math.min(r.bottom + 6, window.innerHeight - 216)
+    const height = 224
+    const gap = 10
+    let left = r.right + gap
+    if (left + width > window.innerWidth - 8) left = r.left - width - gap
+    left = Math.min(Math.max(8, left), window.innerWidth - width - 8)
+    const top = Math.min(Math.max(8, r.top - 12), window.innerHeight - height - 8)
     colorPopoverPos.value = { top, left }
   }
   const target = state.folders.find((f) => f.id === id)
