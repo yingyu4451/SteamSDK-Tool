@@ -25,6 +25,8 @@ export const state = reactive({
   uploadOff: {},
   // 界面缩放：1 = 100%，主进程 setZoomFactor 后回填（值同时存 settings.zoomFactor）
   zoom: 1,
+  // Apps 列表手动排序用的 dirName 顺序（存 settings.appOrder）；不在表里的排后面
+  appOrder: [],
   sdk: null,
   hasPassword: false,
   encryptionAvailable: false,
@@ -215,6 +217,7 @@ export async function boot() {
     const [s, status] = await Promise.all([api.settings.get(), api.sdk.status()])
     state.settings = s.settings
     state.uploadOff = { ...(s.settings?.uploadOff || {}) }
+    state.appOrder = Array.isArray(s.settings?.appOrder) ? s.settings.appOrder.map(String) : []
     state.zoom = Number(s.settings?.zoomFactor) || 1
     state.hasPassword = s.hasPassword
     state.encryptionAvailable = s.encryptionAvailable
@@ -632,6 +635,13 @@ export async function reloadDetail() {
 
 export function setActiveDepot(id) {
   state.activeDepot = String(id)
+}
+
+/** Apps 列表拖动排序：记住 dirName 顺序，下次启动仍按这个顺序显示 */
+export function setAppOrder(dirNames) {
+  const order = (dirNames || []).map(String)
+  state.appOrder = order
+  api.settings.save({ appOrder: order }).catch(() => {})
 }
 
 /** 这个 Depot 会不会随构建上传（默认会；用户关掉的不上传） */

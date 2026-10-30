@@ -8,9 +8,10 @@ import {
   Plus,
   BookOpen,
   Unplug,
-  FolderPlus
+  FolderPlus,
+  GripVertical
 } from '@lucide/vue'
-import { state, selectApp, rescan, openWizard } from '../store.js'
+import { state, selectApp, rescan, openWizard, setAppOrder } from '../store.js'
 import { useListStagger } from '../motion.js'
 import EmptyState from './EmptyState.vue'
 
@@ -32,6 +33,82 @@ const nav = [
 ]
 
 const appCount = computed(() => state.apps.length)
+
+/**
+ * 显示顺序：settings.appOrder 里有的按它的顺序排，没记录的（新 App）排最后，
+ * 同类内保持扫描返回的顺序。拖动排序只改这个表，不动磁盘。
+ */
+const apps = computed(() => {
+  const rank = new Map((state.appOrder || []).map((d, i) => [d, i]))
+  return [...state.apps]
+    .map((a, i) => ({ a, i }))
+    .sort((x, y) => {
+      const rx = rank.has(x.a.dirName) ? rank.get(x.a.dirName) : Number.MAX_SAFE_INTEGER
+      const ry = rank.has(y.a.dirName) ? rank.get(y.a.dirName) : Number.MAX_SAFE_INTEGER
+      return rx - ry || x.i - y.i
+    })
+    .map((o) => o.a)
+})
+
+// ---- Apps 列表拖动排序（pointer 事件；不用 HTML5 DnD，避免系统拖拽光标） ----
+const drag = ref({ active: false, dir: '', from: -1, insert: -1, startY: 0, pointerId: -1 })
+let lastDragEndAt = 0
+
+function cardEls() {
+  return listEl.value ? [...listEl.value.querySelectorAll('[data-dir]')] : []
+}
+
+function insertionAt(clientY) {
+  const els = cardEls()
+  for (let i = 0; i < els.length; i++) {
+    const r = els[i].getBoundingClientRect()
+    if (clientY < r.top + r.height / 2) return i
+  }
+  return els.length
+}
+
+function onCardPointerDown(e, app) {
+  if (e.button !== 0) return
+  const from = apps.value.findIndex((a) => a.dirName === app.dirName)
+  drag.value = { active: false, dir: app.dirName, from, insert: from, startY: e.clientY, pointerId: e.pointerId }
+  const move = (ev) => {
+    if (ev.pointerId !== drag.value.pointerId) return
+    if (!drag.value.active) {
+      if (Math.abs(ev.clientY - drag.value.startY) < 4) return
+      drag.value.active = true
+    }
+    drag.value.insert = insertionAt(ev.clientY)
+    ev.preventDefault()
+  }
+  const up = (ev) => {
+    if (ev.pointerId !== drag.value.pointerId) return
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', up)
+    if (drag.value.active) {
+      lastDragEndAt = Date.now()
+      const d = drag.value
+      const arr = apps.value.map((a) => a.dirName)
+      const from2 = arr.indexOf(d.dir)
+      if (from2 >= 0) {
+        const without = arr.filter((x) => x !== d.dir)
+        let insert = d.insert
+        if (from2 < insert) insert -= 1
+        insert = Math.max(0, Math.min(insert, without.length))
+        const next = [...without.slice(0, insert), d.dir, ...without.slice(insert)]
+        if (next.join('|') !== arr.join('|')) setAppOrder(next)
+      }
+    }
+    drag.value = { active: false, dir: '', from: -1, insert: -1, startY: 0, pointerId: -1 }
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', up)
+}
+
+function onCardClick(app) {
+  // 刚拖动完的那一下 click 不要当成「切换 App」
+  if (Date.now() - lastDragEndAt < 350) return
+  selectApp(app.dirName)
+}
 
 /**
  * 三态：红 = 结构性坏了（脚本缺了 / 没有 AppID / AppID 撞车），
@@ -121,42 +198,48 @@ function healthTitle(app) {
     </div>
 
     <div ref="listEl" class="flex-1 min-h-0 overflow-y-auto scroll-thin px-3 pb-3 flex flex-col gap-1.5">
-      <button
-        v-for="app in state.apps"
-        :key="app.dirName"
-        :data-dir="app.dirName"
-        class="text-left rounded-card border px-3 py-2.5 transition-colors cursor-pointer"
-        :class="
-          state.selectedDir === app.dirName
-            ? 'border-[#66c0f4] bg-[rgba(102,192,244,.16)]'
-            : 'border-line bg-surface hover:bg-surface-3/45'
-        "
-        :aria-current="state.selectedDir === app.dirName ? 'true' : undefined"
-        @click="selectApp(app.dirName)"
-      >
-        <div class="flex items-center gap-2 min-w-0">
-          <!-- 三态一律是圆点，只有颜色不同；语义写在 title 里 -->
-          <span
-            class="w-2 h-2 rounded-full shrink-0"
-            :class="
-              healthOf(app) === 'bad'
-                ? 'bg-danger'
-                : healthOf(app) === 'warn'
-                  ? 'bg-amber'
-                  : 'bg-success'
-            "
-            :title="healthTitle(app)"
-          />
-          <span class="text-body font-normal truncate">{{ app.dirName }}</span>
-        </div>
-        <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
-          <span>App {{ app.appId || '?' }}</span>
-          <template v-if="app.setLive">
-            <span class="text-faint">·</span>
-            <span class="text-amber break-all">{{ app.setLive }}</span>
-          </template>
-        </div>
-      </button>
+      <template v-for="(app, idx) in apps" :key="app.dirName">
+        <div v-if="drag.active && drag.insert === idx" class="h-0.5 rounded-full bg-accent shrink-0" />
+        <button
+          :data-dir="app.dirName"
+          class="text-left rounded-card border px-3 py-2.5 transition-colors cursor-pointer select-none"
+          :class="[
+            state.selectedDir === app.dirName
+              ? 'border-[#66c0f4] bg-[rgba(102,192,244,.16)]'
+              : 'border-line bg-surface hover:bg-surface-3/45',
+            drag.active && drag.dir === app.dirName ? 'opacity-40' : ''
+          ]"
+          :aria-current="state.selectedDir === app.dirName ? 'true' : undefined"
+          :title="'拖动调整顺序；点击切换到 ' + app.dirName"
+          @pointerdown="onCardPointerDown($event, app)"
+          @click="onCardClick(app)"
+        >
+          <div class="flex items-center gap-2 min-w-0">
+            <!-- 三态一律是圆点，只有颜色不同；语义写在 title 里 -->
+            <span
+              class="w-2 h-2 rounded-full shrink-0"
+              :class="
+                healthOf(app) === 'bad'
+                  ? 'bg-danger'
+                  : healthOf(app) === 'warn'
+                    ? 'bg-amber'
+                    : 'bg-success'
+              "
+              :title="healthTitle(app)"
+            />
+            <span class="text-body font-normal truncate">{{ app.dirName }}</span>
+            <GripVertical class="ml-auto shrink-0 text-faint/60" :size="12" :stroke-width="2" />
+          </div>
+          <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
+            <span>App {{ app.appId || '?' }}</span>
+            <template v-if="app.setLive">
+              <span class="text-faint">·</span>
+              <span class="text-amber break-all">{{ app.setLive }}</span>
+            </template>
+          </div>
+        </button>
+      </template>
+      <div v-if="drag.active && drag.insert === apps.length" class="h-0.5 rounded-full bg-accent shrink-0" />
 
       <div v-if="!state.apps.length && !state.scanning" class="px-1 py-2">
         <EmptyState compact :icon="FolderPlus" title="还没有 App" hint="点右上角 + 新建一个，或把游戏文件夹拖进窗口。">
