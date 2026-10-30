@@ -2083,6 +2083,17 @@ export async function runCheck() {
 
 export async function runBuild({ preview, password, local, guardCode }) {
   if (state.running || !state.selectedDir) return
+  // 构建脚本不是最新就先拦下来：旧 build.ps1 不认「跳过某个 Depot」这类参数，
+  // 放它跑下去只会得到一个「看起来成功、其实传了不该传的 Depot」的结果。
+  await refreshScriptUpdate()
+  if (state.scriptUpdate?.needsUpdate) {
+    const files = [...(state.scriptUpdate.missing || []), ...(state.scriptUpdate.stale || [])].join('、')
+    toast(
+      `构建脚本不是最新（${files}），已中止${preview ? ' Preview 空跑' : '上传'}：点右上角「构建脚本需更新」同步后再试`,
+      'bad'
+    )
+    return
+  }
   clearLogs()
   state.askPasswordError = null
   state.askGuard = null
