@@ -27,6 +27,9 @@ export const state = reactive({
   zoom: 1,
   // Apps 列表手动排序用的 dirName 顺序（存 settings.appOrder）；不在表里的排后面
   appOrder: [],
+  // Apps 文件夹（存 settings.folders）= [{ id, name, collapsed }]；folderMap 是 App → 文件夹
+  folders: [],
+  folderMap: {},
   sdk: null,
   hasPassword: false,
   encryptionAvailable: false,
@@ -218,6 +221,15 @@ export async function boot() {
     state.settings = s.settings
     state.uploadOff = { ...(s.settings?.uploadOff || {}) }
     state.appOrder = Array.isArray(s.settings?.appOrder) ? s.settings.appOrder.map(String) : []
+  state.folders = Array.isArray(s.settings?.folders)
+    ? s.settings.folders
+        .filter((f) => f && f.id)
+        .map((f) => ({ id: String(f.id), name: String(f.name || '未命名'), collapsed: !!f.collapsed }))
+    : []
+  state.folderMap =
+    s.settings?.folderMap && typeof s.settings.folderMap === 'object'
+      ? { ...s.settings.folderMap }
+      : {}
     state.zoom = Number(s.settings?.zoomFactor) || 1
     state.hasPassword = s.hasPassword
     state.encryptionAvailable = s.encryptionAvailable
@@ -642,6 +654,78 @@ export function setAppOrder(dirNames) {
   const order = (dirNames || []).map(String)
   state.appOrder = order
   api.settings.save({ appOrder: order }).catch(() => {})
+}
+
+// ---- Apps 文件夹：只是本地分类，不动磁盘上的任何文件 ----
+
+function persistFolders() {
+  // 注意：不能把 Vue 的 reactive 代理直接丢给 IPC（structured clone 会抛
+  // "An object could not be cloned" 然后被静默 catch 掉），这里先转成普通对象。
+  api.settings
+    .save({
+      folders: state.folders.map((f) => ({ ...f })),
+      folderMap: { ...state.folderMap }
+    })
+    .catch(() => {})
+}
+
+/** 这个 App 属于哪个文件夹（folderId，没有则空串） */
+export function folderOfApp(dirName) {
+  const id = state.folderMap?.[dirName]
+  if (!id) return ''
+  return state.folders.some((f) => f.id === id) ? id : ''
+}
+
+export function createFolder(name) {
+  const clean = String(name || '').trim() || '新建文件夹'
+  const folder = {
+    id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name: clean,
+    collapsed: false
+  }
+  state.folders = [...state.folders, folder]
+  persistFolders()
+  return folder
+}
+
+export function renameFolder(id, name) {
+  const clean = String(name || '').trim()
+  if (!clean) return
+  const f = state.folders.find((x) => x.id === id)
+  if (!f) return
+  f.name = clean
+  persistFolders()
+}
+
+export function toggleFolder(id) {
+  const f = state.folders.find((x) => x.id === id)
+  if (!f) return
+  f.collapsed = !f.collapsed
+  persistFolders()
+}
+
+/** 删除文件夹：里面的 App 回到「未分类」，App 本身不受影响 */
+export function deleteFolder(id) {
+  state.folders = state.folders.filter((f) => f.id !== id)
+  for (const [dir, fid] of Object.entries(state.folderMap || {})) {
+    if (fid === id) delete state.folderMap[dir]
+  }
+  persistFolders()
+}
+
+/** 把 App 放进文件夹（folderId 为空 = 移出到未分类） */
+export function assignAppFolder(dirName, folderId) {
+  const dir = String(dirName || '')
+  if (!dir) return
+  if (!folderId) {
+    if (state.folderMap && Object.prototype.hasOwnProperty.call(state.folderMap, dir)) {
+      delete state.folderMap[dir]
+    }
+  } else {
+    if (!state.folders.some((f) => f.id === folderId)) return
+    state.folderMap[dir] = folderId
+  }
+  persistFolders()
 }
 
 /** 这个 Depot 会不会随构建上传（默认会；用户关掉的不上传） */
