@@ -903,6 +903,25 @@ function registerIpc() {
     return { ...res, app: readApp(dirName, loadSettings()) }
   })
 
+  /* ---- 单个 Depot 是否参与上传 ---- */
+  // 不改 vdf（不动用户脚本），工具侧记一份「不上传清单」，构建时通过
+  // STEAMSDK_SKIP_DEPOTS 传给 build.ps1，由它在临时 app vdf 里注释掉这些 depot。
+  ipcMain.handle('app:setDepotUpload', (_e, { dirName, depotId, enabled } = {}) => {
+    const dir = String(dirName || '').trim()
+    const id = String(depotId || '').trim()
+    if (!dir || !/^\d+$/.test(id)) return { ok: false, error: '参数不对' }
+    const s = loadSettings()
+    const map = { ...(s.uploadOff || {}) }
+    const list = new Set((Array.isArray(map[dir]) ? map[dir] : []).map(String))
+    if (enabled) list.delete(id)
+    else list.add(id)
+    if (list.size) map[dir] = [...list]
+    else delete map[dir]
+    const saved = saveSettings({ uploadOff: map })
+    if (saved?.ok === false) return saved
+    return { ok: true, uploadOff: map[dir] || [] }
+  })
+
   /* ---- 删除 App ---- */
   ipcMain.handle('app:previewDelete', (_e, { dirName }) => describeDelete(dirName, loadSettings()))
   ipcMain.handle('app:delete', (_e, { dirName, deleteContent } = {}) => {
@@ -1170,13 +1189,23 @@ function registerIpc() {
     if (preview) args.push('-Preview')
     if (local) args.push('-Local')
 
+    // 用户关掉的 Depot 不参与这次构建：传给 build.ps1 在临时 vdf 里注释掉
+    const offList = (s.uploadOff || {})[dirName]
+    const skipDepots = (Array.isArray(offList) ? offList : [])
+      .map((x) => String(x).trim())
+      .filter((x) => /^\d+$/.test(x))
+
     const handle = runScript({
       script: p.buildScript,
       args,
       cwd: p.contentBuilder,
       label: `${local ? '本地服务器' : preview ? 'Preview' : '正式上传'} ${dirName}`,
       password: pw,
-      env: { STEAMSDK_BUILD_PASSWORD: pw, STEAMSDK_GUARD_CODE: String(guardCode || '').trim() },
+      env: {
+        STEAMSDK_BUILD_PASSWORD: pw,
+        STEAMSDK_GUARD_CODE: String(guardCode || '').trim(),
+        ...(skipDepots.length ? { STEAMSDK_SKIP_DEPOTS: skipDepots.join(',') } : {})
+      },
       onData: (d) => send('run:data', { kind: 'build', ...d }),
       onPrompt: (d) => send('run:prompt', { kind: 'build', ...d }),
       onExit: (d) => {

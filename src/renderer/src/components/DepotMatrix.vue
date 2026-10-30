@@ -1,10 +1,10 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { fmtSize, fmtInt } from '../format.js'
-import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL } from '../store.js'
+import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL, depotUploadEnabled, toggleDepotUpload } from '../store.js'
 import PathLink from './PathLink.vue'
 import EmptyState from './EmptyState.vue'
-import { ChevronRight, Package } from '@lucide/vue'
+import { ChevronRight, Package, CloudUpload, CloudOff } from '@lucide/vue'
 
 const props = defineProps({ depots: { type: Array, default: () => [] } })
 
@@ -103,39 +103,63 @@ async function openPath(p) {
       class="px-5 pb-4 grid gap-2"
       style="grid-template-columns: repeat(auto-fill, minmax(156px, 1fr))"
     >
-      <button
-        v-for="d in sortedDepots"
-        :key="d.id"
-        class="text-left rounded-card border px-3 py-2 transition-colors cursor-pointer min-w-0 bg-transparent"
-        :class="
-          String(d.id) === String(current?.id)
-            ? 'border-[rgba(102,192,244,.4)] bg-[rgba(102,192,244,.06)]'
-            : 'border-line hover:bg-surface-2/60'
-        "
-        @click="setActiveDepot(d.id)"
-      >
-        <div class="flex items-center gap-2 min-w-0">
-          <span
-            class="w-1.5 h-1.5 rounded-full shrink-0"
-            :class="{
-              'bg-accent': depotState(d).tone === 'ok',
-              'bg-amber': depotState(d).tone === 'warn',
-              'bg-danger': depotState(d).tone === 'bad'
-            }"
+      <div v-for="d in sortedDepots" :key="d.id" class="relative min-w-0">
+        <button
+          class="w-full text-left rounded-card border px-3 py-2 pr-8 transition-colors cursor-pointer min-w-0 bg-transparent"
+          :class="
+            String(d.id) === String(current?.id)
+              ? 'border-[rgba(102,192,244,.55)] bg-[rgba(102,192,244,.1)]'
+              : 'border-[rgba(120,160,200,.4)] bg-[rgba(179,218,255,.05)] hover:bg-[rgba(179,218,255,.1)] hover:border-[rgba(120,160,200,.62)]'
+          "
+          @click="setActiveDepot(d.id)"
+        >
+          <div class="flex items-center gap-2 min-w-0">
+            <span
+              class="w-1.5 h-1.5 rounded-full shrink-0"
+              :class="{
+                'bg-accent': depotState(d).tone === 'ok',
+                'bg-amber': depotState(d).tone === 'warn',
+                'bg-danger': depotState(d).tone === 'bad'
+              }"
+            />
+            <span
+              class="text-body font-normal truncate"
+              :class="String(d.id) === String(current?.id) ? 'text-ink' : 'text-muted'"
+            >
+              {{ platLabel(d.platform) }}
+            </span>
+          </div>
+          <div class="mt-1 flex items-center gap-1.5 text-micro text-faint num min-w-0">
+            <span class="font-mono truncate">{{ d.id }}</span>
+            <span class="text-faint">·</span>
+            <span class="shrink-0">{{ fmtSize(d.analysis?.totalBytes) }}</span>
+            <span v-if="!depotUploadEnabled(state.selectedDir, d.id)" class="shrink-0 text-amber">不上传</span>
+          </div>
+        </button>
+        <!-- 只有图标的上传开关：按下=参与构建上传，弹起=构建时跳过 -->
+        <button
+          class="absolute top-1 right-1 w-6 h-6 grid place-items-center rounded-btn border cursor-pointer no-drag transition-all active:translate-y-px active:brightness-90"
+          :class="
+            depotUploadEnabled(state.selectedDir, d.id)
+              ? 'bg-[rgba(102,192,244,.16)] border-[rgba(102,192,244,.5)] text-accent hover:bg-[rgba(102,192,244,.3)] hover:border-[rgba(102,192,244,.8)]'
+              : 'bg-[rgba(0,0,0,.35)] border-[rgba(120,160,200,.35)] text-faint hover:bg-surface-3/70 hover:border-[rgba(120,160,200,.65)] hover:text-ink'
+          "
+          :title="
+            depotUploadEnabled(state.selectedDir, d.id)
+              ? '这个 Depot 会随构建上传；点击改为不上传'
+              : '这个 Depot 不会上传；点击改为上传'
+          "
+          :aria-pressed="depotUploadEnabled(state.selectedDir, d.id)"
+          :aria-label="`切换 ${platLabel(d.platform)} Depot 上传`"
+          @click.stop="toggleDepotUpload(d.id)"
+        >
+          <component
+            :is="depotUploadEnabled(state.selectedDir, d.id) ? CloudUpload : CloudOff"
+            :size="14"
+            :stroke-width="1.9"
           />
-          <span
-            class="text-body font-normal truncate"
-            :class="String(d.id) === String(current?.id) ? 'text-ink' : 'text-muted'"
-          >
-            {{ platLabel(d.platform) }}
-          </span>
-        </div>
-        <div class="mt-1 flex items-center gap-1.5 text-micro text-faint num min-w-0">
-          <span class="font-mono truncate">{{ d.id }}</span>
-          <span class="text-faint">·</span>
-          <span class="shrink-0">{{ fmtSize(d.analysis?.totalBytes) }}</span>
-        </div>
-      </button>
+        </button>
+      </div>
     </div>
 
     <!-- 当前 Depot -->

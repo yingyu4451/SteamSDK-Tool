@@ -153,12 +153,28 @@ if ($parseText -match '(?is)"Depots"\s*\{([^}]*)\}') {
 }
 if ($depotRefs.Count -eq 0) { Fail "no depots listed in the Depots block of $appVdf" }
 
+# 工具里给每个 Depot 加了「是否上传」开关，关掉的 DepotID 走这个环境变量传进来。
+# 这里在临时 vdf 里把它们的 depot 行注释掉，用户的原 vdf 一个字都不改。
+$skipIds = @()
+if ($env:STEAMSDK_SKIP_DEPOTS) {
+    $skipIds = @($env:STEAMSDK_SKIP_DEPOTS.Split(',') |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ -match '^\d+$' })
+}
+$skipped = @($depotRefs | Where-Object { $skipIds -contains $_.Id })
+if ($skipIds.Count -gt 0 -and $skipped.Count -eq 0) {
+    Write-Host "Skip       : $($skipIds -join ',')  (none of them is in this App, ignored)" -ForegroundColor DarkGray
+}
+
 Write-Host ""
 Write-Host "App        : $App"      -ForegroundColor Cyan
 Write-Host "AppID      : $appId"
 Write-Host "Script     : $appVdf"
 Write-Host "Preview    : $([bool]$Preview)"
 Write-Host "Depots     : $($depotRefs.Count)"
+if ($skipped.Count -gt 0) {
+    Write-Host "Skip       : $($skipped.Id -join ',')  (won't be uploaded)" -ForegroundColor Yellow
+}
 Write-Host ""
 
 $rows = @()
@@ -178,11 +194,19 @@ foreach ($d in $depotRefs) {
         }
         $cr = $appContentRoot
     }
-    $rows += [pscustomobject]@{ Id = $d.Id; File = $d.File; Root = $cr; Own = $own }
+    $rows += [pscustomobject]@{ Id = $d.Id; File = $d.File; Root = $cr; Own = $own; Skip = ($skipIds -contains $d.Id) }
+}
+
+if ($rows.Count -gt 0 -and @($rows | Where-Object { $_.Skip }).Count -eq $rows.Count) {
+    Fail "all depots have upload turned off -> nothing to build (turn at least one on in the Depot card)"
 }
 
 $bad = 0
 foreach ($r in $rows) {
+    if ($r.Skip) {
+        Write-Host ("  depot {0,-10} {1,-30} [skip] won't be uploaded" -f $r.Id, $r.File) -ForegroundColor DarkGray
+        continue
+    }
     $src = if ($r.Own) { 'own' } else { 'app' }
     if (-not (Test-Path $r.Root)) {
         Write-Host ("  depot {0,-10} {1,-30} [{2}] MISSING ROOT: {3}" -f $r.Id, $r.File, $src, $r.Root) -ForegroundColor Red
@@ -250,6 +274,14 @@ if ($Local) {
 # referenced by relative filename.
 # 不用 Set-Content -Encoding ASCII —— 那会把 Desc 和注释里的中文写成 ????，
 # 路径里有中文时更糟。写不带 BOM 的 UTF-8。
+
+# 上传开关关掉的 Depot：在临时 vdf 里把对应的 depot 行注释掉，
+# steamcmd 就不会构建它。用户的原 vdf 一个字都不动。
+foreach ($id in $skipIds) {
+    $idEsc = [regex]::Escape($id)
+    $t = $t -replace ('(?im)^(\s*)"' + $idEsc + '"\s+"[^"]*"'), '// $0'
+}
+
 $tempVdf = Join-Path $appDir ("_preview_" + [IO.Path]::GetFileName($appVdf))
 [IO.File]::WriteAllText($tempVdf, $t, (New-Object Text.UTF8Encoding($false)))
 $runVdf = $tempVdf

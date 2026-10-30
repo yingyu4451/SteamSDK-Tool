@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { state, openOrphanDialog } from '../store.js'
+import { state, openOrphanDialog, depotUploadEnabled } from '../store.js'
 import AppHeader from './AppHeader.vue'
 import ActionBar from './ActionBar.vue'
 import DepotMatrix from './DepotMatrix.vue'
@@ -13,9 +13,15 @@ const detail = computed(() => state.detail)
 
 const agg = computed(() => {
   const a = { upload: 0, uploadBytes: 0, excluded: 0, total: 0, totalBytes: 0 }
+  const dirName = detail.value?.dirName || state.selectedDir
   for (const d of detail.value?.depots || []) {
     const x = d.analysis
     if (!x) continue
+    // 关掉上传的 Depot 不计入「会上传 / 上传体积」
+    if (!depotUploadEnabled(dirName, d.id)) {
+      a.excluded += x.excludedCount
+      continue
+    }
     a.upload += x.uploadCount
     a.uploadBytes += x.uploadBytes
     a.excluded += x.excludedCount

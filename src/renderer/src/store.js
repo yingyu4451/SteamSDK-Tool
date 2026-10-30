@@ -20,6 +20,9 @@ export const state = reactive({
   bootError: null,
 
   settings: null,
+  // 单个 Depot 是否参与上传：{ [dirName]: [depotId, ...] }，这里放「不上传」的
+  // 清单；构建时主进程把它转成 STEAMSDK_SKIP_DEPOTS 传给 build.ps1。
+  uploadOff: {},
   // 界面缩放：1 = 100%，主进程 setZoomFactor 后回填（值同时存 settings.zoomFactor）
   zoom: 1,
   sdk: null,
@@ -211,6 +214,7 @@ export async function boot() {
   try {
     const [s, status] = await Promise.all([api.settings.get(), api.sdk.status()])
     state.settings = s.settings
+    state.uploadOff = { ...(s.settings?.uploadOff || {}) }
     state.zoom = Number(s.settings?.zoomFactor) || 1
     state.hasPassword = s.hasPassword
     state.encryptionAvailable = s.encryptionAvailable
@@ -628,6 +632,36 @@ export async function reloadDetail() {
 
 export function setActiveDepot(id) {
   state.activeDepot = String(id)
+}
+
+/** 这个 Depot 会不会随构建上传（默认会；用户关掉的不上传） */
+export function depotUploadEnabled(dirName, depotId) {
+  const list = state.uploadOff?.[dirName]
+  if (!Array.isArray(list)) return true
+  return !list.map(String).includes(String(depotId))
+}
+
+/** 切换某个 Depot 的上传开关：写进设置，构建时主进程传给 build.ps1 跳过 */
+export async function toggleDepotUpload(depotId) {
+  const dirName = state.selectedDir
+  if (!dirName) return
+  const enabled = !depotUploadEnabled(dirName, depotId)
+  let res
+  try {
+    res = await api.app.setDepotUpload(dirName, String(depotId), enabled)
+  } catch (e) {
+    res = { ok: false, error: String(e?.message || e) }
+  }
+  if (!res?.ok) {
+    toast(res?.error || '切换失败', 'error')
+    return
+  }
+  const next = { ...(state.uploadOff || {}) }
+  const list = Array.isArray(res.uploadOff) ? res.uploadOff.map(String) : []
+  if (list.length) next[dirName] = list
+  else delete next[dirName]
+  state.uploadOff = next
+  toast(enabled ? '这个 Depot 会随构建上传' : '已关闭这个 Depot 的上传，构建时跳过')
 }
 
 export async function loadHistory() {

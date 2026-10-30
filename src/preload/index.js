@@ -65,7 +65,10 @@ const api = {
     knownApps: () => ipcRenderer.invoke('app:knownApps'),
     preflight: (dirName) => ipcRenderer.invoke('app:preflight', { dirName }),
     ignoreProblem: (dirName, text, on) =>
-      ipcRenderer.invoke('app:ignoreProblem', { dirName, text, on })
+      ipcRenderer.invoke('app:ignoreProblem', { dirName, text, on }),
+    // 单个 Depot 是否参与上传（工具侧记录，构建时跳过）
+    setDepotUpload: (dirName, depotId, enabled) =>
+      ipcRenderer.invoke('app:setDepotUpload', { dirName, depotId, enabled })
   },
 
   /** 本地内容服务器：把构建写进 tools\ContentServer\htdocs，不上传 Steam */
