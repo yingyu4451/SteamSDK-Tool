@@ -840,14 +840,14 @@ body {
 }
 #app::before { display: none; }
 
-/* 顶栏：Steam 全局 header #171d25 */
+/* 顶栏：Steam 全局 header #171d25；内容盒 44px，让右上角窗口按钮 44×44 正方 */
 .s-header {
   background: #171d25;
   border-bottom: 1px solid #171a21;
-  min-height: 52px;
+  min-height: 45px;
 }
 .s-brand {
-  font-size: var(--text-lead);
+  font-size: var(--text-body);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;

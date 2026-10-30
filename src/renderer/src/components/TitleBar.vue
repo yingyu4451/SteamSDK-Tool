@@ -21,9 +21,9 @@ onBeforeUnmount(() => {
   if (typeof off === 'function') off()
 })
 
-/* 窗口按钮：顶栏是 h-11 + 1px 下边框，内容盒只有 43px。
- * 按钮必须跟着容器走（h-full），不能用 h-11 —— 否则 44px 的按钮塞进 43px 的盒子里，
- * 图标会比右边的状态胶囊高出 1px。 */
+/* 窗口按钮：顶栏内容盒 44px（min-height 45 含 1px 下边框），按钮 44×44 正方。
+ * 按钮必须跟着容器走（h-full），不能用固定 h —— 否则按钮高度会和容器差 1px，
+ * 右边再出现长方形高亮。 */
 const WBTN = 'h-full w-11 grid place-items-center bg-transparent border-0 cursor-pointer text-muted transition-colors'
 
 /* 一定要在这里先把 window.api.win 取出来再用。
@@ -43,7 +43,7 @@ const win = window.api.win
          箭头三角 (96,74)(160,74)(128,22)）。箭头先画、立方体压上去，看着就是从箱子里升出来。
          这里用矢量重画而不是贴 build/icon.png —— 22px 下位图会糊。 -->
     <div class="flex items-center gap-2.5 no-drag">
-      <svg viewBox="0 0 256 256" class="w-[22px] h-[22px] shrink-0" aria-hidden="true">
+      <svg viewBox="0 0 256 256" class="w-[20px] h-[20px] shrink-0" aria-hidden="true">
         <defs>
           <linearGradient id="tb-logo-bg" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#2f516e" />
@@ -98,7 +98,7 @@ const win = window.api.win
       </button>
     </div>
 
-    <!-- 窗口按钮：和顶栏同高（h-11 = 44px），hover 自己控 -->
+    <!-- 窗口按钮：和顶栏内容盒同高（44px），宽也 44px，hover 是正方形 -->
     <div class="self-stretch flex items-stretch no-drag">
       <button :class="WBTN" class="hover:bg-surface-3 hover:text-ink" title="最小化" @click="win.minimize()">
         <Minus :size="15" />
