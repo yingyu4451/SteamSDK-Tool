@@ -3,7 +3,6 @@ import { ref, watch, nextTick, computed, onMounted } from 'vue'
 import gsap from 'gsap'
 import { state, clearLogs, cancelRun, answerPrompt, saveApp, submitGuardCode, cancelGuardPrompt } from '../store.js'
 import { fmtClock } from '../format.js'
-import { reducedMotion } from '../motion.js'
 import { Check, TriangleAlert, ShieldAlert, LoaderCircle, Terminal } from '@lucide/vue'
 import EmptyState from './EmptyState.vue'
 
@@ -40,7 +39,7 @@ watch(
     if (kids.length < animated) animated = 0 // 被清空过
     const fresh = kids.slice(animated)
     animated = kids.length
-    if (!fresh.length || reducedMotion()) return
+    if (!fresh.length) return
     gsap.fromTo(
       fresh.slice(-30),
       { opacity: 0, x: -8 },

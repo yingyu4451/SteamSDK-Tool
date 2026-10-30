@@ -12,8 +12,6 @@ import {
   zoomStep,
   zoomReset
 } from './store.js'
-import { reducedMotion } from './motion.js'
-
 import TitleBar from './components/TitleBar.vue'
 import Sidebar from './components/Sidebar.vue'
 import WorkbenchView from './components/WorkbenchView.vue'
@@ -124,7 +122,6 @@ onUnmounted(() => {
 
 /* 视图切换：淡出 + 轻微位移，比直接硬切有方向感 */
 function onEnter(el, done) {
-  if (reducedMotion()) return done()
   gsap.fromTo(
     el,
     { opacity: 0, y: 10 },
@@ -132,7 +129,6 @@ function onEnter(el, done) {
   )
 }
 function onLeave(el, done) {
-  if (reducedMotion()) return done()
   gsap.to(el, { opacity: 0, y: -6, duration: 0.18, ease: 'power2.in', onComplete: done })
 }
 </script>

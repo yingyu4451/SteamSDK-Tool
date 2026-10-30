@@ -1,10 +1,8 @@
 import gsap from 'gsap'
 import { ref, watch, nextTick } from 'vue'
 
-const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-export const reducedMotion = () => mq.matches
-
-const D = (n) => (reducedMotion() ? 0 : n)
+// 产品要求：所有过渡/动效始终按设计时长播放，不跟随系统「减少动画」开关。
+const D = (n) => n
 
 /* ------------------------------------------------------------------ *
  *  指令：v-reveal  —— 元素入场
@@ -71,7 +69,7 @@ export function useCountUp(source, { duration = 0.7 } = {}) {
       const target = Number(to) || 0
       tween?.kill()
       const from = Number(display.value) || 0
-      if (reducedMotion() || from === target) {
+      if (from === target) {
         display.value = target
         return
       }
@@ -115,7 +113,7 @@ export function useListStagger(containerRef, getKey, { each = 0.035, max = 24 } 
     }
     seen = nextSeen
 
-    if (!fresh.length || reducedMotion()) return
+    if (!fresh.length) return
     gsap.fromTo(
       fresh.slice(0, max),
       { opacity: 0, x: -10 },
@@ -130,7 +128,7 @@ export function useListStagger(containerRef, getKey, { each = 0.035, max = 24 } 
  *  数值变化时闪一下，让「刚刚更新了」这件事可见
  * ------------------------------------------------------------------ */
 export function flashValue(el) {
-  if (!el || reducedMotion()) return
+  if (!el) return
   gsap.fromTo(
     el,
     { color: '#66c0f4' },
@@ -142,7 +140,7 @@ export function flashValue(el) {
  *  构建中：卡片上流动的光带 + 呼吸
  * ------------------------------------------------------------------ */
 export function pulseLoop(el) {
-  if (!el || reducedMotion()) return { kill() {} }
+  if (!el) return { kill() {} }
   return gsap.to(el, {
     opacity: 0.55,
     duration: 1.1,

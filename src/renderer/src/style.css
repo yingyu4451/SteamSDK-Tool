@@ -814,17 +814,7 @@ select:focus {
   overflow: hidden;
 }
 
-/* ---------- 减少动态效果 ---------- */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+/* ---------- 动效不受系统「减少动画」设置影响（产品要求） ---------- */
 
 /* ============================================================
    照抄 Steam 商店（store.steampowered.com v7）组件层
