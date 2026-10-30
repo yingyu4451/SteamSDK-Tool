@@ -105,10 +105,10 @@ async function openPath(p) {
     >
       <div v-for="d in sortedDepots" :key="d.id" class="relative min-w-0">
         <button
-          class="w-full text-left rounded-card border px-3 py-2 pr-8 transition-colors cursor-pointer min-w-0 bg-transparent"
+          class="w-full text-left rounded-card border px-3 py-2 pr-8 transition-colors cursor-pointer min-w-0"
           :class="
             String(d.id) === String(current?.id)
-              ? 'border-[rgba(102,192,244,.55)] bg-[rgba(102,192,244,.1)]'
+              ? 'border-[rgba(102,192,244,.95)] bg-[rgba(102,192,244,.22)] shadow-[inset_0_0_0_1px_rgba(102,192,244,.35)]'
               : 'border-[rgba(120,160,200,.4)] bg-[rgba(179,218,255,.05)] hover:bg-[rgba(179,218,255,.1)] hover:border-[rgba(120,160,200,.62)]'
           "
           @click="setActiveDepot(d.id)"
@@ -138,11 +138,11 @@ async function openPath(p) {
         </button>
         <!-- 只有图标的上传开关：按下=参与构建上传，弹起=构建时跳过 -->
         <button
-          class="absolute top-1 right-1 w-6 h-6 grid place-items-center rounded-btn border cursor-pointer no-drag transition-all active:translate-y-px active:brightness-90"
+          class="absolute top-1 right-1 w-6 h-6 grid place-items-center rounded-btn border-0 cursor-pointer no-drag transition-all active:translate-y-px active:brightness-90"
           :class="
             depotUploadEnabled(state.selectedDir, d.id)
-              ? 'bg-[rgba(102,192,244,.16)] border-[rgba(102,192,244,.5)] text-accent hover:bg-[rgba(102,192,244,.3)] hover:border-[rgba(102,192,244,.8)]'
-              : 'bg-[rgba(0,0,0,.35)] border-[rgba(120,160,200,.35)] text-faint hover:bg-surface-3/70 hover:border-[rgba(120,160,200,.65)] hover:text-ink'
+              ? 'bg-[rgba(102,192,244,.22)] text-accent hover:bg-[rgba(102,192,244,.38)]'
+              : 'bg-[rgba(0,0,0,.45)] text-faint hover:bg-surface-3/80 hover:text-ink'
           "
           :title="
             depotUploadEnabled(state.selectedDir, d.id)
