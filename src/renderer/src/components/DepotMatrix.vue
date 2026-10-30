@@ -299,9 +299,7 @@ async function openPath(p) {
     </div>
 
     <div v-else class="border-t border-line px-5 py-3">
-      <EmptyState compact :icon="Package" title="还没有 Depot" hint="点右上角「新建 Depot」，按平台各建一个 —— 一次构建会全平台一起传。">
-        <button class="btn btn-sm" @click="openDepotSlide()">新建 Depot</button>
-      </EmptyState>
+      <EmptyState compact :icon="Package" title="还没有 Depot" hint="点右上角「新建 Depot」，按平台各建一个 —— 一次构建会全平台一起传。" />
     </div>
   </section>
 </template>

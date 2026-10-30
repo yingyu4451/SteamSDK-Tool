@@ -128,7 +128,7 @@ function healthTitle(app) {
         class="text-left rounded-card border px-3 py-2.5 transition-colors cursor-pointer"
         :class="
           state.selectedDir === app.dirName
-            ? 'border-[rgba(102,192,244,.5)] bg-[rgba(102,192,244,.08)]'
+            ? 'border-[#66c0f4] bg-[rgba(102,192,244,.14)] shadow-[inset_3px_0_0_#66c0f4]'
             : 'border-line bg-surface hover:bg-surface-3/45'
         "
         :aria-current="state.selectedDir === app.dirName ? 'true' : undefined"

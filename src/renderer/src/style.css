@@ -854,21 +854,21 @@ body {
   color: #dcdedf;
 }
 
-/* 侧栏：与顶栏同色的 Steam 客户端左栏；导航项照抄商店 nav tab */
+/* 侧栏：比画布更暗一档（#0c1219 vs #0f1924），跟主内容区拉开层次 */
 .s-sidebar {
-  background: #171d25;
-  border-right: 1px solid #171a21;
+  background: #0c1219;
+  border-right: 1px solid #1b2a3a;
 }
 .s-nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 34px;
+  height: 36px;
   padding: 0 15px;
   border: 0;
   border-radius: 2px;
   background: transparent;
-  color: #d9dadd;
+  color: #b9c2cc;
   font-size: var(--text-body);
   font-weight: 600;
   text-align: left;
@@ -879,14 +879,16 @@ body {
   background: rgba(26, 159, 255, 0.12);
   color: #d9dadd;
 }
+/* 选中项：实心亮蓝底 + 白色粗字 + 左侧亮条，跟未选中一眼分开 */
 .s-nav-item.is-active {
-  background: var(--tint-accent);
-  color: #99d4ff;
-  box-shadow: inset 2px 0 0 #1a9fff;
+  background: #2f6f93;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 #66c0f4;
 }
 .s-nav-item.is-active:hover {
-  background: rgba(26, 159, 255, 0.28);
-  color: #c6e7fb;
+  background: #357fa6;
+  color: #ffffff;
 }
 
 
