@@ -879,12 +879,11 @@ body {
   background: rgba(26, 159, 255, 0.12);
   color: #d9dadd;
 }
-/* 选中项：实心亮蓝底 + 白色粗字 + 左侧亮条，跟未选中一眼分开 */
+/* 选中项：实心亮蓝底 + 白色粗字（不用左侧亮条那种突出方式） */
 .s-nav-item.is-active {
   background: #2f6f93;
   color: #ffffff;
   font-weight: 700;
-  box-shadow: inset 3px 0 0 #66c0f4;
 }
 .s-nav-item.is-active:hover {
   background: #357fa6;
