@@ -197,10 +197,6 @@ watch(appId, () => {
       <button class="btn btn-sm px-2" :disabled="busy" @click="creating = false">取消</button>
     </div>
 
-    <p class="mt-2.5 text-micro text-faint leading-relaxed m-0">
-      点分支名即写入本地 vdf 的 SetLive；新分支在这里建，建完后台可能还要在 Steamworks 里配分支。
-    </p>
-
     <Transition
       enter-active-class="transition duration-200"
       enter-from-class="opacity-0 -translate-y-1"
