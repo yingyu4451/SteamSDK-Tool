@@ -244,6 +244,11 @@ select:focus {
   transform: translateY(-4px);
 }
 
+/* ---------- Apps 列表拖动排序的实时让位过渡 ---------- */
+.app-reorder-move {
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 /* ---------- 侧边栏（新建 Depot）进出场 ---------- */
 .slideover-enter-active,
 .slideover-leave-active {

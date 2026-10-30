@@ -50,55 +50,95 @@ const apps = computed(() => {
     .map((o) => o.a)
 })
 
-// ---- Apps 列表拖动排序（pointer 事件；不用 HTML5 DnD，避免系统拖拽光标） ----
-const drag = ref({ active: false, dir: '', from: -1, insert: -1, startY: 0, pointerId: -1 })
+// ---- Apps 列表拖动排序：拖动中实时换位（FLIP 过渡）+ 跟随指针的浮层 ----
+const drag = ref({
+  active: false,
+  dir: '',
+  pointerId: -1,
+  startY: 0,
+  ghostX: 0,
+  ghostY: 0,
+  w: 0,
+  h: 0,
+  grabX: 0,
+  grabY: 0,
+  preview: []
+})
 let lastDragEndAt = 0
+
+const appMap = computed(() => new Map(apps.value.map((a) => [a.dirName, a])))
+const shownApps = computed(() => {
+  if (!drag.value.active) return apps.value
+  return drag.value.preview.map((d) => appMap.value.get(d)).filter(Boolean)
+})
+const dragApp = computed(() => (drag.value.active ? appMap.value.get(drag.value.dir) || null : null))
 
 function cardEls() {
   return listEl.value ? [...listEl.value.querySelectorAll('[data-dir]')] : []
 }
 
+/** 目标槽位：用 offsetTop（布局位置）算，不受 FLIP transform 影响 */
 function insertionAt(clientY) {
-  const els = cardEls()
-  for (let i = 0; i < els.length; i++) {
-    const r = els[i].getBoundingClientRect()
-    if (clientY < r.top + r.height / 2) return i
+  const list = listEl.value
+  if (!list) return 0
+  const cards = cardEls()
+  const base = list.getBoundingClientRect().top - list.scrollTop
+  for (let i = 0; i < cards.length; i++) {
+    const el = cards[i]
+    if (clientY < base + el.offsetTop + el.offsetHeight / 2) return i
   }
-  return els.length
+  return cards.length
 }
 
 function onCardPointerDown(e, app) {
   if (e.button !== 0) return
-  const from = apps.value.findIndex((a) => a.dirName === app.dirName)
-  drag.value = { active: false, dir: app.dirName, from, insert: from, startY: e.clientY, pointerId: e.pointerId }
+  const rect = e.currentTarget.getBoundingClientRect()
+  drag.value = {
+    active: false,
+    dir: app.dirName,
+    pointerId: e.pointerId,
+    startY: e.clientY,
+    ghostX: rect.left,
+    ghostY: rect.top,
+    w: rect.width,
+    h: rect.height,
+    grabX: e.clientX - rect.left,
+    grabY: e.clientY - rect.top,
+    preview: []
+  }
   const move = (ev) => {
     if (ev.pointerId !== drag.value.pointerId) return
-    if (!drag.value.active) {
-      if (Math.abs(ev.clientY - drag.value.startY) < 4) return
-      drag.value.active = true
+    const d = drag.value
+    if (!d.active) {
+      if (Math.abs(ev.clientY - d.startY) < 4) return
+      d.active = true
+      d.preview = apps.value.map((a) => a.dirName)
     }
-    drag.value.insert = insertionAt(ev.clientY)
+    d.ghostX = ev.clientX - d.grabX
+    d.ghostY = ev.clientY - d.grabY
+    // 实时预览：指针越过某张卡的中线就把自己挪过去（列表会带过渡地让位）
+    const insert = insertionAt(ev.clientY)
+    const cur = d.preview.indexOf(d.dir)
+    let target = insert
+    if (cur < insert) target -= 1
+    target = Math.max(0, Math.min(target, d.preview.length - 1))
+    if (target !== cur) {
+      const next = d.preview.filter((x) => x !== d.dir)
+      next.splice(target, 0, d.dir)
+      d.preview = next
+    }
     ev.preventDefault()
   }
   const up = (ev) => {
     if (ev.pointerId !== drag.value.pointerId) return
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', up)
-    if (drag.value.active) {
+    const d = drag.value
+    if (d.active) {
       lastDragEndAt = Date.now()
-      const d = drag.value
-      const arr = apps.value.map((a) => a.dirName)
-      const from2 = arr.indexOf(d.dir)
-      if (from2 >= 0) {
-        const without = arr.filter((x) => x !== d.dir)
-        let insert = d.insert
-        if (from2 < insert) insert -= 1
-        insert = Math.max(0, Math.min(insert, without.length))
-        const next = [...without.slice(0, insert), d.dir, ...without.slice(insert)]
-        if (next.join('|') !== arr.join('|')) setAppOrder(next)
-      }
+      if (d.preview.join('|') !== apps.value.map((a) => a.dirName).join('|')) setAppOrder(d.preview)
     }
-    drag.value = { active: false, dir: '', from: -1, insert: -1, startY: 0, pointerId: -1 }
+    drag.value = { active: false, dir: '', pointerId: -1, startY: 0, ghostX: 0, ghostY: 0, w: 0, h: 0, grabX: 0, grabY: 0, preview: [] }
   }
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', up)
@@ -197,57 +237,87 @@ function healthTitle(app) {
       </button>
     </div>
 
-    <div ref="listEl" class="flex-1 min-h-0 overflow-y-auto scroll-thin px-3 pb-3 flex flex-col gap-1.5">
-      <template v-for="(app, idx) in apps" :key="app.dirName">
-        <div v-if="drag.active && drag.insert === idx" class="h-0.5 rounded-full bg-accent shrink-0" />
-        <button
-          :data-dir="app.dirName"
-          class="text-left rounded-card border px-3 py-2.5 transition-colors cursor-pointer select-none"
-          :class="[
-            state.selectedDir === app.dirName
-              ? 'border-[#66c0f4] bg-[rgba(102,192,244,.16)]'
-              : 'border-line bg-surface hover:bg-surface-3/45',
-            drag.active && drag.dir === app.dirName ? 'opacity-40' : ''
-          ]"
-          :aria-current="state.selectedDir === app.dirName ? 'true' : undefined"
-          :title="'拖动调整顺序；点击切换到 ' + app.dirName"
-          @pointerdown="onCardPointerDown($event, app)"
-          @click="onCardClick(app)"
-        >
-          <div class="flex items-center gap-2 min-w-0">
-            <!-- 三态一律是圆点，只有颜色不同；语义写在 title 里 -->
-            <span
-              class="w-2 h-2 rounded-full shrink-0"
-              :class="
-                healthOf(app) === 'bad'
-                  ? 'bg-danger'
-                  : healthOf(app) === 'warn'
-                    ? 'bg-amber'
-                    : 'bg-success'
-              "
-              :title="healthTitle(app)"
-            />
-            <span class="text-body font-normal truncate">{{ app.dirName }}</span>
-            <GripVertical class="ml-auto shrink-0 text-faint/60" :size="12" :stroke-width="2" />
-          </div>
-          <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
-            <span>App {{ app.appId || '?' }}</span>
-            <template v-if="app.setLive">
-              <span class="text-faint">·</span>
-              <span class="text-amber break-all">{{ app.setLive }}</span>
-            </template>
-          </div>
-        </button>
-      </template>
-      <div v-if="drag.active && drag.insert === apps.length" class="h-0.5 rounded-full bg-accent shrink-0" />
+    <div ref="listEl" class="relative flex-1 min-h-0 overflow-y-auto scroll-thin px-3 pb-3">
+      <TransitionGroup name="app-reorder" tag="div" class="flex flex-col gap-1.5">
+      <button
+        v-for="app in shownApps"
+        :key="app.dirName"
+        :data-dir="app.dirName"
+        class="text-left rounded-card border px-3 py-2.5 transition-colors cursor-pointer select-none"
+        :class="[
+          state.selectedDir === app.dirName
+            ? 'border-[#66c0f4] bg-[rgba(102,192,244,.16)]'
+            : 'border-line bg-surface hover:bg-surface-3/45',
+          drag.active && drag.dir === app.dirName ? 'opacity-0' : ''
+        ]"
+        :aria-current="state.selectedDir === app.dirName ? 'true' : undefined"
+        :title="'拖动调整顺序；点击切换到 ' + app.dirName"
+        @pointerdown="onCardPointerDown($event, app)"
+        @click="onCardClick(app)"
+      >
+        <div class="flex items-center gap-2 min-w-0">
+          <!-- 三态一律是圆点，只有颜色不同；语义写在 title 里 -->
+          <span
+            class="w-2 h-2 rounded-full shrink-0"
+            :class="
+              healthOf(app) === 'bad'
+                ? 'bg-danger'
+                : healthOf(app) === 'warn'
+                  ? 'bg-amber'
+                  : 'bg-success'
+            "
+            :title="healthTitle(app)"
+          />
+          <span class="text-body font-normal truncate">{{ app.dirName }}</span>
+          <GripVertical class="ml-auto shrink-0 text-faint/60" :size="12" :stroke-width="2" />
+        </div>
+        <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
+          <span>App {{ app.appId || '?' }}</span>
+          <template v-if="app.setLive">
+            <span class="text-faint">·</span>
+            <span class="text-amber break-all">{{ app.setLive }}</span>
+          </template>
+        </div>
+      </button>
+      </TransitionGroup>
+    </div>
 
-      <div v-if="!state.apps.length && !state.scanning" class="px-1 py-2">
+    <!-- 拖动时跟随指针的浮层（原卡片留在列表里占位并透明） -->
+    <div
+      v-if="drag.active && dragApp"
+      class="fixed z-[60] pointer-events-none rounded-card border border-[#66c0f4] bg-[#1f3347] px-3 py-2.5 shadow-[0_12px_30px_rgba(0,0,0,.6)]"
+      :style="{ left: drag.ghostX + 'px', top: drag.ghostY + 'px', width: drag.w + 'px' }"
+    >
+      <div class="flex items-center gap-2 min-w-0">
+        <span
+          class="w-2 h-2 rounded-full shrink-0"
+          :class="
+            healthOf(dragApp) === 'bad'
+              ? 'bg-danger'
+              : healthOf(dragApp) === 'warn'
+                ? 'bg-amber'
+                : 'bg-success'
+          "
+        />
+        <span class="text-body font-normal truncate text-ink">{{ dragApp.dirName }}</span>
+        <GripVertical class="ml-auto shrink-0 text-faint/70" :size="12" :stroke-width="2" />
+      </div>
+      <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
+        <span>App {{ dragApp.appId || '?' }}</span>
+        <template v-if="dragApp.setLive">
+          <span class="text-faint">·</span>
+          <span class="text-amber break-all">{{ dragApp.setLive }}</span>
+        </template>
+      </div>
+    </div>
+
+    <div v-if="!state.apps.length && !state.scanning" class="px-3 pb-3">
         <EmptyState compact :icon="FolderPlus" title="还没有 App" hint="点右上角 + 新建一个，或把游戏文件夹拖进窗口。">
           <button class="btn btn-sm" @click="openWizard">新建 App</button>
         </EmptyState>
       </div>
 
-      <div v-if="state.scanErrors?.length" class="mt-1 flex flex-col gap-1">
+    <div v-if="state.scanErrors?.length" class="px-3 pb-3 flex flex-col gap-1">
         <div
           v-for="(e, i) in state.scanErrors"
           :key="i"
@@ -256,6 +326,5 @@ function healthTitle(app) {
           {{ e.error }}
         </div>
       </div>
-    </div>
   </aside>
 </template>
