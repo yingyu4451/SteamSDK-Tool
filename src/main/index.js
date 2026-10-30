@@ -65,7 +65,7 @@ import {
   incrementalDownload,
   incrementalInstall
 } from './updater.js'
-import { analyzeTarget, applyDrop } from './dropzone.js'
+import { analyzeTarget, applyDrop, cleanupProbe } from './dropzone.js'
 import { localStatus, startLocal, stopLocal, probePort, steamDevCfg, writeSteamDevCfg } from './localserver.js'
 import {
   PLATFORMS,
@@ -1012,6 +1012,8 @@ function registerIpc() {
       return { ok: false, error: e.message }
     }
   })
+  // 导入窗口关掉时清掉 .drop-probe：解压缓存不该长期留在 buildsRoot 里
+  ipcMain.handle('drop:cleanup', () => cleanupProbe(loadSettings()))
 
   /* ---- 本地内容服务器 ---- */
   ipcMain.handle('local:status', async () => {
@@ -1291,6 +1293,12 @@ if (!app.requestSingleInstanceLock()) {
       console.error('[scripts] resolve bundled dir failed:', e)
     }
     pruneOldDownloads()
+    // 上次运行（崩溃/强退）可能留下没清掉的解压探测目录，这里补一刀
+    try {
+      cleanupProbe(loadSettings())
+    } catch (e) {
+      console.error('[drop] cleanup probe failed:', e)
+    }
     autoInstallScripts()
     registerIpc()
     createWindow()

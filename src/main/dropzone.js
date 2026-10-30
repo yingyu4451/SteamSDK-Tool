@@ -343,6 +343,11 @@ export async function analyzeTarget(target, settings, onProgress) {
 
   // 先解到临时目录看，apply 的时候再决定最终落在哪
   const tmpRoot = path.join(settings?.buildsRoot || path.dirname(p), '.drop-probe')
+  // 探测缓存只留一份：上次分析（或上次运行崩溃）留下的旧目录先清掉，
+  // 否则每拖一个新包就多占一份解压空间。
+  try {
+    fs.rmSync(tmpRoot, { recursive: true, force: true })
+  } catch {}
   let probe
   try {
     say({ phase: 'extract', text: '正在解压…', files: 0, bytes: 0 })
@@ -484,6 +489,21 @@ export async function applyDrop(spec, settings) {
       return { ok: false, error: `复制失败：${e.message}` }
     }
   }
+
+  // ---- 3. 临时解压缓存用完就清 ----
+  // bind：目录已被挪到 buildsRoot\<包名> 当内容目录，.drop-probe 只剩空壳；
+  // copy：内容已复制进 contentRoot，解压出来的副本没必要再留一份。
+  try {
+    if (extractedTo && mode === 'copy') {
+      const abs = path.resolve(extractedTo)
+      const root = path.resolve(String(settings?.buildsRoot || path.dirname(extractedTo)))
+      const inRoot = abs.toLowerCase().startsWith(root.toLowerCase() + path.sep)
+      if (inRoot && abs !== path.resolve(contentRoot)) {
+        fs.rmSync(abs, { recursive: true, force: true })
+      }
+    }
+  } catch {}
+  cleanupProbe(settings)
 
   return {
     ok: true,

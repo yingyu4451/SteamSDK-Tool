@@ -2167,6 +2167,13 @@ export function closeDrop() {
   state.drop.error = null
   state.drop.over = false
   state.drop.backend = { busy: false, done: false, error: '', needsCreds: false, appName: '', via: '', depots: [] }
+  // 解压缓存不长期占盘：导入窗口一关就把 .drop-probe 清掉
+  // （applyDrop 成功时已清过一次，这里兜住取消/关闭/分析失败的情况）
+  try {
+    api.drop.cleanup()
+  } catch {
+    /* 清理失败不影响关闭窗口 */
+  }
 }
 
 /**
