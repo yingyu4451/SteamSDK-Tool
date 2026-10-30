@@ -224,7 +224,12 @@ export async function boot() {
   state.folders = Array.isArray(s.settings?.folders)
     ? s.settings.folders
         .filter((f) => f && f.id)
-        .map((f) => ({ id: String(f.id), name: String(f.name || '未命名'), collapsed: !!f.collapsed }))
+        .map((f) => ({
+          id: String(f.id),
+          name: String(f.name || '未命名'),
+          collapsed: !!f.collapsed,
+          color: String(f.color || '')
+        }))
     : []
   state.folderMap =
     s.settings?.folderMap && typeof s.settings.folderMap === 'object'
@@ -658,6 +663,18 @@ export function setAppOrder(dirNames) {
 
 // ---- Apps 文件夹：只是本地分类，不动磁盘上的任何文件 ----
 
+/** 文件夹可选颜色（按顺序给新文件夹分配，也可手动改） */
+export const FOLDER_COLORS = [
+  '#66c0f4',
+  '#a4d007',
+  '#f0a92e',
+  '#e06c75',
+  '#b18cf3',
+  '#4ec9b0',
+  '#f0a1c0',
+  '#9aa8bb'
+]
+
 function persistFolders() {
   // 注意：不能把 Vue 的 reactive 代理直接丢给 IPC（structured clone 会抛
   // "An object could not be cloned" 然后被静默 catch 掉），这里先转成普通对象。
@@ -681,11 +698,20 @@ export function createFolder(name) {
   const folder = {
     id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     name: clean,
-    collapsed: false
+    collapsed: false,
+    color: FOLDER_COLORS[state.folders.length % FOLDER_COLORS.length]
   }
   state.folders = [...state.folders, folder]
   persistFolders()
   return folder
+}
+
+/** 设置文件夹颜色（空串 = 恢复默认主题色） */
+export function setFolderColor(id, color) {
+  const f = state.folders.find((x) => x.id === id)
+  if (!f) return
+  f.color = String(color || '')
+  persistFolders()
 }
 
 export function renameFolder(id, name) {

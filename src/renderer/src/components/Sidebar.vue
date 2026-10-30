@@ -13,16 +13,19 @@ import {
   ChevronDown,
   Pencil,
   Trash2,
+  Palette,
   GripVertical
 } from '@lucide/vue'
 import {
   state,
+  FOLDER_COLORS,
   selectApp,
   rescan,
   openWizard,
   setAppOrder,
   createFolder,
   renameFolder,
+  setFolderColor,
   toggleFolder,
   deleteFolder,
   assignAppFolder
@@ -165,6 +168,44 @@ function confirmRenameFolder() {
 }
 function cancelRenameFolder() {
   editingFolder.value = ''
+}
+
+// ---- 文件夹颜色 / 删除二次确认（都做成行内状态，不弹新窗口） ----
+const colorMenuFolder = ref('')
+const pendingDeleteFolder = ref('')
+
+/** 文件夹主色：没设置时用主题蓝 */
+function folderColor(f) {
+  return f?.color || 'var(--color-accent)'
+}
+function folderBoxStyle(f) {
+  const over = drag.active && drag.dropFolder === f.id
+  if (over) return { borderColor: 'var(--color-accent)', background: 'rgba(102,192,244,0.14)' }
+  const c = f?.color
+  if (!c) return {}
+  return {
+    borderColor: `color-mix(in srgb, ${c} 42%, transparent)`,
+    background: `color-mix(in srgb, ${c} 9%, transparent)`
+  }
+}
+function toggleColorMenu(id) {
+  pendingDeleteFolder.value = ''
+  colorMenuFolder.value = colorMenuFolder.value === id ? '' : id
+}
+function chooseFolderColor(id, color) {
+  setFolderColor(id, color)
+  colorMenuFolder.value = ''
+}
+function askDeleteFolder(id) {
+  colorMenuFolder.value = ''
+  pendingDeleteFolder.value = pendingDeleteFolder.value === id ? '' : id
+}
+function cancelDeleteFolder() {
+  pendingDeleteFolder.value = ''
+}
+function doDeleteFolder(id) {
+  pendingDeleteFolder.value = ''
+  deleteFolder(id)
 }
 
 function cardEls() {
@@ -461,15 +502,12 @@ function healthTitle(app) {
             :key="row.key"
             :data-folder-box="row.folder.id"
             class="rounded-card border overflow-hidden transition-colors"
-            :class="
-              drag.active && drag.dropFolder === row.folder.id
-                ? 'border-accent bg-accent/14'
-                : 'border-line/70 bg-black/18'
-            "
+            :class="drag.active && drag.dropFolder === row.folder.id ? '' : 'border-line/70 bg-black/18'"
+            :style="folderBoxStyle(row.folder)"
           >
             <div
               :data-folder-head="row.folder.id"
-              class="group flex items-center gap-1.5 h-8 px-2 transition-colors select-none"
+              class="group relative flex items-center gap-1.5 h-9 px-2.5 py-1 transition-colors select-none"
               :class="[
                 drag.active ? 'cursor-copy' : 'cursor-pointer hover:bg-surface-3/35',
                 drag.active && drag.dropFolder === row.folder.id ? 'bg-accent/12' : ''
@@ -483,7 +521,12 @@ function healthTitle(app) {
                 :class="row.folder.collapsed ? '-rotate-90' : ''"
                 :stroke-width="2"
               />
-              <FolderClosed :size="13" class="shrink-0 text-accent/85" :stroke-width="1.9" />
+              <FolderClosed
+                :size="13"
+                class="shrink-0"
+                :style="{ color: folderColor(row.folder) }"
+                :stroke-width="1.9"
+              />
               <input
                 v-if="editingFolder === row.folder.id"
                 v-model="editName"
@@ -497,7 +540,37 @@ function healthTitle(app) {
               <template v-else>
                 <span class="text-body font-normal truncate">{{ row.folder.name }}</span>
                 <span class="num text-micro text-faint">{{ row.items.length }}</span>
-                <span class="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span
+                  v-if="pendingDeleteFolder === row.folder.id"
+                  class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-btn bg-black/60 px-1.5 py-0.5"
+                  @click.stop
+                >
+                  <span class="text-micro text-muted">删除？</span>
+                  <button
+                    class="text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer px-1"
+                    @click="cancelDeleteFolder"
+                  >
+                    取消
+                  </button>
+                  <button
+                    class="text-micro text-danger hover:text-ink bg-transparent border-0 cursor-pointer px-1 font-semibold"
+                    title="删除文件夹（里面的 App 回到未分类，App 本身不受影响）"
+                    @click="doDeleteFolder(row.folder.id)"
+                  >
+                    删除
+                  </button>
+                </span>
+                <span
+                  v-else
+                  class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 rounded-btn bg-gradient-to-l from-black/70 via-black/55 to-transparent pl-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <button
+                    class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 border-0 bg-transparent cursor-pointer"
+                    title="文件夹颜色"
+                    @click.stop="toggleColorMenu(row.folder.id)"
+                  >
+                    <Palette :size="12" :stroke-width="2" />
+                  </button>
                   <button
                     class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 border-0 bg-transparent cursor-pointer"
                     title="重命名文件夹"
@@ -507,8 +580,8 @@ function healthTitle(app) {
                   </button>
                   <button
                     class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-danger hover:bg-danger/14 border-0 bg-transparent cursor-pointer"
-                    title="删除文件夹（里面的 App 回到未分类）"
-                    @click.stop="deleteFolder(row.folder.id)"
+                    title="删除文件夹（会先确认；里面的 App 回到未分类）"
+                    @click.stop="askDeleteFolder(row.folder.id)"
                   >
                     <Trash2 :size="12" :stroke-width="2" />
                   </button>
@@ -516,9 +589,35 @@ function healthTitle(app) {
               </template>
             </div>
 
+            <!-- 颜色选择：行内展开，8 个色块 + 默认 -->
+            <div
+              v-if="colorMenuFolder === row.folder.id"
+              class="flex items-center gap-1 px-2.5 pb-2 pt-0.5"
+              @click.stop
+            >
+              <button
+                v-for="c in FOLDER_COLORS"
+                :key="c"
+                class="w-4 h-4 shrink-0 rounded-full border-0 cursor-pointer transition-transform hover:scale-110"
+                :style="{
+                  background: c,
+                  boxShadow: folderColor(row.folder) === c ? '0 0 0 2px var(--color-ink)' : 'none'
+                }"
+                :title="'用这个颜色'"
+                :aria-label="'文件夹颜色 ' + c"
+                @click="chooseFolderColor(row.folder.id, c)"
+              />
+              <button
+                class="ml-auto shrink-0 whitespace-nowrap text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer"
+                @click="chooseFolderColor(row.folder.id, '')"
+              >
+                默认
+              </button>
+            </div>
+
             <div class="folder-body" :class="row.folder.collapsed ? 'is-collapsed' : ''">
               <div class="folder-inner">
-                <div class="flex flex-col gap-1 px-1.5 pb-1.5">
+                <div class="flex flex-col gap-1.5 p-2 pt-1">
                   <AppCard
                     v-for="app in row.items"
                     :key="app.dirName"
