@@ -928,6 +928,21 @@ body {
 .btn-sm { height: 26px; padding: 0 12px; font-size: var(--text-label); }
 .btn-lg { height: 40px; padding: 0 18px; font-size: var(--text-copy); }
 
+/* 界面缩放：加减号按钮比普通按钮大一号；输入框直接用全局 input 样式（单层边框/底色），不再套外壳 */
+.btn-zoom {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: var(--radius-btn);
+}
+.zoom-input {
+  width: 56px;
+  height: 40px;
+  padding: 0 6px;
+  text-align: center;
+  box-shadow: none;
+}
+
 .btn-primary {
   background: linear-gradient(90deg, #4e7a14 5%, #3f6410 95%);
   color: #fff;

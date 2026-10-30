@@ -11,7 +11,6 @@ import {
   installUpdateNow,
   openReleases,
   zoomStep,
-  zoomReset,
   setZoomPercent
 } from '../store.js'
 
@@ -394,39 +393,36 @@ function openExternal(url) {
         <!-- 界面缩放 -->
         <section class="card p-5" v-reveal="{ delay: 0.07 }">
           <h2 class="text-body font-semibold m-0">界面缩放</h2>
-          <div class="mt-3 flex items-center gap-1.5">
+          <div class="mt-3 flex items-center gap-2">
             <button
-              class="btn no-drag w-9 px-0"
+              class="btn btn-zoom no-drag"
               aria-label="缩小 5%"
               title="缩小 5%"
               :disabled="zoomPct <= 80"
               @click="zoomStep(-1)"
             >
-              <Minus :size="14" :stroke-width="2" />
+              <Minus :size="18" :stroke-width="2.2" />
             </button>
-            <div
-              class="h-8 flex items-center rounded-input border border-[rgba(0,0,0,.4)] bg-[rgba(0,0,0,.25)] px-2 focus-within:border-[rgba(102,192,244,.45)]"
-            >
+            <span class="flex items-center gap-1">
               <input
                 v-model="zoomText"
-                class="w-8 bg-transparent border-0 text-center text-body num text-ink outline-none"
+                class="zoom-input text-center text-body num text-ink"
                 inputmode="numeric"
                 aria-label="界面缩放百分比"
                 @keydown.enter.prevent="commitZoomText"
                 @blur="commitZoomText"
               />
               <span class="text-label text-faint">%</span>
-            </div>
+            </span>
             <button
-              class="btn no-drag w-9 px-0"
+              class="btn btn-zoom no-drag"
               aria-label="放大 5%"
               title="放大 5%"
               :disabled="zoomPct >= 150"
               @click="zoomStep(1)"
             >
-              <Plus :size="14" :stroke-width="2" />
+              <Plus :size="18" :stroke-width="2.2" />
             </button>
-            <button class="link-btn no-drag ml-1" @click="zoomReset()">100%</button>
           </div>
         </section>
 
