@@ -378,8 +378,9 @@ async function doApply() {
                   <button
                     v-for="p in platformChoices"
                     :key="p.id"
-                    class="btn btn-sm px-2.5 "
-                    :class="platform === p.id ? 'border-[rgba(102,192,244,.5)] text-accent' : ''"
+                    class="btn btn-sm px-2.5"
+                    :class="platform === p.id ? 'btn-primary' : ''"
+                    :aria-pressed="platform === p.id"
                     @click="pickPlatform(p.id)"
                   >
                     {{ p.label }}<span v-if="p.used" class="text-faint"> ·已占用</span>
