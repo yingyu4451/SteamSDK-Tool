@@ -18,7 +18,6 @@ import {
 } from '@lucide/vue'
 import {
   state,
-  FOLDER_COLORS,
   selectApp,
   rescan,
   openWizard,
@@ -28,7 +27,9 @@ import {
   setFolderColor,
   toggleFolder,
   deleteFolder,
-  assignAppFolder
+  assignAppFolder,
+  setFolderAlpha,
+  folderAlphaOf,
 } from '../store.js'
 import { useListStagger } from '../motion.js'
 import EmptyState from './EmptyState.vue'
@@ -171,33 +172,46 @@ function cancelRenameFolder() {
 }
 
 // ---- 文件夹颜色 / 删除二次确认（都做成行内状态，不弹新窗口） ----
-const colorMenuFolder = ref('')
 const pendingDeleteFolder = ref('')
 
 /** 文件夹主色：没设置时用主题蓝 */
 function folderColor(f) {
   return f?.color || 'var(--color-accent)'
 }
+function folderColorHex(f) {
+  const c = f?.color || ''
+  return /^#[0-9a-f]{6}$/i.test(c) ? c : '#66c0f4'
+}
+function folderColorLive(id, color) {
+  setFolderColor(id, color)
+}
+const colorPopoverFolder = ref('')
+function toggleColorPopover(id) {
+  colorPopoverFolder.value = colorPopoverFolder.value === id ? '' : id
+}
+function folderAlphaPct(f) {
+  return Math.round(folderAlphaOf(f) * 100)
+}
+function setFolderAlphaLive(id, pct) {
+  setFolderAlpha(id, Number(pct) / 100)
+}
+function resetFolderLook(id) {
+  setFolderColor(id, '')
+  setFolderAlpha(id, 0.4)
+  colorPopoverFolder.value = ''
+}
 function folderBoxStyle(f) {
   const over = drag.active && drag.dropFolder === f.id
   if (over) return { borderColor: 'var(--color-accent)', background: 'rgba(102,192,244,0.14)' }
   const c = f?.color
   if (!c) return {}
-  return {
-    borderColor: `color-mix(in srgb, ${c} 42%, transparent)`,
-    background: `color-mix(in srgb, ${c} 9%, transparent)`
-  }
-}
-function toggleColorMenu(id) {
-  pendingDeleteFolder.value = ''
-  colorMenuFolder.value = colorMenuFolder.value === id ? '' : id
+  // 只让描边和图标变色，背景保持和未设置颜色时一致
+  return { borderColor: `color-mix(in srgb, ${c} ${Math.round(folderAlphaOf(f) * 100)}%, transparent)` }
 }
 function chooseFolderColor(id, color) {
   setFolderColor(id, color)
-  colorMenuFolder.value = ''
 }
 function askDeleteFolder(id) {
-  colorMenuFolder.value = ''
   pendingDeleteFolder.value = pendingDeleteFolder.value === id ? '' : id
 }
 function cancelDeleteFolder() {
@@ -501,7 +515,7 @@ function healthTitle(app) {
             v-if="row.type === 'folder'"
             :key="row.key"
             :data-folder-box="row.folder.id"
-            class="rounded-card border overflow-hidden transition-colors"
+            class="rounded-card folder-box border relative transition-colors"
             :class="drag.active && drag.dropFolder === row.folder.id ? '' : 'border-line/70 bg-black/18'"
             :style="folderBoxStyle(row.folder)"
           >
@@ -566,8 +580,8 @@ function healthTitle(app) {
                 >
                   <button
                     class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 border-0 bg-transparent cursor-pointer"
-                    title="文件夹颜色"
-                    @click.stop="toggleColorMenu(row.folder.id)"
+                    title="调色：颜色与边框亮度"
+                    @click.stop="toggleColorPopover(row.folder.id)"
                   >
                     <Palette :size="12" :stroke-width="2" />
                   </button>
@@ -589,30 +603,53 @@ function healthTitle(app) {
               </template>
             </div>
 
-            <!-- 颜色选择：行内展开，8 个色块 + 默认 -->
+            <!-- 调色弹窗：颜色 + 边框亮度（每个文件夹独立） -->
             <div
-              v-if="colorMenuFolder === row.folder.id"
-              class="flex items-center gap-1 px-2.5 pb-2 pt-0.5"
+              v-if="colorPopoverFolder === row.folder.id"
+              class="folder-color-pop"
               @click.stop
             >
-              <button
-                v-for="c in FOLDER_COLORS"
-                :key="c"
-                class="w-4 h-4 shrink-0 rounded-full border-0 cursor-pointer transition-transform hover:scale-110"
-                :style="{
-                  background: c,
-                  boxShadow: folderColor(row.folder) === c ? '0 0 0 2px var(--color-ink)' : 'none'
-                }"
-                :title="'用这个颜色'"
-                :aria-label="'文件夹颜色 ' + c"
-                @click="chooseFolderColor(row.folder.id, c)"
-              />
-              <button
-                class="ml-auto shrink-0 whitespace-nowrap text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer"
-                @click="chooseFolderColor(row.folder.id, '')"
-              >
-                默认
-              </button>
+              <div class="flex items-center gap-2">
+                <label
+                  class="folder-color-swatch"
+                  :style="{ background: folderColorHex(row.folder) }"
+                  title="打开系统选色器"
+                  @click.stop
+                >
+                  <Palette :size="11" :stroke-width="2" class="text-ink/70" />
+                  <input
+                    type="color"
+                    class="folder-color-input"
+                    :value="folderColorHex(row.folder)"
+                    aria-label="选择文件夹颜色"
+                    @click.stop
+                    @input="chooseFolderColor(row.folder.id, $event.target.value)"
+                    @change="chooseFolderColor(row.folder.id, $event.target.value)"
+                  />
+                </label>
+                <span class="text-label text-muted">颜色</span>
+                <button
+                  class="ml-auto text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer whitespace-nowrap"
+                  @click="resetFolderLook(row.folder.id)"
+                >
+                  恢复默认
+                </button>
+              </div>
+              <div class="mt-2.5 flex items-center gap-2">
+                <span class="text-label text-muted shrink-0">亮度</span>
+                <input
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="5"
+                  class="folder-alpha-range flex-1 min-w-0"
+                  :value="folderAlphaPct(row.folder)"
+                  aria-label="文件夹边框亮度"
+                  title="文件夹边框亮度"
+                  @input="setFolderAlphaLive(row.folder.id, $event.target.value)"
+                />
+                <span class="text-label num text-ink w-9 text-right">{{ folderAlphaPct(row.folder) }}%</span>
+              </div>
             </div>
 
             <div class="folder-body" :class="row.folder.collapsed ? 'is-collapsed' : ''">

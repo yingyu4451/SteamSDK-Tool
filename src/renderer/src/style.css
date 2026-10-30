@@ -275,6 +275,77 @@ select:focus {
   overflow: hidden;
   min-height: 0;
 }
+.folder-box {
+  border-width: 1.5px;
+}
+/* 原生取色器：覆盖在调色图标上，点图标即弹出系统取色面板 */
+/* 文件夹边框亮度滑杆 */
+/* 文件夹调色弹窗：颜色 + 亮度 */
+.folder-color-pop {
+  position: absolute;
+  z-index: 40;
+  top: 36px;
+  left: 6px;
+  right: 6px;
+  padding: 10px 10px 8px;
+  border-radius: var(--radius-card);
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  background: var(--color-surface);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+.folder-color-swatch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.folder-alpha-range {
+  border: 0;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+.folder-alpha-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(102, 192, 244, 0.2), rgba(102, 192, 244, 0.85));
+}
+.folder-alpha-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55);
+}
+.folder-alpha-range:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.folder-color-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-btn);
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
 
 /* ---------- 侧边栏（新建 Depot）进出场 ---------- */
 .slideover-enter-active,

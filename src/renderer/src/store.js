@@ -714,6 +714,19 @@ export function setFolderColor(id, color) {
   persistFolders()
 }
 
+/** 文件夹边框亮度 = 颜色透明度（0.1–1），默认 0.4；存在 folders[].colorAlpha */
+export function setFolderAlpha(id, alpha) {
+  const f = state.folders.find((x) => x.id === id)
+  if (!f) return
+  const a = Math.min(1, Math.max(0.1, Math.round(Number(alpha) * 20) / 20))
+  f.colorAlpha = a
+  persistFolders()
+}
+
+export function folderAlphaOf(f) {
+  return Math.min(1, Math.max(0.1, Number(f?.colorAlpha) || 0.4))
+}
+
 export function renameFolder(id, name) {
   const clean = String(name || '').trim()
   if (!clean) return
