@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { Download, ShieldOff, Wrench } from '@lucide/vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { Download, ShieldOff, Wrench, Minus, Plus } from '@lucide/vue'
 import {
   state,
   rescan,
@@ -11,11 +11,26 @@ import {
   installUpdateNow,
   openReleases,
   zoomStep,
-  zoomReset
+  zoomReset,
+  setZoomPercent
 } from '../store.js'
 
-/** 当前界面缩放百分比，卡片上显示 */
+/** 当前界面缩放百分比 */
 const zoomPct = computed(() => Math.round((Number(state.zoom) || 1) * 100))
+
+/** 输入框草稿：跟随实际缩放回填，失焦/回车才提交 */
+const zoomText = ref(String(zoomPct.value))
+watch(zoomPct, (p) => { zoomText.value = String(p) })
+
+async function commitZoomText() {
+  const raw = Number.parseInt(String(zoomText.value).replace(/[^\d]/g, ''), 10)
+  if (!Number.isFinite(raw)) {
+    zoomText.value = String(zoomPct.value)
+    return
+  }
+  await setZoomPercent(raw)
+  zoomText.value = String(zoomPct.value)
+}
 
 /** 官方 SDK 下载页。要 Steamworks 账号登录（就是上传构建那个），没有匿名直链 */
 const SDK_DOWNLOAD = 'https://partner.steamgames.com/downloads/list'
@@ -378,14 +393,40 @@ function openExternal(url) {
 
         <!-- 界面缩放 -->
         <section class="card p-5" v-reveal="{ delay: 0.07 }">
-          <div class="flex items-center gap-2 flex-wrap">
-            <h2 class="text-body font-semibold m-0">界面缩放</h2>
-            <span class="pill num">{{ zoomPct }}%</span>
-          </div>
-          <div class="mt-3 flex items-center gap-2 flex-wrap">
-            <button class="btn no-drag" :disabled="zoomPct <= 80" @click="zoomStep(-1)">缩小</button>
-            <button class="btn no-drag" @click="zoomReset()">100%</button>
-            <button class="btn no-drag" :disabled="zoomPct >= 150" @click="zoomStep(1)">放大</button>
+          <h2 class="text-body font-semibold m-0">界面缩放</h2>
+          <div class="mt-3 flex items-center gap-1.5">
+            <button
+              class="btn no-drag w-9 px-0"
+              aria-label="缩小 5%"
+              title="缩小 5%"
+              :disabled="zoomPct <= 80"
+              @click="zoomStep(-1)"
+            >
+              <Minus :size="14" :stroke-width="2" />
+            </button>
+            <div
+              class="h-8 flex items-center rounded-input border border-[rgba(0,0,0,.4)] bg-[rgba(0,0,0,.25)] px-2 focus-within:border-[rgba(102,192,244,.45)]"
+            >
+              <input
+                v-model="zoomText"
+                class="w-8 bg-transparent border-0 text-center text-body num text-ink outline-none"
+                inputmode="numeric"
+                aria-label="界面缩放百分比"
+                @keydown.enter.prevent="commitZoomText"
+                @blur="commitZoomText"
+              />
+              <span class="text-label text-faint">%</span>
+            </div>
+            <button
+              class="btn no-drag w-9 px-0"
+              aria-label="放大 5%"
+              title="放大 5%"
+              :disabled="zoomPct >= 150"
+              @click="zoomStep(1)"
+            >
+              <Plus :size="14" :stroke-width="2" />
+            </button>
+            <button class="link-btn no-drag ml-1" @click="zoomReset()">100%</button>
           </div>
         </section>
 

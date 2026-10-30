@@ -998,7 +998,6 @@ export function removeDepot(appDirName, depotFile, settings) {
 
   const depot = app.depots.find((d) => d.file === depotFile)
   if (!depot) return { ok: false, error: `找不到 depot ${depotFile}` }
-  if (app.depots.length <= 1) return { ok: false, error: '至少要保留一个 depot' }
 
   let appText = readText(app.appPath)
   const line = `"${depot.id}"\t"${depotFile}"`

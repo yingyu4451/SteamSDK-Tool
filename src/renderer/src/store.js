@@ -1972,7 +1972,16 @@ export function pushLog(stream, line) {
  *  界面缩放（主进程 webContents.setZoomFactor，值同时写进 settings.json）
  * ------------------------------------------------------------------ */
 
-const ZOOM_STEPS = [0.8, 0.9, 1, 1.1, 1.25, 1.5]
+export const ZOOM_MIN_PCT = 80
+export const ZOOM_MAX_PCT = 150
+export const ZOOM_STEP_PCT = 5
+
+/** 百分比取整并夹到 80–150 */
+export function clampZoomPct(pct) {
+  const n = Math.round(Number(pct))
+  if (!Number.isFinite(n)) return 100
+  return Math.min(ZOOM_MAX_PCT, Math.max(ZOOM_MIN_PCT, n))
+}
 
 export async function setZoom(factor) {
   const r = await api.ui.zoom(factor)
@@ -1983,16 +1992,15 @@ export async function setZoom(factor) {
   return r
 }
 
-/** dir = 1 放大一档，-1 缩小一档；到头就停在 80% / 150% */
-export async function zoomStep(dir) {
-  const cur = Number(state.zoom) || 1
-  let next
-  if (dir > 0) {
-    next = ZOOM_STEPS.find((z) => z > cur + 0.001) ?? ZOOM_STEPS[ZOOM_STEPS.length - 1]
-  } else {
-    next = [...ZOOM_STEPS].reverse().find((z) => z < cur - 0.001) ?? ZOOM_STEPS[0]
-  }
-  return setZoom(next)
+/** 设成某个整数百分比（输入框用） */
+export function setZoomPercent(pct) {
+  return setZoom(clampZoomPct(pct) / 100)
+}
+
+/** dir = 1 加 5%，-1 减 5%；先在整数百分比上取整再步进，到头停在 80% / 150% */
+export function zoomStep(dir) {
+  const curPct = Math.round((Number(state.zoom) || 1) * 100)
+  return setZoomPercent(curPct + (dir > 0 ? ZOOM_STEP_PCT : -ZOOM_STEP_PCT))
 }
 
 export function zoomReset() {
