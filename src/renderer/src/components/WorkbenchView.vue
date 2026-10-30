@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { state, openOrphanDialog } from '../store.js'
 import AppHeader from './AppHeader.vue'
 import ActionBar from './ActionBar.vue'
-import StatCard from './StatCard.vue'
 import DepotMatrix from './DepotMatrix.vue'
 import BranchPanel from './BranchPanel.vue'
 import ConsoleLog from './ConsoleLog.vue'
@@ -94,58 +93,60 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
         <AppHeader />
         <ActionBar />
 
-      <!-- 概览数字 -->
-      <div class="grid grid-cols-4 gap-3">
-        <StatCard
-          label="会上传"
-          :value="agg.upload"
-          unit="个文件"
-          tone="accent"
-          :hint="`磁盘共 ${agg.total.toLocaleString('en-US')} 个`"
-          v-reveal="{ delay: 0.02 }"
-        />
-        <StatCard
-          label="上传体积"
-          :value="uploadMb"
-          format="mb"
-          tone="ink"
-          :hint="`磁盘共 ${totalMb.toFixed(1)} MB`"
-          v-reveal="{ delay: 0.04 }"
-        />
-        <StatCard
-          label="被排除"
-          :value="agg.excluded"
-          unit="个文件"
-          :tone="agg.excluded ? 'amber' : 'muted'"
-          hint="只不上传，本地保留"
-          v-reveal="{ delay: 0.06 }"
-        />
-        <StatCard
-          label="待处理"
-          :value="activeProblems"
-          unit="项"
-          :tone="activeProblems ? 'danger' : 'success'"
-          :hint="
+      <!-- 概览数字：压成一条，别占一块高度 -->
+      <div
+        class="card px-5 py-2.5 flex items-center gap-5 flex-wrap min-w-0"
+        v-reveal="{ delay: 0.02 }"
+      >
+        <div class="flex items-baseline gap-2 min-w-0" :title="`磁盘共 ${agg.total.toLocaleString('en-US')} 个`">
+          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">会上传</span>
+          <span class="num text-title font-semibold text-accent leading-none">{{ agg.upload.toLocaleString('en-US') }}</span>
+          <span class="text-label text-faint">个文件</span>
+        </div>
+        <span class="w-px h-5 bg-line shrink-0" />
+        <div class="flex items-baseline gap-2 min-w-0" :title="`磁盘共 ${totalMb.toFixed(1)} MB`">
+          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">上传体积</span>
+          <span class="num text-title font-semibold text-ink leading-none">{{ uploadMb >= 1024 ? (uploadMb / 1024).toFixed(2) : uploadMb.toFixed(1) }}</span>
+          <span class="text-label text-faint">{{ uploadMb >= 1024 ? 'GB' : 'MB' }}</span>
+        </div>
+        <span class="w-px h-5 bg-line shrink-0" />
+        <div class="flex items-baseline gap-2 min-w-0" title="只不上传，本地保留">
+          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">被排除</span>
+          <span
+            class="num text-title font-semibold leading-none"
+            :class="agg.excluded ? 'text-amber' : 'text-muted'"
+          >{{ agg.excluded.toLocaleString('en-US') }}</span>
+          <span class="text-label text-faint">个文件</span>
+        </div>
+        <span class="w-px h-5 bg-line shrink-0" />
+        <div
+          class="flex items-baseline gap-2 min-w-0"
+          :title="
             activeProblems
               ? '见上方问题清单'
               : ignoredProblems
                 ? `还有 ${ignoredProblems} 项已忽略`
                 : '没有发现问题'
           "
-          v-reveal="{ delay: 0.08 }"
-        />
+        >
+          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">待处理</span>
+          <span
+            class="num text-title font-semibold leading-none"
+            :class="activeProblems ? 'text-danger' : 'text-success'"
+          >{{ activeProblems }}</span>
+          <span class="text-label text-faint">项</span>
+        </div>
       </div>
 
-      <!-- 左边 Depot（下面挂分支），右边构建输出。
-           注意：不能直接给卡片加 absolute —— style.css 里的 .card 是**无层**样式，
-           `position: relative` 会盖掉 Tailwind 分层里的 .absolute。 -->
-      <div class="grid grid-cols-2 gap-4 min-w-0">
+      <!-- 左边 Depot（下面挂分支），右边构建输出：两列等高，构建输出跟左列底边齐平；
+           日志多了在卡片内部滚动，不会把整页撑高。 -->
+      <div class="grid grid-cols-2 gap-4 min-w-0 items-stretch">
         <div class="flex flex-col gap-4 min-w-0">
           <DepotMatrix :depots="detail.depots || []" />
           <BranchPanel />
         </div>
-        <div class="flex flex-col gap-4 min-w-0">
-          <ConsoleLog class="flex-1 min-h-[300px]" />
+        <div class="flex flex-col min-w-0">
+          <ConsoleLog class="flex-1 min-h-0" />
         </div>
       </div>
       </div>
