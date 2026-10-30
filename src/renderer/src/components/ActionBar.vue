@@ -109,7 +109,9 @@ const pfTone = computed(() => {
  */
 const barEl = ref(null)
 const anchors = reactive({ pf: {}, verify: {}, pwd: {} })
-const POP_W = 620
+/** 各浮层的实际宽度：宽面板是 880，密码框是 620 —— 之前统一用 620 算，
+ * 结果宽面板会从右边溢出窗口（连「收起」都看不见）。 */
+const POP_W = { pwd: 620, verify: 880, pf: 880 }
 
 function anchorTo(key, el) {
   const bar = barEl.value
@@ -117,14 +119,10 @@ function anchorTo(key, el) {
   if (!bar || !btn) return
   const b = bar.getBoundingClientRect()
   const r = btn.getBoundingClientRect()
-  const w = Math.min(POP_W, b.width)
-  const left = r.left - b.left
-  if (left + w > b.width) {
-    // 右边放不下就改成贴着按钮的右边对齐 —— 不然会顶到窗口外面
-    anchors[key] = { left: 'auto', right: `${Math.round(Math.max(0, b.right - r.right))}px` }
-    return
-  }
-  anchors[key] = { left: `${Math.round(Math.max(0, left))}px`, right: 'auto' }
+  const w = Math.min(POP_W[key] || 620, b.width)
+  // 左边对齐按钮，但必须夹在工具条内 —— 右边放不下就整体左移
+  const left = Math.max(0, Math.min(Math.round(r.left - b.left), Math.round(b.width - w)))
+  anchors[key] = { left: `${left}px`, right: 'auto' }
 }
 
 function reanchor() {
@@ -243,7 +241,7 @@ watch(
     >
       <div
         v-if="state.askPassword"
-        class="bar-pop bar-pop-left rounded-card border border-[rgba(255,180,84,.3)] px-3 py-2.5"
+        class="bar-pop rounded-card border border-[rgba(255,180,84,.3)] px-3 py-2.5"
         :style="anchors.pwd"
       >
         <div class="flex items-center gap-2 text-label text-amber">
@@ -284,7 +282,7 @@ watch(
         id="pop-verify"
         role="region"
         aria-label="同步 Depot"
-        class="bar-pop bar-pop-wide bar-pop-right rounded-card border px-3 py-2.5"
+        class="bar-pop bar-pop-wide rounded-card border px-3 py-2.5"
         :style="anchors.verify"
         :class="
           state.verify.error
@@ -418,7 +416,7 @@ watch(
         id="pop-preflight"
         role="region"
         aria-label="检查文件结果"
-        class="bar-pop bar-pop-wide bar-pop-left rounded-card border px-3 py-2.5"
+        class="bar-pop bar-pop-wide rounded-card border px-3 py-2.5"
         :style="anchors.pf"
         :class="
           state.preflight.error

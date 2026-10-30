@@ -73,6 +73,13 @@ const newDepotFile = computed(() => {
   return newDepotId.value.trim() ? `depot_${newDepotId.value.trim()}_${p}.vdf` : ''
 })
 
+/** 新建 Depot 时内容落在项目文件夹下的 <平台> 子目录（win64 / macos …） */
+const newContentRoot = computed(() => {
+  const base = String(state.detail?.contentRoot || '').replace(/[\\/]+$/, '')
+  const p = platform.value || suggested.value || 'win64'
+  return base ? `${base}\\${p}` : ''
+})
+
 const canApply = computed(() => {
   if (!d.value?.ok || state.drop.busy) return false
   if (effPick.value) return true
@@ -89,7 +96,9 @@ const willDo = computed(() => {
   const src = d.value.kind === 'archive' ? `先解压到 ${state.settings?.buildsRoot || ''}，再把` : '把这个文件夹'
   if (effPick.value) return ''
   if (!target.value) {
-    return `${src}当作新 Depot ${newDepotId.value.trim()} 的内容目录`
+    return newContentRoot.value
+      ? `${src}复制进 ${newContentRoot.value}，并作为新 Depot ${newDepotId.value.trim()} 的内容目录`
+      : `${src}当作新 Depot ${newDepotId.value.trim()} 的内容目录`
   }
   const dep = depots.value.find((x) => x.file === target.value)
   if (mode.value === 'copy') {
@@ -176,19 +185,32 @@ async function doApply() {
   if (pick) {
     const r = await dropSyncDepot(pick.depotId, pick.platform)
     if (!r?.ok) return
-    const file =
-      r.file || (state.detail?.depots || []).find((x) => String(x.id) === String(pick.depotId))?.file || ''
+    const made = (state.detail?.depots || []).find((x) => String(x.id) === String(pick.depotId))
+    const file = r.file || made?.file || ''
     if (!file) return
-    await dropApply({ depotFile: file, mode: 'bind', platform: pick.platform, depotId: '', depotName: '', contentRoot: '' })
+    // 后台补进来的 Depot 内容目录默认是 <项目文件夹><平台>，
+    // 所以这里是「复制进内容目录」，让 win64 / macos 这些目录真正装下东西。
+    const root = String(made?.contentRoot || '').trim()
+    await dropApply({
+      depotFile: file,
+      mode: root ? 'copy' : 'bind',
+      platform: pick.platform,
+      depotId: '',
+      depotName: '',
+      contentRoot: root
+    })
     return
   }
+  const newRoot = newContentRoot.value
   await dropApply({
     depotFile: target.value,
-    mode: mode.value,
+    mode: target.value ? mode.value : newRoot ? 'copy' : 'bind',
     platform: platform.value || suggested.value || 'win64',
     depotId: newDepotId.value,
     depotName: depotName.value,
-    contentRoot: depots.value.find((x) => x.file === target.value)?.contentRoot || ''
+    contentRoot: target.value
+      ? depots.value.find((x) => x.file === target.value)?.contentRoot || ''
+      : newRoot
   })
 }
 </script>
@@ -257,22 +279,6 @@ async function doApply() {
             </div>
             <div v-if="d.truncated" class="mt-1 text-label text-amber">
               文件太多，只统计了前 3 万个。
-            </div>
-
-            <!-- 平台认错了，让用户改 -->
-            <div v-if="!target && !effPick" class="mt-3">
-              <div class="text-label text-muted mb-1.5">新建 Depot 的平台</div>
-              <div class="flex gap-1.5 flex-wrap">
-                <button
-                  v-for="p in platformChoices"
-                  :key="p.id"
-                  class="btn btn-sm px-2.5 "
-                  :class="platform === p.id ? 'border-[rgba(102,192,244,.5)] text-accent' : ''"
-                  @click="pickPlatform(p.id)"
-                >
-                  {{ p.label }}<span v-if="p.used" class="text-faint"> ·已占用</span>
-                </button>
-              </div>
             </div>
 
             <!-- .app bundle -->
@@ -357,7 +363,7 @@ async function doApply() {
             </div>
 
             <!-- 新建的字段 -->
-            <div v-if="!target && !effPick" class="grid grid-cols-2 gap-3 pl-3 pt-1">
+            <div v-if="!target && !effPick" class="flex flex-col gap-3 pl-3 pt-1">
               <label class="flex flex-col gap-1.5">
                 <span class="text-label text-muted">DepotID</span>
                 <input
@@ -366,6 +372,20 @@ async function doApply() {
                   class="h-9 px-3 rounded-input bg-surface border border-line text-body num outline-none focus:border-[rgba(102,192,244,.45)] placeholder:text-faint"
                 />
               </label>
+              <div class="flex flex-col gap-1.5">
+                <span class="text-label text-muted">平台</span>
+                <div class="flex gap-1.5 flex-wrap">
+                  <button
+                    v-for="p in platformChoices"
+                    :key="p.id"
+                    class="btn btn-sm px-2.5 "
+                    :class="platform === p.id ? 'border-[rgba(102,192,244,.5)] text-accent' : ''"
+                    @click="pickPlatform(p.id)"
+                  >
+                    {{ p.label }}<span v-if="p.used" class="text-faint"> ·已占用</span>
+                  </button>
+                </div>
+              </div>
               <label class="flex flex-col gap-1.5">
                 <span class="text-label text-muted">Depot 名称</span>
                 <input

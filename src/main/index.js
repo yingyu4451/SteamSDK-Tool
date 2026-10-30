@@ -172,6 +172,50 @@ async function viaSteamcmd(appId, settings) {
   }
 }
 
+/**
+ * Web API 的 GetAppDepotVersions 只回 DepotID，不带平台（publisher 密钥看不到 oslist）。
+ * 平台是「这个 Depot 该落到哪个本地平台槽位」的关键，而 steamcmd 的 app_info_print
+ * 恰好有 config.oslist —— 所以缺平台时补一次 steamcmd，并按 AppID 缓存 10 分钟，
+ * 避免每次点同步都等十几秒。
+ */
+const depotPlatformCache = new Map()
+const DEPOT_PLATFORM_TTL_MS = 10 * 60 * 1000
+
+async function fillDepotPlatforms(appId, settings, steamDepots) {
+  const list = Array.isArray(steamDepots) ? steamDepots : []
+  if (!list.length || list.every((d) => d.platform)) return list
+  const id = String(appId)
+  const cached = depotPlatformCache.get(id)
+  let byId = null
+  if (cached && Date.now() - cached.at < DEPOT_PLATFORM_TTL_MS) byId = cached.byId
+  else {
+    try {
+      const r = await viaSteamcmd(id, settings)
+      if (r?.ok) {
+        byId = {}
+        for (const d of r.depots || []) if (d.platform) byId[String(d.depotId)] = d
+      }
+    } catch {
+      byId = null
+    }
+    if (byId) depotPlatformCache.set(id, { at: Date.now(), byId })
+  }
+  if (!byId) return list
+  return list.map((d) => {
+    if (d.platform) return d
+    const hit = byId[String(d.depotId)]
+    if (!hit) return d
+    return {
+      ...d,
+      platform: hit.platform,
+      platformLabel: hit.platformLabel || hit.platform,
+      os: d.os || hit.os || '',
+      osarch: d.osarch || hit.osarch || '',
+      size: d.size || hit.size || 0
+    }
+  })
+}
+
 /** 从 app_info_print 的 depot manifests 里推出这个 App 有哪些分支（public / beta…）。 */
 function steamBranchesFrom(depots = []) {
   const keys = new Set()
@@ -467,7 +511,7 @@ function registerIpc() {
           appId: id,
           appIdKnown: !!known,
           appName: known ? known.name : '',
-          depots: summarizeAppDepots(depots.depots),
+          depots: await fillDepotPlatforms(id, s, summarizeAppDepots(depots.depots)),
           builds: buildsRes.builds,
           betas: betasRes.betas
         }
@@ -526,11 +570,15 @@ function registerIpc() {
         // 平台：GetAppDepotVersions 不告诉平台，用本地 vdf 里已配的 depot 平台补上
         const localPlatform = {}
         for (const d of app.depots || []) localPlatform[String(d.id)] = d.platform || ''
-        const steamDepots = summarizeAppDepots(depots.depots).map((d) => {
-          if (d.platform) return d
-          const plat = localPlatform[String(d.depotId)] || ''
-          return { ...d, platform: plat, platformLabel: plat ? PLATFORM_LABEL[plat] || plat : '' }
-        })
+        const steamDepots = await fillDepotPlatforms(
+          app.appId,
+          s,
+          summarizeAppDepots(depots.depots).map((d) => {
+            if (d.platform) return d
+            const plat = localPlatform[String(d.depotId)] || ''
+            return { ...d, platform: plat, platformLabel: plat ? PLATFORM_LABEL[plat] || plat : '' }
+          })
+        )
 
         return {
           ok: true,
