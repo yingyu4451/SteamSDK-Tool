@@ -188,6 +188,79 @@ function folderColorLive(id, color) {
 }
 const colorPopoverFolder = ref('')
 const colorPopoverPos = ref({ top: 0, left: 0 })
+const pickHsv = ref({ h: 0.56, s: 0.58, v: 0.96 })
+const pickAlpha = ref(0.4)
+const pickTarget = ref('')
+const pickColor = computed(() => hsvToHex(pickHsv.value.h, pickHsv.value.s, pickHsv.value.v))
+const pickHueColor = computed(() => `hsl(${Math.round(pickHsv.value.h * 360)}, 100%, 50%)`)
+function clamp01(n) {
+  return Math.min(1, Math.max(0, n))
+}
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '')
+  if (!m) return { r: 102, g: 192, b: 244 }
+  return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) }
+}
+function rgbToHsv(r, g, b) {
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const d = max - min
+  let h = 0
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    h /= 6
+    if (h < 0) h += 1
+  }
+  return { h, s: max === 0 ? 0 : d / max, v: max }
+}
+function hsvToHex(h, s, v) {
+  const f = (n) => {
+    const k = (n + h * 6) % 6
+    const c = v - v * s * Math.max(0, Math.min(k, 4 - k, 1))
+    return Math.round(c * 255).toString(16).padStart(2, '0')
+  }
+  return '#' + f(5) + f(3) + f(1)
+}
+function hexToHsv(hex) {
+  const { r, g, b } = hexToRgb(hex)
+  return rgbToHsv(r, g, b)
+}
+function syncPick(f) {
+  const { h, s, v } = hexToHsv(folderColorHex(f))
+  pickHsv.value = { h, s, v }
+  pickAlpha.value = folderAlphaOf(f)
+  pickTarget.value = f.id
+}
+function applyPick() {
+  if (!pickTarget.value) return
+  setFolderColor(pickTarget.value, pickColor.value)
+  setFolderAlpha(pickTarget.value, pickAlpha.value)
+}
+function svDown(e) {
+  if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId)
+  svMove(e)
+}
+function svMove(e) {
+  if (e.buttons !== 1) return
+  const r = e.currentTarget.getBoundingClientRect()
+  const x = clamp01((e.clientX - r.left) / r.width)
+  const y = clamp01((e.clientY - r.top) / r.height)
+  pickHsv.value = { ...pickHsv.value, s: x, v: 1 - y }
+  applyPick()
+}
+function onHueInput(e) {
+  pickHsv.value = { ...pickHsv.value, h: Number(e.target.value) / 360 }
+  applyPick()
+}
+function onAlphaInput(e) {
+  pickAlpha.value = Number(e.target.value) / 100
+  applyPick()
+}
 function toggleColorPopover(id, event) {
   if (colorPopoverFolder.value === id) {
     closeColorPopover()
@@ -200,8 +273,9 @@ function toggleColorPopover(id, event) {
     const top = Math.min(r.bottom + 6, window.innerHeight - 216)
     colorPopoverPos.value = { top, left }
   }
+  const target = state.folders.find((f) => f.id === id)
+  if (target) syncPick(target)
   colorPopoverFolder.value = id
-  nextTick(() => openFolderPicker())
 }
 function closeColorPopover() {
   colorPopoverFolder.value = ''
@@ -228,10 +302,6 @@ function folderAlphaPct(f) {
 }
 function setFolderAlphaLive(id, pct) {
   setFolderAlpha(id, Number(pct) / 100)
-}
-function openFolderPicker() {
-  const el = document.querySelector('.folder-color-input-hidden')
-  if (el) el.click()
 }
 function resetFolderLook(id) {
   setFolderColor(id, '')
@@ -642,56 +712,61 @@ function healthTitle(app) {
               </template>
             </div>
 
-            <!-- 调色弹窗：颜色 + 边框亮度（每个文件夹独立） -->
+            <!-- 调色弹窗：自绘拾色器（饱和度/明度 + 色相 + 透明度） -->
             <Teleport to="body">
-            <div
-              v-if="colorPopoverFolder === row.folder.id"
-              class="folder-color-pop"
-              :style="{ top: colorPopoverPos.top + 'px', left: colorPopoverPos.left + 'px' }"
-              @click.stop
-            >
-                          <div class="flex items-center gap-2">
-              <button
-                class="btn btn-sm no-drag flex items-center gap-1.5"
-                title="打开系统拾色器"
-                @click.stop="openFolderPicker"
+              <div
+                v-if="colorPopoverFolder === row.folder.id"
+                class="folder-color-pop"
+                :style="{ top: colorPopoverPos.top + 'px', left: colorPopoverPos.left + 'px' }"
+                @click.stop
               >
-                <Palette :size="13" :stroke-width="2" />
-                拾色器
-              </button>
-              <span class="text-micro num text-faint">{{ folderColorHex(row.folder) }}</span>
-              <button
-                class="ml-auto text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer whitespace-nowrap"
-                @click="resetFolderLook(row.folder.id)"
-              >
-                恢复默认
-              </button>
-            </div>
-            <input
-              type="color"
-              class="folder-color-input-hidden"
-              :value="folderColorHex(row.folder)"
-              aria-label="文件夹颜色"
-              @click.stop
-              @input="chooseFolderColor(row.folder.id, $event.target.value)"
-              @change="chooseFolderColor(row.folder.id, $event.target.value)"
-            />
-            <div class="mt-2.5 flex items-center gap-2">
-              <span class="text-label text-muted shrink-0">亮度</span>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                step="5"
-                class="folder-alpha-range flex-1 min-w-0"
-                :value="folderAlphaPct(row.folder)"
-                aria-label="文件夹边框亮度"
-                title="文件夹边框亮度"
-                @input="setFolderAlphaLive(row.folder.id, $event.target.value)"
-              />
-              <span class="text-label num text-ink w-9 text-right">{{ folderAlphaPct(row.folder) }}%</span>
-            </div>
-            </div>
+                <div
+                  class="pick-sv"
+                  :style="{ backgroundImage: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${pickHueColor})` }"
+                  @pointerdown="svDown"
+                  @pointermove="svMove"
+                >
+                  <div
+                    class="pick-sv-cursor"
+                    :style="{ left: pickHsv.s * 100 + '%', top: (1 - pickHsv.v) * 100 + '%' }"
+                  />
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  step="1"
+                  class="pick-range pick-hue mt-2.5"
+                  :value="Math.round(pickHsv.h * 360)"
+                  aria-label="色相"
+                  @input="onHueInput"
+                />
+                <div class="mt-2 flex items-center gap-2">
+                  <span class="text-micro text-faint shrink-0">透明度</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    class="pick-range pick-alpha flex-1"
+                    :style="{ '--pick-color': pickColor }"
+                    :value="Math.round(pickAlpha * 100)"
+                    aria-label="透明度（文件夹边框不透明度）"
+                    @input="onAlphaInput"
+                  />
+                  <span class="text-micro num text-ink w-9 text-right">{{ Math.round(pickAlpha * 100) }}%</span>
+                </div>
+                <div class="mt-2.5 flex items-center gap-2">
+                  <span class="pick-preview" :style="{ background: pickColor }" />
+                  <span class="text-micro num text-faint">{{ pickColor.toUpperCase() }}</span>
+                  <button
+                    class="ml-auto text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer whitespace-nowrap"
+                    @click="resetFolderLook(row.folder.id)"
+                  >
+                    恢复默认
+                  </button>
+                </div>
+              </div>
             </Teleport>
 
             <div class="folder-body" :class="row.folder.collapsed ? 'is-collapsed' : ''">
