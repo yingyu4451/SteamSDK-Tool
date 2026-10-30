@@ -1,4 +1,5 @@
-﻿#Requires -Version 5.1
+﻿# steam-sdk-tool:script-version 2
+#Requires -Version 5.1
 <#
     check.ps1 - offline validation of every build script under scripts\.
 

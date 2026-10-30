@@ -20,6 +20,24 @@ import crypto from 'node:crypto'
 
 export const BUNDLED_SCRIPTS = ['build.ps1', 'check.ps1']
 
+/**
+ * 脚本自带的版本号（写在各脚本第一行注释里）。
+ * 工具升级时靠它判断 SDK 里那份是不是旧版本：旧版本可以在用户没改过的前提下
+ * 自动升级，免得新功能（例如「不上传某个 Depot」）因为 SDK 里存着旧脚本而静默失效。
+ */
+const SCRIPT_VERSION_RE = /steam-sdk-tool:script-version\s+(\d+)/i
+
+/** 历史上随包发布过的旧脚本哈希：内容一模一样说明用户没改过，可以安全覆盖。 */
+const KNOWN_OLD_SCRIPT_SHA = {
+  'build.ps1': [
+    // v0.1.21 / v0.1.22 之前的版本（没有「不上传 Depot」支持）
+    '3e3fc99201abf7544c724beb7a1d8cd93c1f5cd0efd3bcfeb507c85e01396a05'
+  ],
+  'check.ps1': [
+    'd588a712bd4ecef5db8f3c428a2468233739514580f0976d165168d7bf6c3ecf'
+  ]
+}
+
 let bundledDir = ''
 
 /** main 启动时把「自带脚本目录」定下来，之后各 handler 直接用。 */
@@ -51,6 +69,17 @@ function digest(file) {
     return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
   } catch {
     return ''
+  }
+}
+
+/** 读脚本里声明的版本（没有声明 = 0，读不到 = -1）。 */
+function scriptVersion(file) {
+  try {
+    const head = fs.readFileSync(file, 'utf8').slice(0, 800)
+    const m = head.match(SCRIPT_VERSION_RE)
+    return m ? Number(m[1]) || 1 : 0
+  } catch {
+    return -1
   }
 }
 
@@ -94,7 +123,7 @@ export function inspectScripts(contentBuilderDir) {
  */
 export function installScripts(contentBuilderDir, { force = false } = {}) {
   const targetDir = contentBuilderDir || ''
-  const result = { ok: false, error: '', written: [], skipped: [], failed: [] }
+  const result = { ok: false, error: '', written: [], upgraded: [], skipped: [], failed: [] }
 
   if (!targetDir) {
     result.error = '没有 ContentBuilder 目录 —— 先在设置里选对 SDK 路径'
@@ -124,14 +153,29 @@ export function installScripts(contentBuilderDir, { force = false } = {}) {
       result.skipped.push(name)
       continue
     }
-    if (targetSum && !force) {
-      // 已有且内容不同：用户可能改过，不动它
-      result.skipped.push(name)
-      continue
+    let upgrade = false
+    if (targetSum) {
+      if (force) {
+        upgrade = true
+      } else {
+        // 只有在能确定「这份是工具以前发的旧脚本、用户没改过」时才自动升级：
+        //   a) 内容命中历史发布哈希；b) 自带版本号比 SDK 里的高。
+        const knownOld = (KNOWN_OLD_SCRIPT_SHA[name] || []).includes(targetSum)
+        const bundledVersion = scriptVersion(source)
+        const installedVersion = scriptVersion(target)
+        const outdated = installedVersion >= 0 && bundledVersion > installedVersion
+        upgrade = knownOld || outdated
+      }
+      if (!upgrade) {
+        // 内容不同又无法安全判断：用户可能改过，不动它
+        result.skipped.push(name)
+        continue
+      }
     }
     try {
       fs.copyFileSync(source, target)
       result.written.push(name)
+      if (targetSum) result.upgraded.push(name)
     } catch (error) {
       result.failed.push(name)
       lastError = error
@@ -152,15 +196,21 @@ export function installScripts(contentBuilderDir, { force = false } = {}) {
 }
 
 /**
- * 自动流程用：缺才补，有的不动。返回安装后的最新状态。
+ * 自动流程用：补缺失的；能确认是旧版自带脚本的顺手升级；用户改过的不动。
+ * 返回安装后的最新状态，外加本轮写入了哪些。
  */
 export function ensureScripts(contentBuilderDir) {
   const before = inspectScripts(contentBuilderDir)
-  if (!before.bundledReady || before.missing.length === 0) {
-    return { ...before, written: [], error: before.bundledReady ? '' : '安装包里没找到自带的构建脚本' }
+  if (!before.bundledReady) {
+    return { ...before, written: [], upgraded: [], error: '安装包里没找到自带的构建脚本' }
   }
 
   const result = installScripts(contentBuilderDir, { force: false })
   const after = inspectScripts(contentBuilderDir)
-  return { ...after, written: result.written, error: result.error }
+  return {
+    ...after,
+    written: result.written,
+    upgraded: result.upgraded,
+    error: result.error
+  }
 }

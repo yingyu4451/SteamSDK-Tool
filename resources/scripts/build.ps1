@@ -1,4 +1,5 @@
-﻿#Requires -Version 5.1
+﻿# steam-sdk-tool:script-version 2
+#Requires -Version 5.1
 <#
     build.ps1 - upload one Steam app build with the single shared SDK.
 
