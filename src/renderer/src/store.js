@@ -666,13 +666,21 @@ export function setAppOrder(dirNames) {
 /** 文件夹可选颜色（按顺序给新文件夹分配，也可手动改） */
 export const FOLDER_COLORS = [
   '#66c0f4',
-  '#a4d007',
-  '#f0a92e',
-  '#e06c75',
-  '#b18cf3',
+  '#1a9fff',
   '#4ec9b0',
+  '#a4d007',
+  '#8bc34a',
+  '#f0a92e',
+  '#e8b34b',
+  '#e06c75',
+  '#d05f6b',
   '#f0a1c0',
-  '#9aa8bb'
+  '#b18cf3',
+  '#8f7ae8',
+  '#9aa8bb',
+  '#6f8296',
+  '#c0c8d2',
+  '#4b5b6b'
 ]
 
 function persistFolders() {

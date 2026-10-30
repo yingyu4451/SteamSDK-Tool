@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed, nextTick } from 'vue'
+import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
   LayoutDashboard,
   History,
@@ -30,6 +30,7 @@ import {
   assignAppFolder,
   setFolderAlpha,
   folderAlphaOf,
+  FOLDER_COLORS
 } from '../store.js'
 import { useListStagger } from '../motion.js'
 import EmptyState from './EmptyState.vue'
@@ -186,14 +187,51 @@ function folderColorLive(id, color) {
   setFolderColor(id, color)
 }
 const colorPopoverFolder = ref('')
-function toggleColorPopover(id) {
-  colorPopoverFolder.value = colorPopoverFolder.value === id ? '' : id
+const colorPopoverPos = ref({ top: 0, left: 0 })
+function toggleColorPopover(id, event) {
+  if (colorPopoverFolder.value === id) {
+    closeColorPopover()
+    return
+  }
+  const r = event && event.currentTarget ? event.currentTarget.getBoundingClientRect() : null
+  if (r) {
+    const width = 236
+    const left = Math.min(Math.max(8, r.right - width + 6), window.innerWidth - width - 8)
+    const top = Math.min(r.bottom + 6, window.innerHeight - 216)
+    colorPopoverPos.value = { top, left }
+  }
+  colorPopoverFolder.value = id
+  nextTick(() => openFolderPicker())
 }
+function closeColorPopover() {
+  colorPopoverFolder.value = ''
+}
+function onColorPopoverPointerDown(e) {
+  if (!colorPopoverFolder.value) return
+  const t = e.target
+  if (t && t.closest && (t.closest('.folder-color-pop') || t.closest('[data-color-toggle]'))) return
+  closeColorPopover()
+}
+function onColorPopoverKey(e) {
+  if (e.key === 'Escape') closeColorPopover()
+}
+onMounted(() => {
+  window.addEventListener('pointerdown', onColorPopoverPointerDown, true)
+  window.addEventListener('keydown', onColorPopoverKey)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('pointerdown', onColorPopoverPointerDown, true)
+  window.removeEventListener('keydown', onColorPopoverKey)
+})
 function folderAlphaPct(f) {
   return Math.round(folderAlphaOf(f) * 100)
 }
 function setFolderAlphaLive(id, pct) {
   setFolderAlpha(id, Number(pct) / 100)
+}
+function openFolderPicker() {
+  const el = document.querySelector('.folder-color-input-hidden')
+  if (el) el.click()
 }
 function resetFolderLook(id) {
   setFolderColor(id, '')
@@ -581,7 +619,8 @@ function healthTitle(app) {
                   <button
                     class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 border-0 bg-transparent cursor-pointer"
                     title="调色：颜色与边框亮度"
-                    @click.stop="toggleColorPopover(row.folder.id)"
+                    data-color-toggle="1"
+                    @click.stop="toggleColorPopover(row.folder.id, $event)"
                   >
                     <Palette :size="12" :stroke-width="2" />
                   </button>
@@ -604,53 +643,56 @@ function healthTitle(app) {
             </div>
 
             <!-- 调色弹窗：颜色 + 边框亮度（每个文件夹独立） -->
+            <Teleport to="body">
             <div
               v-if="colorPopoverFolder === row.folder.id"
               class="folder-color-pop"
+              :style="{ top: colorPopoverPos.top + 'px', left: colorPopoverPos.left + 'px' }"
               @click.stop
             >
-              <div class="flex items-center gap-2">
-                <label
-                  class="folder-color-swatch"
-                  :style="{ background: folderColorHex(row.folder) }"
-                  title="打开系统选色器"
-                  @click.stop
-                >
-                  <Palette :size="11" :stroke-width="2" class="text-ink/70" />
-                  <input
-                    type="color"
-                    class="folder-color-input"
-                    :value="folderColorHex(row.folder)"
-                    aria-label="选择文件夹颜色"
-                    @click.stop
-                    @input="chooseFolderColor(row.folder.id, $event.target.value)"
-                    @change="chooseFolderColor(row.folder.id, $event.target.value)"
-                  />
-                </label>
-                <span class="text-label text-muted">颜色</span>
-                <button
-                  class="ml-auto text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer whitespace-nowrap"
-                  @click="resetFolderLook(row.folder.id)"
-                >
-                  恢复默认
-                </button>
-              </div>
-              <div class="mt-2.5 flex items-center gap-2">
-                <span class="text-label text-muted shrink-0">亮度</span>
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  step="5"
-                  class="folder-alpha-range flex-1 min-w-0"
-                  :value="folderAlphaPct(row.folder)"
-                  aria-label="文件夹边框亮度"
-                  title="文件夹边框亮度"
-                  @input="setFolderAlphaLive(row.folder.id, $event.target.value)"
-                />
-                <span class="text-label num text-ink w-9 text-right">{{ folderAlphaPct(row.folder) }}%</span>
-              </div>
+                          <div class="flex items-center gap-2">
+              <button
+                class="btn btn-sm no-drag flex items-center gap-1.5"
+                title="打开系统拾色器"
+                @click.stop="openFolderPicker"
+              >
+                <Palette :size="13" :stroke-width="2" />
+                拾色器
+              </button>
+              <span class="text-micro num text-faint">{{ folderColorHex(row.folder) }}</span>
+              <button
+                class="ml-auto text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer whitespace-nowrap"
+                @click="resetFolderLook(row.folder.id)"
+              >
+                恢复默认
+              </button>
             </div>
+            <input
+              type="color"
+              class="folder-color-input-hidden"
+              :value="folderColorHex(row.folder)"
+              aria-label="文件夹颜色"
+              @click.stop
+              @input="chooseFolderColor(row.folder.id, $event.target.value)"
+              @change="chooseFolderColor(row.folder.id, $event.target.value)"
+            />
+            <div class="mt-2.5 flex items-center gap-2">
+              <span class="text-label text-muted shrink-0">亮度</span>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                step="5"
+                class="folder-alpha-range flex-1 min-w-0"
+                :value="folderAlphaPct(row.folder)"
+                aria-label="文件夹边框亮度"
+                title="文件夹边框亮度"
+                @input="setFolderAlphaLive(row.folder.id, $event.target.value)"
+              />
+              <span class="text-label num text-ink w-9 text-right">{{ folderAlphaPct(row.folder) }}%</span>
+            </div>
+            </div>
+            </Teleport>
 
             <div class="folder-body" :class="row.folder.collapsed ? 'is-collapsed' : ''">
               <div class="folder-inner">

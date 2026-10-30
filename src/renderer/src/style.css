@@ -282,16 +282,16 @@ select:focus {
 /* 文件夹边框亮度滑杆 */
 /* 文件夹调色弹窗：颜色 + 亮度 */
 .folder-color-pop {
-  position: absolute;
-  z-index: 40;
-  top: 36px;
-  left: 6px;
-  right: 6px;
+  position: fixed;
+  z-index: 70;
+  width: 236px;
   padding: 10px 10px 8px;
   border-radius: var(--radius-card);
-  border: 1px solid rgba(0, 0, 0, 0.55);
-  background: var(--color-surface);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(102, 192, 244, 0.22);
+  background: var(--color-surface-2);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.62),
+    0 2px 6px rgba(0, 0, 0, 0.5);
 }
 .folder-color-swatch {
   position: relative;
@@ -305,6 +305,47 @@ select:focus {
   overflow: hidden;
 }
 
+.folder-color-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.folder-palette {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+.folder-palette-dot {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.folder-palette-dot:hover {
+  transform: scale(1.12);
+}
+.folder-palette-dot.is-on {
+  box-shadow:
+    0 0 0 2px var(--color-surface-2),
+    0 0 0 3px var(--color-ink);
+}
+.folder-color-pick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.folder-color-pop .folder-alpha-range {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
 .folder-alpha-range {
   border: 0;
   outline: none;
