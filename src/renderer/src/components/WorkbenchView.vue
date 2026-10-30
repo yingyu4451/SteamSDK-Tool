@@ -138,15 +138,17 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
         </div>
       </div>
 
-      <!-- 左边 Depot（下面挂分支），右边构建输出：两列等高，构建输出跟左列底边齐平；
-           日志多了在卡片内部滚动，不会把整页撑高。 -->
-      <div class="grid grid-cols-2 gap-4 min-w-0 items-stretch">
-        <div class="flex flex-col gap-4 min-w-0">
+      <!-- 左边 Depot（下面挂分支），右边构建输出：右列用 absolute 铺满左列的高度，
+           这样行高只由左列决定，日志再多也只会在卡片内部滚动，不会把两列撑高。 -->
+      <div class="grid grid-cols-2 gap-4 min-w-0">
+        <div class="flex flex-col gap-4 min-w-0 min-h-[320px]">
           <DepotMatrix :depots="detail.depots || []" />
           <BranchPanel />
         </div>
-        <div class="flex flex-col min-w-0">
-          <ConsoleLog class="flex-1 min-h-0" />
+        <div class="relative min-w-0">
+          <div class="absolute inset-0 flex flex-col min-h-0">
+            <ConsoleLog class="flex-1 min-h-0" />
+          </div>
         </div>
       </div>
       </div>
