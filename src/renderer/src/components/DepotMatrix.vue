@@ -1,7 +1,7 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { fmtSize, fmtInt } from '../format.js'
-import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, setDepotLanguage, ensureDepotOptions, PLATFORM_LABEL, depotUploadEnabled, toggleDepotUpload } from '../store.js'
+import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL, depotUploadEnabled, toggleDepotUpload } from '../store.js'
 import PathLink from './PathLink.vue'
 import EmptyState from './EmptyState.vue'
 import { ChevronRight, Package, CloudUpload, CloudOff } from '@lucide/vue'
@@ -9,11 +9,6 @@ import { ChevronRight, Package, CloudUpload, CloudOff } from '@lucide/vue'
 const props = defineProps({ depots: { type: Array, default: () => [] } })
 
 const showExcluded = ref(false)
-
-onMounted(() => {
-  // 语言下拉要用主进程给的语言表；以前只有「新建 Depot」滑层才加载，进工作台时是空的
-  ensureDepotOptions()
-})
 const showSuspicious = ref(true)
 
 /** 选项卡固定按 DepotID 从小到大排 —— 就是新建时从上到下 +1、+2 的那个顺序 */
@@ -84,13 +79,6 @@ const metaLine = computed(() => {
 })
 
 const platLabel = (id) => PLATFORM_LABEL[id] || id || ''
-
-/** 语言过滤是工具里本地记的元数据（Steam 后台的语言配置仍以 Steamworks 为准） */
-async function onLangChange(e) {
-  const d = current.value
-  if (!d) return
-  await setDepotLanguage(d.id, e.target.value)
-}
 
 async function createDir(d) {
   const res = await window.api.app.ensureContentDir(state.selectedDir, d.file)
@@ -196,17 +184,6 @@ async function openPath(p) {
           >
             {{ depotState(current).text }}
           </span>
-          <label class="flex items-center gap-1.5 text-label text-faint">
-            <span>语言</span>
-            <select
-              class="depot-lang no-drag"
-              :value="current.meta?.language || 'all'"
-              title="本地记录的语言过滤（Steam 后台的 Depot 语言配置以 Steamworks 为准）；构建上传时会带上这个标记"
-              @change="onLangChange"
-            >
-              <option v-for="l in state.depotOptions.languages" :key="l.id" :value="l.id">{{ l.label }}</option>
-            </select>
-          </label>
           <span v-if="metaLine.length" class="text-label text-muted truncate">{{ metaLine[0] }}</span>
 
           <div class="ml-auto flex items-center gap-1.5">

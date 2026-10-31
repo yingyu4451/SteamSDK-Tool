@@ -1631,23 +1631,6 @@ export function closeDepotSlide() {
   state.depotSlide = null
 }
 
-/** 平台/架构/语言选项：主进程给表，UI 里多处要用（不只在「新建 Depot」滑层里） */
-export async function ensureDepotOptions() {
-  if (state.depotOptions?.languages?.length) return state.depotOptions
-  try {
-    const d = await api.app.defaults({ platform: 'win64' })
-    state.depotOptions = {
-      os: d.depotOs || [],
-      arch: d.depotArch || [],
-      archByOs: d.depotArchByOs || {},
-      languages: d.depotLanguages || []
-    }
-  } catch {
-    /* 拿不到就先用空表，UI 会退化成不显示 */
-  }
-  return state.depotOptions
-}
-
 /** 某个操作系统下能选的架构。主进程给表，这里只做过滤。 */
 export function archOptionsFor(os) {
   const all = state.depotOptions?.arch || []
@@ -2479,22 +2462,6 @@ export async function setDepotUserConfig(depotFile, list) {
   await reloadDetail()
   await rescan()
   toast('已更新玩家存档标记')
-  return r
-}
-
-/** Depot 的语言过滤：本地元数据，存在 settings.depotMeta 里（vdf 没有这个字段） */
-export async function setDepotLanguage(depotId, language) {
-  const id = String(depotId || '').trim()
-  if (!id) return { ok: false }
-  const r = await api.meta.setDepot(id, { language: String(language || 'all') })
-  if (r && r.ok === false) {
-    toast(r.error || '保存语言失败', 'bad')
-    return r
-  }
-  await reloadDetail()
-  // reloadDetail 可能把当前 Depot 重置成列表第一个，改完回到刚才这个
-  if ((state.detail?.depots || []).some((d) => String(d.id) === id)) state.activeDepot = id
-  toast('已更新语言过滤')
   return r
 }
 

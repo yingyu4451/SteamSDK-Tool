@@ -101,8 +101,7 @@ export function setDepotMeta(depotId, meta) {
     os: meta.os != null ? String(meta.os) : cur.os || '',
     arch: meta.arch != null ? String(meta.arch) : cur.arch || ''
   }
-  // 只有语言过滤也要留下（不然「改语言」这种只动 language 的编辑会被当成空记录删掉）
-  const keep = Boolean(merged.name || merged.os || merged.arch || (merged.language && merged.language !== 'all'))
+  const keep = Boolean(merged.name || merged.os || merged.arch)
   if (!keep) delete next[id]
   else next[id] = merged
   saveSettings({ depotMeta: next })
