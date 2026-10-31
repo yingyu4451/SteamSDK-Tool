@@ -125,6 +125,8 @@ export const state = reactive({
   orphanDialog: null,
   // 检查文件
   preflight: { busy: false, error: null, data: null },
+  // 最近一次「检查文件」的结果。收起弹层只清 postflight，这份留着给 Depot 状态 pill 用
+  lastPreflight: null,
   // 本地内容服务器
   local: {
     running: false,
@@ -616,6 +618,8 @@ export async function selectApp(dirName) {
   // 「同步 Depot」「检查文件」这些面板的内容是上一个 App 的，跟着切过来会张冠李戴
   clearVerify()
   clearPreflight()
+  // 换 App 了，上一个 App 的文件检查结果不能再挂在新 App 的 pill 上
+  state.lastPreflight = null
   clearBuildPanel()
   state.detailLoading = true
   try {
@@ -2418,6 +2422,8 @@ export async function runPreflight(dirName) {
     return null
   }
   state.preflight = { busy: false, error: null, data: res }
+  // 弹层可以收起，但「文件」那枚状态 pill 得一直有依据 —— 另存一份最近结果
+  state.lastPreflight = res
   const n = res.errors || 0
   toast(n ? `检查文件发现 ${n} 个会挡住上传的问题` : '检查文件通过，没有会挡住上传的问题', n ? 'warn' : 'ok')
   return res

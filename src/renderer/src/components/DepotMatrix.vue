@@ -50,7 +50,8 @@ function depotStateHint(d) {
 
 /** 文件检查（检查文件）的结果：只有真正上传的那些文件的问题，和上面的配置检查是两码事 */
 function fileState(d) {
-  const pf = state.preflight?.data
+  // 弹层收起后 state.preflight 会清空，这里用最近一次结果的存档
+  const pf = state.lastPreflight
   if (!d) return { tone: 'idle', text: '', hint: '' }
   if (!pf || pf.dirName !== state.selectedDir) {
     return { tone: 'idle', text: '文件未检查', hint: '点上方「检查文件」扫一遍真正会被上传的文件' }
