@@ -625,14 +625,8 @@ function healthTitle(app) {
             v-if="row.type === 'folder'"
             :key="row.key"
             :data-folder-box="row.folder.id"
-            class="rounded-card folder-box border relative transition-all"
-            :class="[
-              drag.active && drag.dropFolder === row.folder.id
-                ? 'is-drop'
-                : row.folder.collapsed
-                  ? 'bg-black/18 border-line/70'
-                  : 'folder-box-open border-line/70'
-            ]"
+            class="rounded-card folder-box border relative transition-colors"
+            :class="drag.active && drag.dropFolder === row.folder.id ? '' : 'border-line/70 bg-black/18'"
             :style="folderBoxStyle(row.folder)"
           >
             <div
@@ -640,6 +634,7 @@ function healthTitle(app) {
               class="group relative flex items-center gap-1.5 h-9 px-2.5 py-1 transition-colors select-none"
               :class="[
                 drag.active ? 'cursor-copy' : 'cursor-pointer hover:bg-surface-3/35',
+                !drag.active && !row.folder.collapsed ? 'bg-surface-3/35' : '',
                 drag.active && drag.dropFolder === row.folder.id ? 'bg-accent/12' : ''
               ]"
               role="button"

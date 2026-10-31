@@ -277,21 +277,6 @@ select:focus {
 }
 .folder-box {
   border-width: 1.5px;
-  transition:
-    background-color 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
-}
-/* 展开的文件夹常驻「悬浮」质感：抬起的面 + 环境投影，方便和收起状态区分 */
-.folder-box-open {
-  background: rgba(255, 255, 255, 0.052);
-  box-shadow:
-    0 12px 26px rgba(0, 0, 0, 0.5),
-    0 1px 0 rgba(255, 255, 255, 0.05) inset;
-}
-.folder-box.is-drop {
-  background: rgba(102, 192, 244, 0.1);
-  border-color: rgba(102, 192, 244, 0.55);
 }
 /* 原生取色器：覆盖在调色图标上，点图标即弹出系统取色面板 */
 /* 文件夹边框亮度滑杆 */
