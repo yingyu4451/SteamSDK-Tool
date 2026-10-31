@@ -566,8 +566,8 @@ function healthTitle(app) {
 
     <div class="h-px bg-line mx-3" />
 
-    <!-- App 列表 -->
-    <div class="px-3 pt-3 pb-2 flex items-center gap-2">
+    <!-- App 列表（头部 pb 与列表 gap 一致：1.5 = 6px，保证第一个条目上边距与文件夹之间一致） -->
+    <div class="px-3 pt-3 pb-1.5 flex items-center gap-2">
       <span class="text-micro font-semibold tracking-wider text-faint uppercase">Apps</span>
       <span class="num text-micro text-faint">{{ appCount }}</span>
       <button
@@ -625,8 +625,14 @@ function healthTitle(app) {
             v-if="row.type === 'folder'"
             :key="row.key"
             :data-folder-box="row.folder.id"
-            class="rounded-card folder-box border relative transition-colors"
-            :class="drag.active && drag.dropFolder === row.folder.id ? '' : 'border-line/70 bg-black/18'"
+            class="rounded-card folder-box border relative transition-all"
+            :class="[
+              drag.active && drag.dropFolder === row.folder.id
+                ? 'is-drop'
+                : row.folder.collapsed
+                  ? 'bg-black/18 border-line/70'
+                  : 'folder-box-open border-line/70'
+            ]"
             :style="folderBoxStyle(row.folder)"
           >
             <div
@@ -780,7 +786,7 @@ function healthTitle(app) {
 
             <div class="folder-body" :class="row.folder.collapsed ? 'is-collapsed' : ''">
               <div class="folder-inner">
-                <div class="flex flex-col gap-1.5 p-2 pt-1">
+                <div class="flex flex-col gap-1.5 p-2 pt-1.5">
                   <AppCard
                     v-for="app in row.items"
                     :key="app.dirName"
