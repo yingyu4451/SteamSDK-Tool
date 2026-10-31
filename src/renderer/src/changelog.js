@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.1.24',
+    date: '2026-10-31',
+    items: [
+      '移除「剥离 Steam」功能（导航、页面、弹窗、主进程 IPC、使用手册条目一并删掉）——以后用不上了，就不再占地方'
+    ]
+  },
+  {
     version: '0.1.23',
     date: '2026-10-31',
     items: [
