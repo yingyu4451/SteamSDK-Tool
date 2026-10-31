@@ -3,6 +3,7 @@ import { computed, onMounted, ref, nextTick, watch } from 'vue'
 import gsap from 'gsap'
 import { Download, RefreshCw, Check, LoaderCircle, TriangleAlert } from '@lucide/vue'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import LoginConsole from './LoginConsole.vue'
 import {
   state,
   onboardGo,
@@ -10,7 +11,6 @@ import {
   onboardPickFolder,
   onboardApplySdk,
   onboardSaveAccount,
-  testTypedLogin,
   finishOnboard,
   onboardMode,
   goSettings,
@@ -78,28 +78,39 @@ onMounted(async () => {
 /** 点「完成」之后的验证过程：idle → checking → ok / fail */
 const checkPhase = ref('idle')
 
-/** 填了账号密码时那次真登录的结果（没填就是 null，只查机器状态） */
-const testResult = ref(null)
-/** 这一次走的到底是「真登录」还是「只看机器状态」 */
-const rowUsesRealLogin = ref(false)
+/** 教程第三步改用内置登录控制台（node-pty）：登录成功关掉控制台后自动完成本步 */
+const loginConsoleOpen = ref(false)
 
-/**
- * Steam Guard 验证码。
- * 账号绑了手机令牌/邮箱令牌、而本机又没被授权过时，steamcmd 光有密码登不进去 ——
- * 它会再要一个码。我们不去解析它那句提示（接管道时是块缓冲的，经常刷不出来），
- * 而是把码作为 stdin 的第二行直接喂进去。
- */
-const guardCode = ref('')
-/** 只有「确实是因为缺验证码失败」时才把输码框摆出来 */
-const needGuard = computed(
-  () => checkPhase.value === 'fail' && testResult.value?.reason === 'steam-guard'
-)
+/** 打开控制台前先要求填账号，顺手把账号存进设置 */
+async function openTutorialLogin() {
+  const acct = String(o.value.account || '').trim()
+  if (!acct) {
+    o.value.error = '先填要登录的 Steam 账号名（不是邮箱）'
+    return
+  }
+  o.value.error = ''
+  await onboardSaveAccount()
+  loginConsoleOpen.value = true
+}
 
-/**
- * 手机令牌那条路：steamcmd 会说「Please confirm the login in the Steam Mobile app」，
- * 然后停在那儿等你在手机上点确认 —— 不用输任何码。这不是失败，是「等你」。
- */
-const mobileWaiting = computed(() => checkPhase.value === 'checking' && state.loginWait?.kind === 'mobile')
+/* 控制台关掉后复查一次登录状态：绿了就自动结束教程，没绿就停在这一步让人再来一次 */
+watch(loginConsoleOpen, async (open) => {
+  if (open) return
+  checkPhase.value = 'checking'
+  loginChecked.value = true
+  try {
+    const l = await checkLogin()
+    if (l?.ready) {
+      checkPhase.value = 'ok'
+      await new Promise((r) => setTimeout(r, 1200))
+      await finishOnboard()
+    } else {
+      checkPhase.value = 'fail'
+    }
+  } finally {
+    if (checkPhase.value === 'checking') checkPhase.value = 'idle'
+  }
+})
 
 /* 这个组件在 App.vue 里是一直挂着的，只有里面那层 div 跟着 open 开关 ——
  * 所以 checkPhase 会活到下一次打开。上一次「验证通过」留下的 ok 会把
@@ -110,9 +121,6 @@ watch(
     if (open) {
       checkPhase.value = 'idle'
       loginChecked.value = false
-      testResult.value = null
-      rowUsesRealLogin.value = false
-      guardCode.value = ''
       machineLogin.value = null
       overrideLogin.value = false
       if (o.value.step === 2) probeMachineLogin()
@@ -150,45 +158,14 @@ watch(
 const alreadyIn = computed(() => !!machineLogin.value?.ready && !overrideLogin.value)
 
 /** 状态行只在「正在验证」或「验证过」的时候出现 —— 没查过就不替用户下结论 */
-const rowShow = computed(() => checkPhase.value === 'checking' || loginChecked.value)
-const rowTone = computed(() => {
-  if (checkPhase.value === 'checking') return 'busy'
-  const t = testResult.value
-  if (t) return t.ok ? 'ok' : 'bad'
-  return lg.value?.ready ? 'ok' : 'bad'
-})
+const rowShow = computed(() => checkPhase.value !== 'idle')
+const rowTone = computed(() =>
+  checkPhase.value === 'checking' ? 'busy' : checkPhase.value === 'ok' ? 'ok' : 'bad'
+)
 const rowText = computed(() => {
-  if (checkPhase.value === 'checking') {
-    if (mobileWaiting.value) return '等你在手机上点确认 —— 打开 Steam App，点「确认登录」'
-    return testResult.value === null && rowUsesRealLogin.value
-      ? '正在用你填的账号登录 steamcmd，第一次要十几秒…'
-      : '正在验证登录状态…'
-  }
-  const t = testResult.value
-  if (t) {
-    if (t.timedOut) return '等太久了 —— 网络慢，或者手机那边一直没确认。可以点「跳过」，构建时再试'
-    switch (t.reason) {
-      case 'ok':
-        return t.passwordChecked
-          ? `账号密码没问题 —— steamcmd 已经登录并记住了（${t.usedAccount}）`
-          : `steamcmd 用它以前缓存的令牌登录成功了（${t.usedAccount}）。你这次填的密码没被校验 —— 想真的验一次，先去设置里「忘记账号」`
-      case 'bad-password':
-        return 'Steam 说密码不对（Invalid Password）。检查一下大小写，账号名不是邮箱'
-      case 'mobile-timeout':
-        return '一直在等你手机上确认，没等到。手机上打开 Steam App → 右下角盾牌图标里那条「确认登录」，点了它这就能过'
-      case 'steam-guard':
-        return 'Steam 要一个 Steam Guard 验证码（不是手机确认那种）—— 填到下面再点一次「完成」'
-      case 'rate-limit':
-        return 'Steam 暂时限制了登录尝试（Rate Limit）。等几分钟再点一次'
-      case 'no-steamcmd':
-        return '找不到 steamcmd.exe —— 回上一步把 SDK 路径配对'
-      case 'no-account':
-        return '账号名是空的'
-      default:
-        return '登录没成功，也没认出具体原因。点「跳过」先继续，构建时能看到 steamcmd 的原始输出'
-    }
-  }
-  return loginText.value
+  if (checkPhase.value === 'checking') return '正在验证登录状态…'
+  if (checkPhase.value === 'ok') return '登录成功 —— steamcmd 已经记住这个账号，构建不用再输密码'
+  return '还没检测到登录凭据。点「打开登录控制台」在终端里输密码 / 手机确认，成功关掉后这里会自动变绿'
 })
 const btnText = computed(() => {
   if (o.value.step !== 2) return '下一步'
@@ -205,61 +182,13 @@ async function next() {
   }
   if (step === 2) {
     if (checkPhase.value === 'checking') return
-    /* 一进来就查到已经登录过、用户也没点「换个账号」—— 这一步没有任何要验的东西 */
     if (alreadyIn.value) {
       checkPhase.value = 'ok'
       await new Promise((r) => setTimeout(r, 1700))
       await finishOnboard()
       return
     }
-    checkPhase.value = 'checking'
-    loginChecked.value = false
-    testResult.value = null
-
-    const acct = String(o.value.account || '').trim()
-    const pw = String(o.value.password || '')
-    rowUsesRealLogin.value = !!(acct && pw)
-
-    try {
-      if (rowUsesRealLogin.value) {
-        /* 填了账号密码 —— 就真的登一次。
-         * 以前这里只读 config.vdf（「这台机器以前登录过没有」），跟你刚敲进去的
-         * 那两行字毫无关系，所以乱填也能过。 */
-        const t = await testTypedLogin(acct, pw, guardCode.value)
-        testResult.value = t
-        loginChecked.value = true
-        if (!t.ok) {
-          // 验证码是一次性的，失败后清掉 —— 留着会让人以为「明明填了还是不过」
-          guardCode.value = ''
-          checkPhase.value = 'fail'
-          return
-        }
-        // 确认能登进去才存，免得把一个错的密码写进 DPAPI
-        await onboardSaveAccount()
-        checkPhase.value = 'ok'
-        await new Promise((r) => setTimeout(r, 1700))
-        await finishOnboard()
-      } else {
-        // 没填 —— 那就只能报告这台机器上有没有现成的登录
-        await onboardSaveAccount()
-        const t0 = Date.now()
-        const l = await checkLogin()
-        // 读一个几百字节的 vdf，实际只要 ~0.1 秒。快到看不见就等于没发生 ——
-        // 留一个 480ms 的下限，让「正在验证」和「结果」这两拍都真的出现在屏幕上。
-        const wait = 480 - (Date.now() - t0)
-        if (wait > 0) await new Promise((r) => setTimeout(r, wait))
-        loginChecked.value = true
-        if (!l?.ready) {
-          checkPhase.value = 'fail'
-          return
-        }
-        checkPhase.value = 'ok'
-        await new Promise((r) => setTimeout(r, 1700))
-        await finishOnboard()
-      }
-    } finally {
-      if (checkPhase.value === 'checking') checkPhase.value = 'idle'
-    }
+    await openTutorialLogin()
     return
   }
   onboardGo(step + 1)
@@ -500,22 +429,18 @@ function skip() {
                 @input="o.account = $event.target.value"
               />
             </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">密码</span>
-              <input
-                :value="o.password"
-                type="password"
-                placeholder="留空就先不存"
-                class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/50 placeholder:text-faint"
-                @input="o.password = $event.target.value"
-              />
-            </label>
+            <button
+              class="btn btn-primary h-9"
+              :disabled="o.busy || checkPhase === 'checking'"
+              @click="openTutorialLogin"
+            >
+              打开登录控制台登录
+            </button>
+            <p class="text-micro text-faint m-0 leading-relaxed">
+              控制台里跑的是 SDK 自带的 steamcmd：输密码 / 验证码都在里面，要求手机确认时会有提示。
+              登录成功后关掉控制台，这一步会自动完成。
+            </p>
           </div>
-
-          <p class="text-micro text-faint mt-2.5 mb-0 leading-relaxed">
-            密码用 Windows DPAPI 加密后存在本机，只有当前 Windows 用户能解 ——
-            不进命令行参数、不写进任何日志。不存也行，每次构建会问你要。
-          </p>
 
           <!-- 点「完成」之后才出现 —— 没查过就不替用户下结论。
                登录与否由主进程读 steamcmd 的 config.vdf 判断，不用用户自己打勾 -->
@@ -547,38 +472,6 @@ function skip() {
             </span>
           </div>
 
-          <!-- 手机令牌：steamcmd 停在那儿等你点确认，什么都别输，去手机上点 -->
-          <div
-            v-if="mobileWaiting"
-            class="mt-2.5 rounded-card border border-accent/34 bg-accent/7 px-3 py-2.5"
-          >
-            <div class="text-body text-accent font-semibold mb-1.5">
-              Steam 正在等你手机上点确认
-            </div>
-            <ol class="m-0 pl-4 text-label text-muted leading-relaxed">
-              <li>拿出手机，打开 <strong class="text-ink">Steam App</strong></li>
-              <li>点右下角的<strong class="text-ink">盾牌图标</strong>，里面有一条「确认登录」</li>
-              <li>点它。这边会自己继续，<strong class="text-ink">不用在这个窗口里做任何操作</strong></li>
-            </ol>
-          </div>
-
-          <!-- 缺验证码时才出现。steamcmd 一次登录只要一个码，
-               所以失败后清空，逼用户去拿新的那个 -->
-          <div v-if="needGuard" class="mt-2.5">
-            <label class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">Steam Guard 验证码</span>
-              <input
-                v-model="guardCode"
-                placeholder="例如 K4F2B"
-                autocomplete="one-time-code"
-                class="h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-accent/45 placeholder:text-faint placeholder:tracking-normal"
-                @keyup.enter="next"
-              />
-            </label>
-            <p class="mt-1.5 mb-0 text-micro text-faint leading-relaxed">
-              在手机 Steam App 的「Steam 令牌」页，或者 Steam 发来的邮件里。填好点下面的「完成」。
-            </p>
-          </div>
           </template>
         </template>
 
@@ -623,4 +516,5 @@ function skip() {
     </div>
   </div>
   </Transition>
+  <LoginConsole :open="loginConsoleOpen" :account="o.account" @close="loginConsoleOpen = false" />
 </template>
