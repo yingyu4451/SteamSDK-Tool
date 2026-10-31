@@ -4,6 +4,15 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.1.25',
+    date: '2026-10-31',
+    items: [
+      '左侧 App 卡片只显示 SetLive 分支名，不再显示 AppID（AppID 在右侧详情里看）',
+      '文件夹去掉了折叠箭头：图标本身就是开关，收起是闭合文件夹、展开是打开文件夹',
+      '切分支 / 改 vdf 后，左侧 App 卡片上的分支名会立刻同步，不用重新扫描'
+    ]
+  },
+  {
     version: '0.1.24',
     date: '2026-10-31',
     items: [

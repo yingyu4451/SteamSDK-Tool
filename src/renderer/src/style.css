@@ -1241,3 +1241,17 @@ select:focus {
   border-left: 0;
   box-shadow: var(--shadow-drawer);
 }
+/* Depot 头部：语言过滤下拉，做成紧凑的内嵌控件 */
+.depot-lang {
+  height: 24px;
+  padding: 0 4px;
+  font-size: var(--text-label);
+  color: var(--color-ink);
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius-input);
+  cursor: pointer;
+}
+.depot-lang:hover {
+  border-color: rgba(102, 192, 244, 0.45);
+}

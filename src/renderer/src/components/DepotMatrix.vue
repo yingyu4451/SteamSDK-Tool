@@ -1,7 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { fmtSize, fmtInt } from '../format.js'
-import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL, depotUploadEnabled, toggleDepotUpload } from '../store.js'
+import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, setDepotLanguage, ensureDepotOptions, PLATFORM_LABEL, depotUploadEnabled, toggleDepotUpload } from '../store.js'
 import PathLink from './PathLink.vue'
 import EmptyState from './EmptyState.vue'
 import { ChevronRight, Package, CloudUpload, CloudOff } from '@lucide/vue'
@@ -9,6 +9,11 @@ import { ChevronRight, Package, CloudUpload, CloudOff } from '@lucide/vue'
 const props = defineProps({ depots: { type: Array, default: () => [] } })
 
 const showExcluded = ref(false)
+
+onMounted(() => {
+  // 语言下拉要用主进程给的语言表；以前只有「新建 Depot」滑层才加载，进工作台时是空的
+  ensureDepotOptions()
+})
 const showSuspicious = ref(true)
 
 /** 选项卡固定按 DepotID 从小到大排 —— 就是新建时从上到下 +1、+2 的那个顺序 */
@@ -33,7 +38,19 @@ function depotState(d) {
   if (!d.idMatches) return { tone: 'bad', text: 'DepotID 不一致' }
   if (!d.analysis?.exists) return { tone: 'warn', text: '内容目录不存在' }
   if (d.analysis.suspicious?.length) return { tone: 'warn', text: `${d.analysis.suspicious.length} 个可疑文件` }
-  return { tone: 'ok', text: '就绪' }
+  return { tone: 'ok', text: '检查通过' }
+}
+
+/** 「就绪」太笼统，悬停时把检查过哪几项写清楚 */
+function depotStateHint(d) {
+  if (!d) return ''
+  if (d.missing) return 'app vdf 引用的 depot 脚本不存在'
+  if (!d.idMatches) return '脚本里的 DepotID 与 app vdf 里写的不一致'
+  if (!d.analysis?.exists) return 'vdf 里的内容目录不存在：点「创建目录」，或在编辑抽屉里改'
+  if (d.analysis.suspicious?.length) {
+    return `内容目录里有 ${d.analysis.suspicious.length} 个可疑文件；跑一次「检查文件」看详情`
+  }
+  return '脚本存在、DepotID 与文件名一致、内容目录存在、没有可疑文件'
 }
 
 const a = computed(() => current.value?.analysis || null)
@@ -63,15 +80,17 @@ const metaLine = computed(() => {
   if (!m) return []
   const out = []
   if (m.name) out.push(m.name)
-  if (m.language && m.language !== 'all') out.push(m.language)
   return out
 })
 
-const osLabel = (id) => state.depotOptions.os.find((o) => o.id === id)?.label || id || ''
 const platLabel = (id) => PLATFORM_LABEL[id] || id || ''
-const archLabel = (id) => state.depotOptions.arch.find((o) => o.id === id)?.label || id || ''
-const langLabel = (id) =>
-  state.depotOptions.languages.find((l) => l.id === id)?.label || (id === 'all' ? '所有语言' : id || '')
+
+/** 语言过滤是工具里本地记的元数据（Steam 后台的语言配置仍以 Steamworks 为准） */
+async function onLangChange(e) {
+  const d = current.value
+  if (!d) return
+  await setDepotLanguage(d.id, e.target.value)
+}
 
 async function createDir(d) {
   const res = await window.api.app.ensureContentDir(state.selectedDir, d.file)
@@ -173,11 +192,21 @@ async function openPath(p) {
               'pill-warn': depotState(current).tone === 'warn',
               'pill-bad': depotState(current).tone === 'bad'
             }"
+            :title="depotStateHint(current)"
           >
             {{ depotState(current).text }}
           </span>
-          <span class="text-label text-muted">{{ osLabel(current.meta?.os) }} {{ archLabel(current.meta?.arch) }}</span>
-          <span class="text-label text-faint">{{ langLabel(current.meta?.language) }}</span>
+          <label class="flex items-center gap-1.5 text-label text-faint">
+            <span>语言</span>
+            <select
+              class="depot-lang no-drag"
+              :value="current.meta?.language || 'all'"
+              title="本地记录的语言过滤（Steam 后台的 Depot 语言配置以 Steamworks 为准）；构建上传时会带上这个标记"
+              @change="onLangChange"
+            >
+              <option v-for="l in state.depotOptions.languages" :key="l.id" :value="l.id">{{ l.label }}</option>
+            </select>
+          </label>
           <span v-if="metaLine.length" class="text-label text-muted truncate">{{ metaLine[0] }}</span>
 
           <div class="ml-auto flex items-center gap-1.5">

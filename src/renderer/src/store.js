@@ -682,10 +682,12 @@ function syncAppMeta(dirName) {
 export async function reloadDetail() {
   if (!state.selectedDir) return
   state.detail = await api.sdk.app(state.selectedDir)
-  // Depot tab 选中的那个可能已经没了（改名 / 删除），回落到第一个
+  // Depot tab 选中的那个可能已经没了（改名 / 删除），回落到编号最小的那个。
+  // 注意 detail.depots 是 vdf 里的顺序，和界面排序后的第一个不一定相同
   const list = state.detail?.depots || []
+  const firstId = [...list].sort((a, b) => Number(a.id) - Number(b.id))[0]?.id
   if (!list.some((d) => String(d.id) === String(state.activeDepot))) {
-    state.activeDepot = list.length ? String(list[0].id) : null
+    state.activeDepot = firstId == null ? null : String(firstId)
   }
   // 左侧列表里这张 App 卡片跟着更新（尤其是切完分支后的 SetLive）
   syncAppMeta(state.selectedDir)
@@ -1629,6 +1631,23 @@ export function closeDepotSlide() {
   state.depotSlide = null
 }
 
+/** 平台/架构/语言选项：主进程给表，UI 里多处要用（不只在「新建 Depot」滑层里） */
+export async function ensureDepotOptions() {
+  if (state.depotOptions?.languages?.length) return state.depotOptions
+  try {
+    const d = await api.app.defaults({ platform: 'win64' })
+    state.depotOptions = {
+      os: d.depotOs || [],
+      arch: d.depotArch || [],
+      archByOs: d.depotArchByOs || {},
+      languages: d.depotLanguages || []
+    }
+  } catch {
+    /* 拿不到就先用空表，UI 会退化成不显示 */
+  }
+  return state.depotOptions
+}
+
 /** 某个操作系统下能选的架构。主进程给表，这里只做过滤。 */
 export function archOptionsFor(os) {
   const all = state.depotOptions?.arch || []
@@ -2460,6 +2479,22 @@ export async function setDepotUserConfig(depotFile, list) {
   await reloadDetail()
   await rescan()
   toast('已更新玩家存档标记')
+  return r
+}
+
+/** Depot 的语言过滤：本地元数据，存在 settings.depotMeta 里（vdf 没有这个字段） */
+export async function setDepotLanguage(depotId, language) {
+  const id = String(depotId || '').trim()
+  if (!id) return { ok: false }
+  const r = await api.meta.setDepot(id, { language: String(language || 'all') })
+  if (r && r.ok === false) {
+    toast(r.error || '保存语言失败', 'bad')
+    return r
+  }
+  await reloadDetail()
+  // reloadDetail 可能把当前 Depot 重置成列表第一个，改完回到刚才这个
+  if ((state.detail?.depots || []).some((d) => String(d.id) === id)) state.activeDepot = id
+  toast('已更新语言过滤')
   return r
 }
 

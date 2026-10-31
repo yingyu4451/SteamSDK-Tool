@@ -845,12 +845,8 @@ function healthTitle(app) {
         <span class="text-body font-normal truncate text-ink">{{ dragApp.dirName }}</span>
         <GripVertical class="ml-auto shrink-0 text-faint/70" :size="12" :stroke-width="2" />
       </div>
-      <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro text-faint num">
-        <span>App {{ dragApp.appId || '?' }}</span>
-        <template v-if="dragApp.setLive">
-          <span class="text-faint">·</span>
-          <span class="text-amber break-all">{{ dragApp.setLive }}</span>
-        </template>
+      <div v-if="dragApp.setLive" class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro num">
+        <span class="text-amber break-all">{{ dragApp.setLive }}</span>
       </div>
     </div>
 
