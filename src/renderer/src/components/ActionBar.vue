@@ -457,7 +457,7 @@ watch(
             </span>
             <div class="min-w-0">
               <div class="text-label text-ink">{{ p.title }}</div>
-              <div class="text-micro text-faint font-mono break-all">{{ p.text }}</div>
+              <div class="text-micro text-faint font-mono break-all whitespace-pre-line">{{ p.text }}</div>
               <div v-if="p.hint" class="text-micro text-muted">{{ p.hint }}</div>
             </div>
           </div>

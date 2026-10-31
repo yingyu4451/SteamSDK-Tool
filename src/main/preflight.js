@@ -28,6 +28,19 @@ function mk(level, code, title, text, hint = '') {
   return { level, code, title, text, hint }
 }
 
+/**
+ * 同一条规则命中多个文件时，合成一条：标题带 ×N，正文列前 max 个，
+ * 剩下的用「…还有 N 个」收尾。检查结果里一堆重复条目看着太累。
+ */
+function addGroup(problems, { level, code, title, items, hint = '', max = 4 }) {
+  if (!items.length) return
+  const many = items.length > 1
+  const shown = items.slice(0, max)
+  let body = many ? shown.join('\n') : shown[0]
+  if (many && items.length > max) body += `\n…还有 ${items.length - max} 个`
+  problems.push(mk(level, code, many ? `${title} ×${items.length}` : title, body, hint))
+}
+
 /** 走一遍目录：要拿到符号链接和空目录，所以不能用 sdk.js 里那个简化版 walk */
 function scanTree(root) {
   const files = []
@@ -109,48 +122,31 @@ function scanDepot(depot, root, platform) {
 
   // --- 1. 非法字符 ---------------------------------------------------------
   const badChars = included.filter((f) => BAD_CHARS.test(f.rel))
-  for (const f of badChars.slice(0, 12)) {
-    problems.push(
-      mk(
-        'error',
-        'bad-char',
-        `文件名里有 Windows 不允许的字符`,
-        f.rel,
-        '文件名不能带 < > : " | ? *，Steam 打包会直接失败。改名后重新检查；不想改名就把这个文件加到 Depot 的排除规则里。'
-      )
-    )
-  }
-  if (badChars.length > 12) {
-    problems.push(
-      mk('error', 'bad-char-more', `还有 ${badChars.length - 12} 个文件名的字符不合法`, '前面只列了前 12 个', '按同样的方式改名后，再点一次「检查文件」。')
-    )
-  }
+  addGroup(problems, {
+    level: 'error',
+    code: 'bad-char',
+    title: '文件名里有 Windows 不允许的字符',
+    items: badChars.map((f) => f.rel),
+    hint: '文件名不能带 < > : " | ? *，Steam 打包会直接失败。改名后重新检查；不想改名就把这些文件加到 Depot 的排除规则里。'
+  })
 
   // --- 2. 超长路径 ---------------------------------------------------------
   const longRel = included.filter((f) => f.rel.length > MAX_REL)
+  addGroup(problems, {
+    level: 'error',
+    code: 'path-too-long',
+    title: `文件路径太长（超过 ${MAX_REL} 个字符）`,
+    items: longRel.map((f) => `${f.rel.length} 字符：${f.rel}`),
+    hint: `超过 ${MAX_REL} 个字符，玩家在 Windows 上解压会失败。把目录层级缩短一层，或者换个更浅的目录。`
+  })
   const longSeg = included.filter((f) => f.rel.split('/').some((s) => s.length > MAX_SEGMENT))
-  for (const f of longRel.slice(0, 8)) {
-    problems.push(
-      mk(
-        'error',
-        'path-too-long',
-        `文件路径太长`,
-        `${f.rel.length} 个字符：${f.rel}`,
-        `超过 ${MAX_REL} 个字符，玩家在 Windows 上解压会失败。把目录层级缩短一层，或者换个更浅的目录。`
-      )
-    )
-  }
-  for (const f of longSeg.slice(0, 8)) {
-    problems.push(
-      mk(
-        'error',
-        'segment-too-long',
-        `单个文件名太长`,
-        f.rel,
-        `其中一段名字超过 ${MAX_SEGMENT} 个字符。改短这个名字后重新检查。`
-      )
-    )
-  }
+  addGroup(problems, {
+    level: 'error',
+    code: 'segment-too-long',
+    title: `单个文件/文件夹名太长（超过 ${MAX_SEGMENT} 个字符）`,
+    items: longSeg.map((f) => f.rel),
+    hint: '改短这个名字后重新检查。'
+  })
 
   // --- 3. 大小写冲突 -------------------------------------------------------
   // Windows 上不可能出现，但从 macOS/Linux 拷过来的包里很常见。
@@ -162,38 +158,30 @@ function scanDepot(depot, root, platform) {
     byLower.get(k).push(f.rel)
   }
   const collisions = [...byLower.values()].filter((v) => v.length > 1)
-  for (const c of collisions.slice(0, 8)) {
-    problems.push(
-      mk(
-        'error',
-        'case-collision',
-        `有两个文件只是大小写不同`,
-        c.join('  /  '),
-        'Steam 区分大小写，但玩家在 Windows 上下载会撞成同一个文件，只剩一个。删掉或改名其中一个。'
-      )
-    )
+  addGroup(problems, {
+    level: 'error',
+    code: 'case-collision',
+    title: '有文件只是大小写不同',
+    items: collisions.map((c) => c.join('  /  ')),
+    hint: 'Steam 区分大小写，但玩家在 Windows 上下载会撞成同一个文件，只剩一个。删掉或改名其中一个。'
+  })
+
+  // .app 目录先算出来：里面的符号链接是 macOS 正常结构，不算问题
+  const apps = dirs.filter((d) => d.rel.toLowerCase().endsWith('.app'))
+  const inApp = (rel) => {
+    const lower = rel.toLowerCase()
+    return apps.some((a) => lower.startsWith(a.rel.toLowerCase() + '/'))
   }
 
   // --- 4. 符号链接 ---------------------------------------------------------
-  const linkTargets = links.filter((l) => !exclusions.find((p) => globMatch(l.rel, p)))
-  if (linkTargets.length) {
-    for (const l of linkTargets.slice(0, 8)) {
-      problems.push(
-        mk(
-          'warn',
-          'symlink',
-          `有一个快捷方式式的文件（符号链接）`,
-          l.rel,
-          'Steam 上传时不保留符号链接，玩家下载到的可能是坏的或空文件。macOS 的 .app 里出现属正常结构（不用处理）；其它位置建议删掉或换成真实文件。'
-        )
-      )
-    }
-    if (linkTargets.length > 8) {
-      problems.push(
-        mk('warn', 'symlink-more', `还有 ${linkTargets.length - 8} 个符号链接`, '前面只列了前 8 个', '处理方式同上；如果都在 .app 里，属正常结构，不用管。')
-      )
-    }
-  }
+  const linkTargets = links.filter((l) => !exclusions.find((p) => globMatch(l.rel, p)) && !inApp(l.rel))
+  addGroup(problems, {
+    level: 'warn',
+    code: 'symlink',
+    title: '有快捷方式式的文件（符号链接）',
+    items: linkTargets.map((l) => l.rel),
+    hint: 'Steam 上传时不保留符号链接，玩家下载到的可能是坏的或空文件。建议删掉或换成真实文件（macOS .app 里的符号链接属正常结构，已自动忽略）。'
+  })
 
   // --- 5. macOS 垃圾文件 ---------------------------------------------------
   const macJunk = included.filter((f) => MAC_JUNK.test(f.rel))
@@ -203,41 +191,40 @@ function scanDepot(depot, root, platform) {
         'warn',
         'mac-junk',
         `有 macOS 自动生成的垃圾文件`,
-        `${macJunk.length} 个，例如：${macJunk.slice(0, 5).map((f) => f.rel).join('、')}${macJunk.length > 5 ? ' …' : ''}`,
+        `${macJunk.length} 个，例如：${macJunk.slice(0, 3).map((f) => f.rel).join('、')}${macJunk.length > 3 ? ' …' : ''}`,
         '像 .DS_Store、._xxx、__MACOSX 这些是 macOS 顺手生成的，不属于游戏文件。在 Depot 的排除规则里加上 .DS_Store / ._* / __MACOSX 就能挡掉。'
       )
     )
   }
 
   // --- 6. .app bundle（macOS）---------------------------------------------
-  const apps = dirs.filter((d) => d.rel.toLowerCase().endsWith('.app'))
-  for (const a of apps) {
+  const appInfo = apps.map((a) => {
     const inside = included.filter((f) => f.rel.startsWith(a.rel + '/'))
     const sym = links.filter((l) => l.rel.startsWith(a.rel + '/'))
     const exec = inside.filter((f) => /\/Contents\/MacOS\//.test(f.rel))
-    if (!exec.length) {
-      problems.push(
-        mk(
-          'error',
-          'app-bundle-broken',
-          `这个 macOS 程序包看起来不完整`,
-          `${a.rel}（${inside.length} 个文件，但找不到 Contents/MacOS 里的可执行文件）`,
-          '可能是打包方式不对。确认这个 .app 是完整的 macOS 程序，或者从 Depot 里去把它排除掉。'
-        )
-      )
-      continue
-    }
-    const extra = sym.length ? `，里面有 ${sym.length} 个符号链接` : ''
-    problems.push(
-      mk(
-        'info',
-        'app-bundle-ok',
-        `macOS 程序包会按目录结构上传`,
-        `${a.rel}（${inside.length} 个文件${extra}）`,
-        'App 的启动方式在 Steamworks 后台的「安装 → 启动选项」里指定（可写 Game.app/Contents/MacOS/Game）；现在的 SteamPipe 直接认 .app 目录，不需要再用 ContentPrep（Valve 已把它标记为废弃）。'
-      )
-    )
-  }
+    return { a, inside, sym, ok: exec.length > 0 }
+  })
+
+  addGroup(problems, {
+    level: 'error',
+    code: 'app-bundle-broken',
+    title: 'macOS 程序包不完整（找不到可执行文件）',
+    items: appInfo
+      .filter((x) => !x.ok)
+      .map((x) => `${x.a.rel}（${x.inside.length} 个文件，没有 Contents/MacOS 可执行文件）`),
+    hint: '确认这两个 .app 是完整的 macOS 程序，或者从 Depot 里去把它们排除掉。'
+  })
+
+  addGroup(problems, {
+    level: 'info',
+    code: 'app-bundle-ok',
+    title: 'macOS 程序包会按目录结构上传',
+    max: 3,
+    items: appInfo
+      .filter((x) => x.ok)
+      .map((x) => `${x.a.rel.split('/').pop()}（${x.inside.length} 个文件${x.sym.length ? `，含 ${x.sym.length} 个符号链接` : ''}）`),
+    hint: 'App 的启动方式在 Steamworks 后台的「安装 → 启动选项」里指定（可写 Game.app/Contents/MacOS/Game）；现在的 SteamPipe 直接认 .app 目录，不需要再用 ContentPrep（Valve 已标记为废弃）。'
+  })
 
   // --- 7. 空目录 -----------------------------------------------------------
   // 空目录不会被上传（Steam 只有文件，没有目录概念）。列出来免得用户以为传了。
@@ -253,7 +240,7 @@ function scanDepot(depot, root, platform) {
         'info',
         'empty-dir',
         `有不会被上传的空目录`,
-        `${emptyDirs.length} 个：${emptyDirs.slice(0, 5).map((d) => d.rel).join('、')}${emptyDirs.length > 5 ? ' …' : ''}`,
+        `${emptyDirs.length} 个：${emptyDirs.slice(0, 3).map((d) => d.rel).join('、')}${emptyDirs.length > 3 ? ' …' : ''}`,
         'Steam 只上传文件，空目录不会出现在玩家那边。这条只是说明，不影响上传，可以忽略。'
       )
     )
