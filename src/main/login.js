@@ -11,11 +11,36 @@ import { getPaths } from './sdk.js'
  * 账号密码对不对，它一无所知 —— 所以乱填也能「通过」。
  *
  * 密码只从 stdin 喂进去，绝不进命令行：argv 是能被别的进程读到的。
+ *
+ * 两种跑法（返回结构完全一样，界面不用改）：
+ *   ① 伪终端（node-pty，装上了就用这个）：steamcmd 以为自己在控制台里，
+ *      输出是行缓冲 ——「请在手机 Steam App 里点确认」这句会随打随出，
+ *      我们能立刻把界面切成「打开手机点确认」。
+ *   ② 管道（node-pty 加载失败时兜底）：stdout 是块缓冲，那句常常刷不出来，
+ *      只能靠「卡住了 30 秒」去猜。功能不变，就是慢。
  */
 
 /* 手机确认那条路要留够时间：用户得先看到提示、掏手机、解锁、点确认。
  * 150 秒对「盯着屏幕点一下」够，对「手机在另一个房间」就不够了。 */
 const TIMEOUT_MS = 240000
+
+let pty = null
+try {
+  // node-pty 1.1 自带 win32 预编译产物（N-API），Electron 下可直接加载。
+  // 加载失败不能让登录整个不可用 —— 退回上面的管道模式就行。
+  pty = require('node-pty')
+} catch {
+  pty = null
+}
+
+// 去掉 ANSI 控制序列（颜色、光标、窗口标题），只留下能读的文本
+const ANSI_RE = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007]*\u0007|\u001b[@-_]/g
+// 只留最近这么多字符做实时判定，防止一直挂着把内存吃满
+const MAX_STREAM = 200000
+
+function stripAnsi(text) {
+  return String(text).replace(ANSI_RE, '')
+}
 
 function logFile(settings) {
   const p = getPaths(settings || {})
@@ -85,12 +110,11 @@ export function classifyLogin(lines = [], exitCode = null) {
 /**
  * 异步跑一次 steamcmd 登录，返回 { ok, reason, usedAccount, passwordChecked, exitCode }
  *
- * guardCode 非空时会作为第二行喂给 stdin。steamcmd 是先读 password:、
- * 再读 Steam Guard code:，所以两行按顺序写进去就行 —— 比去解析它被块缓冲
- * 卡住的提示靠谱得多（接管道时那个提示常常刷不出来）。
+ * guardCode 非空时会作为第二行喂给 steamcmd（先 password:、再 Steam Guard code:）。
  *
- * onWait({kind:'mobile'}) 会在日志里出现「去手机上确认」时回调一次 ——
+ * onWait({kind:'mobile'}) 会在「去手机上确认」那句出现时回调一次 ——
  * 这时候进程还在跑、还在等你，界面应该切成「打开手机 Steam App 点确认」。
+ * 装了 node-pty 时这个回调是实时的（毫秒级）。
  */
 export function loginTest(account, password, guardCode = '', settings, onWait) {
   const user = String(account || '').trim()
@@ -102,7 +126,129 @@ export function loginTest(account, password, guardCode = '', settings, onWait) {
 
   const file = logFile(settings)
   const from = lineCount(file)
+  const ctx = { p, user, password, guardCode, file, from, onWait }
 
+  if (pty) return runPtyLogin(ctx)
+  return runPipeLogin(ctx)
+}
+
+/** 伪终端模式：输出是行缓冲的，手机确认提示能立刻读到 */
+function runPtyLogin({ p, user, password, guardCode, file, from, onWait }) {
+  return new Promise((resolve) => {
+    let term
+    try {
+      term = pty.spawn(p.steamcmd, ['+login', user, '+quit'], {
+        name: 'xterm-256color',
+        cols: 200,
+        rows: 40,
+        cwd: p.builderDir,
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+      })
+    } catch {
+      // 伪终端起不来就退回管道模式，别让登录直接不可用
+      runPipeLogin({ p, user, password, guardCode, file, from, onWait }).then(resolve)
+      return
+    }
+
+    let done = false
+    let toldMobile = false
+    let wrotePassword = false
+    let wroteGuard = false
+    let streamed = ''
+    let ticker = null
+
+    const finish = (extra) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      clearInterval(ticker)
+      try {
+        term.kill()
+      } catch {
+        /* 进程可能已经自己退了 */
+      }
+      resolve({ ...classifyLogin(newLines(file, from), extra.exitCode ?? null), ...extra })
+    }
+
+    const write = (value) => {
+      try {
+        term.write(value)
+      } catch {
+        /* 会话已经结束 */
+      }
+    }
+
+    /* 只在看到提示符时才输入。提前打字会被 ConPTY 排在输入队列里，
+     * 很可能落到下一个提示上（比如把验证码当密码喂进去）。 */
+    const feedPrompts = () => {
+      const tail = streamed.slice(-4000)
+      if (!wrotePassword && /password:\s*$/im.test(tail)) {
+        wrotePassword = true
+        write(String(password || '') + '\r')
+        return
+      }
+      if (!wroteGuard && /(Steam Guard code|Two-factor code):\s*$/im.test(tail)) {
+        wroteGuard = true
+        if (guardCode) {
+          write(String(guardCode).trim() + '\r')
+        } else {
+          // 还没拿到验证码就先收工，让界面去要码（不然只能干等超时）
+          setTimeout(() => finish({ exitCode: null, guardAsked: true }), 600)
+        }
+      }
+    }
+
+    /* 实时判定：拿到一块输出就查一遍。
+     * 这是「最快知道要去看手机」的关键 —— 伪终端下这句不会被块缓冲吃掉。 */
+    const onData = (raw) => {
+      const text = stripAnsi(raw)
+      if (!text) return
+      streamed = (streamed + text).slice(-MAX_STREAM)
+      if (!toldMobile && MOBILE_RE.test(streamed.slice(-4000))) {
+        toldMobile = true
+        onWait?.({ kind: 'mobile' })
+      }
+      feedPrompts()
+    }
+
+    term.onData(onData)
+    term.onExit(({ exitCode }) => finish({ exitCode }))
+
+    // 日志文件兜底（有些提示只写日志、不走控制台） + 老版本的「卡住了」兜底
+    const watch = () => {
+      if (done || toldMobile) return
+      let text = ''
+      try {
+        text = newLines(file, from).join('\n')
+      } catch {
+        return
+      }
+      if (MOBILE_RE.test(text)) {
+        toldMobile = true
+        onWait?.({ kind: 'mobile' })
+        return
+      }
+      // 已经 Logging in 了，30 秒既不出错也不 OK —— 那就是在等人。
+      if (!/Logging in user/i.test(text)) return
+      if (/ERROR|Retrying|Logged in OK/i.test(text)) return
+      const m = /\[([\d-]+ [\d:]+)\] Logging in user/.exec(text)
+      const since = m ? Date.parse(m[1].replace(' ', 'T') + '+08:00') : NaN
+      const waited = Number.isFinite(since) ? Date.now() - since : 0
+      if (waited > 30000) {
+        toldMobile = true
+        onWait?.({ kind: 'mobile' })
+      }
+    }
+    ticker = setInterval(watch, 1000)
+
+    const timer = setTimeout(() => {
+      finish({ timedOut: true, exitCode: null })
+    }, TIMEOUT_MS)
+  })
+}
+
+/** 管道模式（node-pty 不可用时的兜底，行为跟旧版完全一致） */
+function runPipeLogin({ p, user, password, guardCode, file, from, onWait }) {
   return new Promise((resolve) => {
     const child = spawn(p.steamcmd, ['+login', user, '+quit'], {
       cwd: p.builderDir,
@@ -115,13 +261,9 @@ export function loginTest(account, password, guardCode = '', settings, onWait) {
     /** steamcmd 打在控制台上的原文。有些提示只走 stdout，不写日志文件 */
     let streamed = ''
 
-    /* 为什么不能只盯日志文件：
-     * 实测过 —— 用户屏幕上明明出现了
-     *   ...to Steam Public...This account is protected by a Steam Guard mobile authenticator.
-     *   Please confirm the login in the Steam Mobile app on your phone.
-     * 但 console_log.txt 里 `mobile authenticator` 出现 0 次：那句只打在控制台上，
-     * 日志文件只记到 "...to Steam Public..." 就断了。
-     * 所以两条路一起看：stdout 抓到最好，抓不到就靠「卡住了」这个行为兜底。 */
+    /* 管道模式下 steamcmd 的 stdout 是块缓冲：让它停在提示上干等，
+     * 20 秒只收到 92 字节的横幅，手机确认那句一个字都不刷出来。
+     * 所以只能两条路一起看：stdout 抓到最好，抓不到就靠「卡住了」兜底。 */
     const watch = () => {
       if (done || toldMobile) return
 
@@ -145,12 +287,6 @@ export function loginTest(account, password, guardCode = '', settings, onWait) {
       }
 
       // ② 兜底：已经 Logging in 了，半分钟既不出错也不 OK —— 那就是在等人。
-      //
-      // 为什么只能靠「卡住了」这个行为，而不是直接读那句话：
-      // 实测过两遍 —— steamcmd 的 stdout 接管道时是**块缓冲**。让它停在提示上干等，
-      // 20 秒只收到 92 字节的横幅，password: / Cached credentials / Logging in
-      // 一个字都没刷出来，非要等进程结束才一次性吐出来。绑了手机令牌的账号会一直挂到
-      // 你在 App 里点确认，所以那条路读不到实时文本。
       //
       // 30 秒这个数是量出来的：
       //   密码错     → 5 秒（我这边的实测）到 22 秒（用户日志里最慢那次）
