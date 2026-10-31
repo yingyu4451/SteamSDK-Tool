@@ -9,7 +9,7 @@ import {
   BookOpen,
   FolderPlus,
   FolderClosed,
-  ChevronDown,
+  FolderOpen,
   Pencil,
   Trash2,
   Palette,
@@ -636,17 +636,24 @@ function healthTitle(app) {
                 drag.active ? 'cursor-copy' : 'cursor-pointer hover:bg-surface-3/35',
                 drag.active && drag.dropFolder === row.folder.id ? 'bg-accent/12' : ''
               ]"
-              :title="'点击折叠/展开；把 App 拖到这里分类'"
+              role="button"
+              tabindex="0"
+              :aria-expanded="!row.folder.collapsed"
+              :title="`${row.folder.collapsed ? '展开' : '折叠'}「${row.folder.name}」；把 App 拖到这里分类`"
               @click="toggleFolder(row.folder.id)"
+              @keydown.enter.prevent="toggleFolder(row.folder.id)"
+              @keydown.space.prevent="toggleFolder(row.folder.id)"
             >
-              <ChevronDown
-                :size="13"
-                class="shrink-0 text-faint transition-transform duration-200"
-                :class="row.folder.collapsed ? '-rotate-90' : ''"
-                :stroke-width="2"
+              <FolderOpen
+                v-if="!row.folder.collapsed"
+                :size="14"
+                class="shrink-0"
+                :style="{ color: folderColor(row.folder) }"
+                :stroke-width="2.1"
               />
               <FolderClosed
-                :size="13"
+                v-else
+                :size="14"
                 class="shrink-0"
                 :style="{ color: folderColor(row.folder) }"
                 :stroke-width="1.9"
