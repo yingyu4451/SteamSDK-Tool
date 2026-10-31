@@ -33,7 +33,7 @@ function depotState(d) {
   if (!d.idMatches) return { tone: 'bad', text: 'DepotID 不一致' }
   if (!d.analysis?.exists) return { tone: 'warn', text: '内容目录不存在' }
   if (d.analysis.suspicious?.length) return { tone: 'warn', text: `${d.analysis.suspicious.length} 个可疑文件` }
-  return { tone: 'ok', text: '检查通过' }
+  return { tone: 'ok', text: '配置通过' }
 }
 
 /** 「就绪」太笼统，悬停时把检查过哪几项写清楚 */
@@ -45,7 +45,41 @@ function depotStateHint(d) {
   if (d.analysis.suspicious?.length) {
     return `内容目录里有 ${d.analysis.suspicious.length} 个可疑文件；跑一次「检查文件」看详情`
   }
-  return '脚本存在、DepotID 与文件名一致、内容目录存在、没有可疑文件'
+  return '配置检查通过：脚本存在、DepotID 与文件名一致、内容目录存在、没有可疑文件（来自「检查配置」；实际文件另看「检查文件」）'
+}
+
+/** 文件检查（检查文件）的结果：只有真正上传的那些文件的问题，和上面的配置检查是两码事 */
+function fileState(d) {
+  const pf = state.preflight?.data
+  if (!d) return { tone: 'idle', text: '', hint: '' }
+  if (!pf || pf.dirName !== state.selectedDir) {
+    return { tone: 'idle', text: '文件未检查', hint: '点上方「检查文件」扫一遍真正会被上传的文件' }
+  }
+  const row = (pf.depots || []).find((x) => String(x.depotId) === String(d.id))
+  if (!row) {
+    return { tone: 'idle', text: '文件未检查', hint: '这次「检查文件」没有包含这个 Depot（脚本缺失或已被跳过）' }
+  }
+  const errs = (row.problems || []).filter((p) => p.level === 'error').length
+  const warns = (row.problems || []).filter((p) => p.level === 'warn').length
+  if (errs) {
+    return {
+      tone: 'bad',
+      text: `文件 ${errs} 个问题`,
+      hint: `内容目录里扫出 ${errs} 个会拦住上传的文件问题（非法字符/超长路径/大小写冲突等）；点「检查文件」看详情`
+    }
+  }
+  if (warns) {
+    return {
+      tone: 'warn',
+      text: `文件 ${warns} 个警告`,
+      hint: `扫出 ${warns} 个警告（符号链接 / macOS 元数据 / 空目录等），点「检查文件」看详情`
+    }
+  }
+  return { tone: 'ok', text: '文件通过', hint: '最近一次「检查文件」没有发现会拦住上传的问题' }
+}
+
+function toneCls(t) {
+  return t === 'ok' ? 'pill-ok' : t === 'warn' ? 'pill-warn' : t === 'bad' ? 'pill-bad' : 'pill-idle'
 }
 
 const a = computed(() => current.value?.analysis || null)
@@ -138,8 +172,6 @@ async function openPath(p) {
           </div>
           <div class="mt-1 flex items-center gap-1.5 text-micro text-faint num min-w-0">
             <span class="font-mono truncate">{{ d.id }}</span>
-            <span class="text-faint">·</span>
-            <span class="shrink-0">{{ fmtSize(d.analysis?.totalBytes) }}</span>
             <span v-if="!depotUploadEnabled(state.selectedDir, d.id)" class="shrink-0 text-amber">不上传</span>
           </div>
         </button>
@@ -173,16 +205,11 @@ async function openPath(p) {
     <div v-if="current" class="border-t border-line">
       <div class="px-5 py-3">
         <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-          <span
-            class="pill"
-            :class="{
-              'pill-ok': depotState(current).tone === 'ok',
-              'pill-warn': depotState(current).tone === 'warn',
-              'pill-bad': depotState(current).tone === 'bad'
-            }"
-            :title="depotStateHint(current)"
-          >
+          <span class="pill" :class="toneCls(depotState(current).tone)" :title="depotStateHint(current)">
             {{ depotState(current).text }}
+          </span>
+          <span class="pill" :class="toneCls(fileState(current).tone)" :title="fileState(current).hint">
+            {{ fileState(current).text }}
           </span>
           <span v-if="metaLine.length" class="text-label text-muted truncate">{{ metaLine[0] }}</span>
 

@@ -71,9 +71,9 @@ function healthTitle(app) {
       <span class="text-body font-normal truncate">{{ app.dirName }}</span>
       <GripVertical class="ml-auto shrink-0 text-faint/60" :size="12" :stroke-width="2" />
     </div>
-    <!-- 卡片上只留 SetLive（分支名），AppID 在右侧详情里看 -->
-    <div v-if="app.setLive" class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro num">
-      <span class="text-amber break-all">{{ app.setLive }}</span>
+    <!-- 卡片上只留 SetLive（分支名），AppID 在右侧详情里看；没设分支也占住这一行，别把卡片压矮 -->
+    <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro num min-h-[16px]">
+      <span v-if="app.setLive" class="text-amber break-all">{{ app.setLive }}</span>
     </div>
   </button>
 </template>
