@@ -48,6 +48,7 @@ import {
   readSteamLogin
 } from './sdk.js'
 import { loginTest } from './login.js'
+import * as ptyconsole from './ptyconsole.js'
 import { preflightApp } from './preflight.js'
 import { describeLogin, forgetLogin } from './forget.js'
 import {
@@ -696,6 +697,47 @@ function registerIpc() {
       if (!wc.isDestroyed()) wc.send('login:progress', msg)
     })
     return { ok: true, ...r }
+  })
+
+  /**
+   * 内置登录控制台（node-pty 伪终端）。
+   * 和 login:test 的区别：那个是「用密码自动试一次」，这个是给用户一个能敲命令、
+   * 能看到 steamcmd 原始输出的终端；PTY 让输出变成行缓冲，手机确认那句话能实时看到。
+   */
+  let consoleQuitWired = false
+  const sendConsole = (wc, channel, payload) => {
+    if (!wc || wc.isDestroyed()) return
+    wc.send(channel, payload)
+  }
+  ipcMain.handle('login:consoleOpen', (e, { account } = {}) => {
+    const wc = e.sender
+    const settings = loadSettings()
+    const p = getPaths(settings)
+    if (!fs.existsSync(p.steamcmd)) return { ok: false, error: `找不到 ${p.steamcmd}` }
+    const r = ptyconsole.open({
+      steamcmd: p.steamcmd,
+      cwd: p.builderDir,
+      account,
+      emit: (evt) => {
+        if (evt.type === 'data') sendConsole(wc, 'login:console:data', { id: evt.id, text: evt.text })
+        else if (evt.type === 'mobile') sendConsole(wc, 'login:console:mobile', { id: evt.id })
+        else sendConsole(wc, 'login:console:exit', { id: evt.id, code: evt.code })
+      }
+    })
+    if (r.ok) {
+      wc.once('destroyed', () => ptyconsole.close())
+      if (!consoleQuitWired) {
+        consoleQuitWired = true
+        app.on('before-quit', () => ptyconsole.close())
+      }
+    }
+    return r
+  })
+  ipcMain.handle('login:consoleInput', (_e, { id, data } = {}) => ptyconsole.write(id, data))
+  ipcMain.handle('login:consoleResize', (_e, { id, cols, rows } = {}) => ptyconsole.resize(id, cols, rows))
+  ipcMain.handle('login:consoleClose', () => {
+    ptyconsole.close()
+    return { ok: true }
   })
 
   ipcMain.handle('login:state', () => {

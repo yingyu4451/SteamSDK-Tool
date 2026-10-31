@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Download, ShieldOff, Wrench, Minus, Plus } from '@lucide/vue'
 import ChangelogDialog from './ChangelogDialog.vue'
+import LoginConsole from './LoginConsole.vue'
 import {
   state,
   rescan,
@@ -43,6 +44,8 @@ const saving = ref(false)
 const message = ref(null)
 /** 更新日志弹窗 */
 const changelogOpen = ref(false)
+/** 内置登录控制台（node-pty + steamcmd） */
+const loginConsoleOpen = ref(false)
 
 /* ---- Web API 密钥 ---- */
 const apiKeyDraft = ref('')
@@ -346,12 +349,22 @@ function openExternal(url) {
           </div>
 
           <div class="mt-3 pt-3 border-t border-line-soft flex items-center gap-2 flex-wrap">
-            <button class="btn no-drag" @click="openLogin">打开登录窗口</button>
+            <button class="btn no-drag" @click="loginConsoleOpen = true">登录 Steam</button>
+            <button
+              class="link-btn no-drag"
+              title="内置控制台打不开时，退回系统命令行窗口登录"
+              @click="openLogin"
+            >
+              外置窗口
+            </button>
             <button class="btn btn-danger no-drag" @click="openForget">
               <ShieldOff :size="14" />
               忘记账号
             </button>
           </div>
+          <p class="mt-2 mb-0 text-label text-faint leading-relaxed">
+            登录、密码、验证码、手机确认都在内置控制台里，手机确认那一刻会直接在界面上提示。
+          </p>
         </section>
 
       </div>
@@ -534,5 +547,10 @@ function openExternal(url) {
     </div>
   </div>
 
+  <LoginConsole
+    :open="loginConsoleOpen"
+    :account="state.settings?.account || ''"
+    @close="loginConsoleOpen = false"
+  />
   <ChangelogDialog :open="changelogOpen" @close="changelogOpen = false" />
 </template>

@@ -37,7 +37,15 @@ const api = {
     test: (account, password, guardCode) => ipcRenderer.invoke('login:test', { account, password, guardCode }),
     onProgress: (h) => subscribe('login:progress', h),
     describe: () => ipcRenderer.invoke('login:describe'),
-    forget: () => ipcRenderer.invoke('login:forget')
+    forget: () => ipcRenderer.invoke('login:forget'),
+    // 内置登录控制台（node-pty 伪终端）
+    consoleOpen: (account) => ipcRenderer.invoke('login:consoleOpen', { account }),
+    consoleInput: (id, data) => ipcRenderer.invoke('login:consoleInput', { id, data }),
+    consoleResize: (id, cols, rows) => ipcRenderer.invoke('login:consoleResize', { id, cols, rows }),
+    consoleClose: () => ipcRenderer.invoke('login:consoleClose'),
+    onConsoleData: (h) => subscribe('login:console:data', h),
+    onConsoleExit: (h) => subscribe('login:console:exit', h),
+    onConsoleMobile: (h) => subscribe('login:console:mobile', h)
   },
 
   vdf: {

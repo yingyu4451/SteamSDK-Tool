@@ -8,10 +8,18 @@ directories:
   output: release
   buildResources: build
 
+# node-pty 自带 N-API 预编译产物（prebuilds/），在 Electron 下可直接加载；
+# 本机没装 Spectre 缓解库，electron-builder 默认的 node-gyp 重编译会失败，所以关掉重编译。
+npmRebuild: false
+
 files:
   - out/**
   - package.json
   - '!**/*.map'
+
+# node-pty 是原生模块：.node / winpty 二进制不能待在 asar 里，必须解包到 asar.unpacked
+asarUnpack:
+  - node_modules/node-pty/**
 
 # 不需要打进包里的调试脚本
 extraMetadata:
