@@ -284,10 +284,10 @@ select:focus {
 }
 /* 展开的文件夹常驻「悬浮」质感：抬起的面 + 环境投影，方便和收起状态区分 */
 .folder-box-open {
-  background: var(--color-surface-2);
+  background: rgba(255, 255, 255, 0.052);
   box-shadow:
-    0 14px 30px rgba(0, 0, 0, 0.42),
-    0 1px 0 rgba(255, 255, 255, 0.045) inset;
+    0 12px 26px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.05) inset;
 }
 .folder-box.is-drop {
   background: rgba(102, 192, 244, 0.1);
