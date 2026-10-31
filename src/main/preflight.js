@@ -184,13 +184,13 @@ function scanDepot(depot, root, platform) {
           'symlink',
           `有一个快捷方式式的文件（符号链接）`,
           l.rel,
-          'Steam 上传时不保留符号链接，玩家下载到的可能是坏的或空文件。macOS 的 .app 里出现属正常结构，要按 .app 流程打包；其它位置建议删掉或换成真实文件。'
+          'Steam 上传时不保留符号链接，玩家下载到的可能是坏的或空文件。macOS 的 .app 里出现属正常结构（不用处理）；其它位置建议删掉或换成真实文件。'
         )
       )
     }
     if (linkTargets.length > 8) {
       problems.push(
-        mk('warn', 'symlink-more', `还有 ${linkTargets.length - 8} 个符号链接`, '前面只列了前 8 个', '处理方式同上；如果都在 .app 里，按 .app 打包流程处理即可。')
+        mk('warn', 'symlink-more', `还有 ${linkTargets.length - 8} 个符号链接`, '前面只列了前 8 个', '处理方式同上；如果都在 .app 里，属正常结构，不用管。')
       )
     }
   }
@@ -227,14 +227,14 @@ function scanDepot(depot, root, platform) {
       )
       continue
     }
-    const extra = sym.length ? `，里面有 ${sym.length} 个符号链接（Steam 不会保留）` : ''
+    const extra = sym.length ? `，里面有 ${sym.length} 个符号链接` : ''
     problems.push(
       mk(
-        'warn',
-        'app-bundle',
-        `检测到 macOS 程序包（.app）`,
+        'info',
+        'app-bundle-ok',
+        `macOS 程序包会按目录结构上传`,
         `${a.rel}（${inside.length} 个文件${extra}）`,
-        'macOS 程序是 .app 目录结构，直接上传玩家那边可能打不开。Valve 的做法是先在 macOS 上用 tools\\ContentPrep 把它处理成 .app bundle 再上传；在 Windows 上一般不会传 macOS 包，需要的话让 Mac 同事处理这一步。'
+        'App 的启动方式在 Steamworks 后台的「安装 → 启动选项」里指定（可写 Game.app/Contents/MacOS/Game）；现在的 SteamPipe 直接认 .app 目录，不需要再用 ContentPrep（Valve 已把它标记为废弃）。'
       )
     )
   }
