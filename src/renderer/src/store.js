@@ -663,6 +663,22 @@ export function restoreProblemThisRun(text) {
   if (i >= 0) list.splice(i, 1)
 }
 
+/**
+ * 左侧 App 卡片的数据来自「扫描结果」（state.apps），切分支 / 改 vdf 之后
+ * 只有 state.detail 是最新的 —— 不把这条同步回去，卡片上就会一直显示旧分支。
+ */
+function syncAppMeta(dirName) {
+  if (!dirName) return
+  const i = state.apps.findIndex((a) => a.dirName === dirName)
+  if (i < 0) return
+  const cur = state.apps[i]
+  const live = state.detail?.setLive ?? cur.setLive ?? ''
+  if ((cur.setLive || '') === live) return
+  const next = state.apps.slice()
+  next[i] = { ...cur, setLive: live }
+  state.apps = next
+}
+
 export async function reloadDetail() {
   if (!state.selectedDir) return
   state.detail = await api.sdk.app(state.selectedDir)
@@ -671,6 +687,8 @@ export async function reloadDetail() {
   if (!list.some((d) => String(d.id) === String(state.activeDepot))) {
     state.activeDepot = list.length ? String(list[0].id) : null
   }
+  // 左侧列表里这张 App 卡片跟着更新（尤其是切完分支后的 SetLive）
+  syncAppMeta(state.selectedDir)
 }
 
 export function setActiveDepot(id) {
