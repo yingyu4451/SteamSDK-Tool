@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Plus,
   BookOpen,
-  Unplug,
   FolderPlus,
   FolderClosed,
   ChevronDown,
@@ -48,7 +47,6 @@ watch(
 const nav = [
   { id: 'workbench', label: '工作台', icon: LayoutDashboard },
   { id: 'history', label: '构建历史', icon: History },
-  { id: 'strip', label: '剥离 Steam', icon: Unplug },
   { id: 'manual', label: '使用手册', icon: BookOpen },
   { id: 'settings', label: '设置', icon: Settings }
 ]

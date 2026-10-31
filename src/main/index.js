@@ -49,7 +49,6 @@ import {
 } from './sdk.js'
 import { loginTest } from './login.js'
 import { preflightApp } from './preflight.js'
-import { inspectFolder, copyAndStripFolder, suggestDest } from './steamstrip.js'
 import { describeLogin, forgetLogin } from './forget.js'
 import {
   checkUpdate,
@@ -982,56 +981,6 @@ function registerIpc() {
   ipcMain.handle('app:preflight', (_e, { dirName } = {}) => {
     try {
       return preflightApp(dirName, loadSettings())
-    } catch (e) {
-      return { ok: false, error: e.message }
-    }
-  })
-
-  /* ---- 剥离 Steam（独立功能）----
-     拖一个打包好的文件夹进来，复制一份到旁边，副本里去掉 Steam 原生运行库。
-     原文件夹完全不动，和当前选中的 App / Depot 也没关系。 */
-  ipcMain.handle('strip:pickFolder', async (_e, { current } = {}) => {
-    const res = await dialog.showOpenDialog(mainWindow, {
-      title: '选择要剥离 Steam 的文件夹',
-      defaultPath: current || '',
-      properties: ['openDirectory']
-    })
-    if (res.canceled || !res.filePaths.length) return { ok: false }
-    return { ok: true, path: res.filePaths[0] }
-  })
-
-  ipcMain.handle('strip:inspect', (_e, { target } = {}) => {
-    try {
-      return inspectFolder(target)
-    } catch (e) {
-      return { ok: false, error: e.message }
-    }
-  })
-
-  ipcMain.handle('strip:copy', (e, { src, dest, removeConfig = true } = {}) => {
-    try {
-      return copyAndStripFolder({
-        src,
-        dest,
-        removeConfig,
-        onProgress: (p) => {
-          if (!e.sender.isDestroyed()) e.sender.send('strip:progress', p)
-        }
-      })
-    } catch (err) {
-      return { ok: false, error: err.message }
-    }
-  })
-
-  ipcMain.handle('strip:pickDest', async (_e, { current, name } = {}) => {
-    const res = await dialog.showOpenDialog(mainWindow, {
-      title: '选择副本放在哪个文件夹',
-      defaultPath: current ? path.dirname(current) : '',
-      properties: ['openDirectory', 'createDirectory']
-    })
-    if (res.canceled || !res.filePaths.length) return { ok: false }
-    try {
-      return { ok: true, path: suggestDest(res.filePaths[0], name) }
     } catch (e) {
       return { ok: false, error: e.message }
     }

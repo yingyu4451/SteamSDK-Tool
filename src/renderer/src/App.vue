@@ -8,14 +8,12 @@ import {
   loadHistory,
   setDropOver,
   dropAnalyze,
-  inspectStripFolder,
   zoomStep,
   zoomReset
 } from './store.js'
 import TitleBar from './components/TitleBar.vue'
 import Sidebar from './components/Sidebar.vue'
 import WorkbenchView from './components/WorkbenchView.vue'
-import SteamStripView from './components/SteamStripView.vue'
 import HistoryView from './components/HistoryView.vue'
 import SettingsView from './components/SettingsView.vue'
 import ManualView from './components/ManualView.vue'
@@ -27,12 +25,10 @@ import AdoptOrphansDialog from './components/AdoptOrphansDialog.vue'
 import ForgetDialog from './components/ForgetDialog.vue'
 import DropDialog from './components/DropDialog.vue'
 import OnboardGuide from './components/OnboardGuide.vue'
-import SteamStripDialog from './components/SteamStripDialog.vue'
 import { Upload } from '@lucide/vue'
 
 const views = {
   workbench: WorkbenchView,
-  strip: SteamStripView,
   history: HistoryView,
   settings: SettingsView,
   manual: ManualView
@@ -80,9 +76,7 @@ function onDrop(e) {
     setDropOver(false)
     return
   }
-  // 剥离 Steam 页只认文件夹：拖进来直接检查它，不走上传内容的分析流程
-  if (state.view === 'strip') inspectStripFolder(p)
-  else dropAnalyze(p)
+  dropAnalyze(p)
 }
 
 /* 界面缩放快捷键：Ctrl + = / - / 0（主键盘和小键盘的 + - 都覆盖） */
@@ -184,7 +178,6 @@ function onLeave(el, done) {
     <ForgetDialog />
     <DropDialog />
     <OnboardGuide />
-    <SteamStripDialog />
 
     <!-- 拖着东西悬在窗口上 -->
     <Transition
@@ -201,10 +194,10 @@ function onLeave(el, done) {
         <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
           <Upload :size="32" :stroke-width="1.8" />
           <div class="text-body font-semibold">
-            {{ state.view === 'strip' ? '松手就检查' : '松手就分析' }}
+            松手就分析
           </div>
           <div class="text-label text-muted">
-            {{ state.view === 'strip' ? '把游戏文件夹拖进来' : '文件夹，或者 .zip' }}
+            文件夹，或者 .zip
           </div>
         </div>
       </div>

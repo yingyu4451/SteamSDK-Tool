@@ -102,16 +102,6 @@ const api = {
 
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),
 
-  /** 剥离 Steam（独立功能）：复制一个游戏文件夹，副本里去掉 Steam 运行库 */
-  strip: {
-    pickFolder: (current) => ipcRenderer.invoke('strip:pickFolder', { current }),
-    inspect: (target) => ipcRenderer.invoke('strip:inspect', { target }),
-    copy: (src, dest, removeConfig = true) =>
-      ipcRenderer.invoke('strip:copy', { src, dest, removeConfig }),
-    pickDest: (current, name) => ipcRenderer.invoke('strip:pickDest', { current, name }),
-    onProgress: (h) => subscribe('strip:progress', h)
-  },
-
   /** 拖进来的文件/文件夹：Electron 32 之后 File.path 没了，只能走 webUtils */
   drop: {
     pathFor: (file) => {
