@@ -125,8 +125,8 @@ export const state = reactive({
   orphanDialog: null,
   // 检查文件
   preflight: { busy: false, error: null, data: null },
-  // 最近一次「检查文件」的结果。收起弹层只清 postflight，这份留着给 Depot 状态 pill 用
-  lastPreflight: null,
+  // 检查文件：结果按 Depot 单独缓存（收起弹层不清，切 App 才清）
+  preflightByDepot: {},
   // 本地内容服务器
   local: {
     running: false,
@@ -618,12 +618,13 @@ export async function selectApp(dirName) {
   // 「同步 Depot」「检查文件」这些面板的内容是上一个 App 的，跟着切过来会张冠李戴
   clearVerify()
   clearPreflight()
-  // 换 App 了，上一个 App 的文件检查结果不能再挂在新 App 的 pill 上
-  state.lastPreflight = null
+  // 换 App 了，上一个 App 的（每个 Depot 的）文件检查结果不能再挂到新 App 上
+  state.preflightByDepot = {}
   clearBuildPanel()
   state.detailLoading = true
   try {
     state.detail = await api.sdk.app(dirName)
+    ensureActiveDepot()
     state.settings = { ...state.settings, lastApp: dirName }
     api.settings.save({ lastApp: dirName })
   } finally {
@@ -687,18 +688,27 @@ export async function reloadDetail() {
   if (!state.selectedDir) return
   state.detail = await api.sdk.app(state.selectedDir)
   // Depot tab 选中的那个可能已经没了（改名 / 删除），回落到编号最小的那个。
-  // 注意 detail.depots 是 vdf 里的顺序，和界面排序后的第一个不一定相同
+  ensureActiveDepot()
+  // 左侧列表里这张 App 卡片跟着更新（尤其是切完分支后的 SetLive）
+  syncAppMeta(state.selectedDir)
+}
+
+/**
+ * 保证 state.activeDepot 是当前 App 里真实存在的 Depot。
+ * 注意 detail.depots 是 vdf 里的顺序，和界面排序后的第一个不一定相同。
+ */
+function ensureActiveDepot() {
   const list = state.detail?.depots || []
   const firstId = [...list].sort((a, b) => Number(a.id) - Number(b.id))[0]?.id
   if (!list.some((d) => String(d.id) === String(state.activeDepot))) {
     state.activeDepot = firstId == null ? null : String(firstId)
   }
-  // 左侧列表里这张 App 卡片跟着更新（尤其是切完分支后的 SetLive）
-  syncAppMeta(state.selectedDir)
 }
 
 export function setActiveDepot(id) {
   state.activeDepot = String(id)
+  // 检查文件面板里是上一个 Depot 的结果，切走就收起来（每个 Depot 的结果仍缓存在 preflightByDepot）
+  if (state.preflight?.data) state.preflight = { busy: false, error: null, data: null }
 }
 
 /** Apps 列表拖动排序：记住 dirName 顺序，下次启动仍按这个顺序显示 */
@@ -2401,31 +2411,45 @@ export async function dropApply(spec) {
  *  检查文件
  * ------------------------------------------------------------------ */
 
-export async function runPreflight(dirName) {
+/**
+ * 检查文件：只扫当前选中的这个 Depot（按 Depot 单独检查，不扫全部）。
+ * 结果按 Depot 缓存在 preflightByDepot[dir][depotId]，收起弹层不会丢。
+ */
+export async function runPreflight(dirName, depotId) {
   const dir = dirName || state.selectedDir
-  if (!dir) return null
-  // 跟「同步 Depot」一个道理：扫盘可能很久，扫完时人可能已经切到别的 App 了，
+  const depot = String(depotId || state.activeDepot || '')
+  if (!dir || !depot) return null
+  // 跟「同步 Depot」一个道理：扫盘可能很久，扫完时人可能已经切到别的 App / Depot 了，
   // 那份结果不能再往界面上写
-  const stale = () => state.selectedDir !== dir
-  state.preflight = { busy: true, error: null, data: null }
+  const stale = () => state.selectedDir !== dir || String(state.activeDepot) !== depot
+  state.preflight = { busy: true, error: null, data: null, depotId: depot }
   let res = null
   try {
-    res = await api.app.preflight(dir)
+    res = await api.app.preflight(dir, depot)
   } catch (e) {
     if (stale()) return null
-    state.preflight = { busy: false, error: e.message, data: null }
+    state.preflight = { busy: false, error: e.message, data: null, depotId: depot }
     return null
   }
   if (stale()) return null
   if (!res || res.ok === false) {
-    state.preflight = { busy: false, error: res?.error || '检查文件失败', data: null }
+    state.preflight = { busy: false, error: res?.error || '检查文件失败', data: null, depotId: depot }
     return null
   }
-  state.preflight = { busy: false, error: null, data: res }
-  // 弹层可以收起，但「文件」那枚状态 pill 得一直有依据 —— 另存一份最近结果
-  state.lastPreflight = res
+  state.preflight = { busy: false, error: null, data: res, depotId: depot }
+  // 弹层可以收起，但 Depot 卡上的「文件」状态得一直有依据
+  if (!state.preflightByDepot[dir]) state.preflightByDepot[dir] = {}
+  state.preflightByDepot[dir][depot] = res
   const n = res.errors || 0
-  toast(n ? `检查文件发现 ${n} 个会挡住上传的问题` : '检查文件通过，没有会挡住上传的问题', n ? 'warn' : 'ok')
+  const w = res.warns || 0
+  toast(
+    n
+      ? `Depot ${depot}：发现 ${n} 个会挡住上传的问题`
+      : w
+        ? `Depot ${depot}：通过，有 ${w} 个警告可以看一眼`
+        : `Depot ${depot}：检查通过，没有发现问题`,
+    n ? 'warn' : 'ok'
+  )
   return res
 }
 

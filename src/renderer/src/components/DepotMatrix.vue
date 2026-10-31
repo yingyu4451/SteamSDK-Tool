@@ -48,35 +48,31 @@ function depotStateHint(d) {
   return '配置检查通过：脚本存在、DepotID 与文件名一致、内容目录存在、没有可疑文件（来自「检查配置」；实际文件另看「检查文件」）'
 }
 
-/** 文件检查（检查文件）的结果：只有真正上传的那些文件的问题，和上面的配置检查是两码事 */
+/** 文件检查（检查文件）的结果：按 Depot 单独检查、单独缓存；和上面的配置检查是两码事 */
 function fileState(d) {
-  // 弹层收起后 state.preflight 会清空，这里用最近一次结果的存档
-  const pf = state.lastPreflight
   if (!d) return { tone: 'idle', text: '', hint: '' }
-  if (!pf || pf.dirName !== state.selectedDir) {
-    return { tone: 'idle', text: '文件未检查', hint: '点上方「检查文件」扫一遍真正会被上传的文件' }
+  // 收起弹层只清 state.preflight，每个 Depot 的结果留在这里
+  const pf = state.preflightByDepot?.[state.selectedDir]?.[String(d.id)]
+  if (!pf) {
+    return { tone: 'idle', text: '文件未检查', hint: `点上方「检查文件」只扫这一个 Depot（${d.id}）真正会被上传的文件` }
   }
-  const row = (pf.depots || []).find((x) => String(x.depotId) === String(d.id))
-  if (!row) {
-    return { tone: 'idle', text: '文件未检查', hint: '这次「检查文件」没有包含这个 Depot（脚本缺失或已被跳过）' }
-  }
-  const errs = (row.problems || []).filter((p) => p.level === 'error').length
-  const warns = (row.problems || []).filter((p) => p.level === 'warn').length
+  const errs = pf.errors || 0
+  const warns = pf.warns || 0
   if (errs) {
     return {
       tone: 'bad',
       text: `文件 ${errs} 个问题`,
-      hint: `内容目录里扫出 ${errs} 个会拦住上传的文件问题（非法字符/超长路径/大小写冲突等）；点「检查文件」看详情`
+      hint: `这个 Depot 扫出 ${errs} 个会拦住上传的文件问题（非法字符/超长路径/大小写冲突等）；点「检查文件」看详情`
     }
   }
   if (warns) {
     return {
       tone: 'warn',
       text: `文件 ${warns} 个警告`,
-      hint: `扫出 ${warns} 个警告（符号链接 / macOS 元数据 / 空目录等），点「检查文件」看详情`
+      hint: `这个 Depot 扫出 ${warns} 个警告（符号链接 / macOS 元数据 / .app 包等），点「检查文件」看详情`
     }
   }
-  return { tone: 'ok', text: '文件通过', hint: '最近一次「检查文件」没有发现会拦住上传的问题' }
+  return { tone: 'ok', text: '文件通过', hint: '最近一次对这个 Depot 的「检查文件」没有发现会拦住上传的问题' }
 }
 
 function toneCls(t) {

@@ -166,12 +166,12 @@ watch(
 
     <button
       class="btn no-drag"
-      :disabled="disabled || state.preflight.busy"
+      :disabled="disabled || state.preflight.busy || !state.detail?.depots?.length"
       data-pop="pf"
-      title="检查文件：扫一遍真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app bundle。配置没问题但文件有问题时，只有这一关能发现。"
+      title="检查文件：只检查当前选中的这个 Depot，扫一遍它真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app 包。每个 Depot 单独检查、单独记状态。"
       :aria-expanded="state.preflight.busy || !!state.preflight.error || !!pf"
       aria-controls="pop-preflight"
-      @click="(e) => { clearVerify(); anchorTo('pf', e.currentTarget); runPreflight() }"
+      @click="(e) => { clearVerify(); anchorTo('pf', e.currentTarget); runPreflight(undefined, state.activeDepot) }"
     >
       <ShieldCheck :size="16" :stroke-width="1.8" />
       {{ state.preflight.busy ? '检查中…' : '检查文件' }}
@@ -429,10 +429,11 @@ watch(
       >
         <div class="flex items-center gap-2 flex-wrap">
           <span class="font-semibold text-label">检查文件</span>
+          <span v-if="state.activeDepot" class="pill pill-idle text-micro">Depot {{ state.activeDepot }}</span>
           <span v-if="pf" class="text-micro" :class="pfTone">
             {{ pf.errors }} 个会拦住上传 · {{ pf.warns }} 个警告 · {{ pf.infos }} 条提示
           </span>
-          <span v-else-if="state.preflight.busy" class="text-micro text-faint">正在查后台和本地…</span>
+          <span v-else-if="state.preflight.busy" class="text-micro text-faint">正在扫这个 Depot 的文件…</span>
           <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="clearPreflight">收起</button>
         </div>
 

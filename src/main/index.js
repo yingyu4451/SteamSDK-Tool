@@ -977,10 +977,10 @@ function registerIpc() {
     }
   })
 
-  /* ---- 上传前预检 ---- */
-  ipcMain.handle('app:preflight', (_e, { dirName } = {}) => {
+  /* ---- 上传前预检（按 Depot 单独检查） ---- */
+  ipcMain.handle('app:preflight', (_e, { dirName, depotId } = {}) => {
     try {
-      return preflightApp(dirName, loadSettings())
+      return preflightApp(dirName, loadSettings(), { depotId })
     } catch (e) {
       return { ok: false, error: e.message }
     }

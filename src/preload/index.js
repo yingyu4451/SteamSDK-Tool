@@ -64,7 +64,7 @@ const api = {
     openVdf: (dirName, depotFile) => ipcRenderer.invoke('app:openVdf', { dirName, depotFile }),
     publicName: (appId) => ipcRenderer.invoke('app:publicName', { appId }),
     knownApps: () => ipcRenderer.invoke('app:knownApps'),
-    preflight: (dirName) => ipcRenderer.invoke('app:preflight', { dirName }),
+    preflight: (dirName, depotId) => ipcRenderer.invoke('app:preflight', { dirName, depotId }),
     ignoreProblem: (dirName, text, on) =>
       ipcRenderer.invoke('app:ignoreProblem', { dirName, text, on }),
     // 单个 Depot 是否参与上传（工具侧记录，构建时跳过）
