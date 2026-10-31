@@ -318,6 +318,13 @@ function folderBoxStyle(f) {
   // 只让描边和图标变色，背景保持和未设置颜色时一致
   return { borderColor: `color-mix(in srgb, ${c} ${Math.round(folderAlphaOf(f) * 100)}%, transparent)` }
 }
+// 标题行底色跟随文件夹颜色：亮度越高，底色越明显（10%–38%）
+function folderHeadStyle(f) {
+  const c = f?.color
+  if (!c) return {}
+  const pct = Math.max(10, Math.min(38, Math.round(folderAlphaOf(f) * 55)))
+  return { '--folder-head-tint': `color-mix(in srgb, ${c} ${pct}%, transparent)` }
+}
 function chooseFolderColor(id, color) {
   setFolderColor(id, color)
 }
@@ -631,12 +638,13 @@ function healthTitle(app) {
           >
             <div
               :data-folder-head="row.folder.id"
-              class="group relative flex items-center gap-1.5 h-9 px-2.5 py-1 transition-colors select-none"
+              class="folder-head group relative flex items-center gap-1.5 h-9 px-2.5 py-1 select-none"
               :class="[
-                drag.active ? 'cursor-copy' : 'cursor-pointer hover:bg-surface-3/35',
-                !drag.active && !row.folder.collapsed ? 'bg-surface-3/35' : '',
+                drag.active ? 'cursor-copy is-dragging' : 'cursor-pointer',
+                !drag.active && !row.folder.collapsed ? 'is-open' : '',
                 drag.active && drag.dropFolder === row.folder.id ? 'bg-accent/12' : ''
               ]"
+              :style="folderHeadStyle(row.folder)"
               role="button"
               tabindex="0"
               :aria-expanded="!row.folder.collapsed"

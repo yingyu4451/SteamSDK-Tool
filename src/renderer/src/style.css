@@ -278,6 +278,20 @@ select:focus {
 .folder-box {
   border-width: 1.5px;
 }
+/* 文件夹标题行：展开时常驻 hover 底色；设了颜色时底色跟着文件夹颜色走 */
+.folder-head {
+  background-color: transparent;
+  transition: background-color 0.16s ease;
+}
+.folder-head.is-open {
+  background-color: var(--folder-head-tint, rgba(42, 71, 94, 0.35));
+}
+.folder-head:not(.is-open):hover {
+  background-color: var(--folder-head-tint, rgba(42, 71, 94, 0.35));
+}
+.folder-head.is-dragging:hover {
+  background-color: transparent;
+}
 /* 原生取色器：覆盖在调色图标上，点图标即弹出系统取色面板 */
 /* 文件夹边框亮度滑杆 */
 /* 文件夹调色弹窗：颜色 + 亮度 */
