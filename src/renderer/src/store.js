@@ -2161,7 +2161,7 @@ export function wireEvents() {
     // 本地服务器构建不算上传 —— 一个字节都没到 Steam
     if (code === 0 && kind === 'build' && !wasPreview && !wasLocal) {
       state.uploaded = { appId: state.detail?.appId || '', at: Date.now() }
-      // 「steamcmd 说成功」≠「后台真有这个 BuildID」——有密钥就再核一遍
+      // 从日志里取 BuildID，只汇报「已上传」，不核对后台最新构建
       void verifyUploadedBuild(
         String(state.detail?.appId || ''),
         (state.logs || []).map((l) => l.line)
