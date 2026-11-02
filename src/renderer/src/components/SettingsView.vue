@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { Download, ShieldOff, Wrench, Minus, Plus } from '@lucide/vue'
+import { Download, ShieldOff, Wrench, Minus, Plus, LoaderCircle, Check, TriangleAlert } from '@lucide/vue'
 import ChangelogDialog from './ChangelogDialog.vue'
 import LoginConsole from './LoginConsole.vue'
 import {
@@ -8,6 +8,7 @@ import {
   rescan,
   openLogin,
   openForget,
+  testTypedLogin,
   checkUpdateNow,
   downloadUpdateNow,
   installUpdateNow,
@@ -46,6 +47,81 @@ const message = ref(null)
 const changelogOpen = ref(false)
 /** 内置登录控制台（node-pty + steamcmd） */
 const loginConsoleOpen = ref(false)
+
+/* ---- 登录凭据：跟教程第三步一样，真的登一次，成功了才存 ----
+ * 只把账号密码写进磁盘、不验证是没意义的 —— 密码打错了照样「已保存」，
+ * 等到构建时才在 steamcmd 那边炸。 */
+const loginPhase = ref('idle') // idle | checking | ok | fail
+const loginResult = ref(null)
+const guardCode = ref('')
+const needGuard = computed(
+  () => loginPhase.value === 'fail' && loginResult.value?.reason === 'steam-guard'
+)
+const mobileWaiting = computed(() => loginPhase.value === 'checking' && state.loginWait?.kind === 'mobile')
+const loginMsg = computed(() => {
+  if (loginPhase.value === 'checking') {
+    return mobileWaiting.value
+      ? '等你在手机上点确认 —— 打开 Steam App，点「确认登录」'
+      : '正在用 steamcmd 登录，第一次要十几秒…'
+  }
+  const t = loginResult.value
+  if (t && loginPhase.value !== 'idle') {
+    if (t.ok) return t.passwordChecked ? '登录验证通过，账号和密码已保存' : 'steamcmd 用缓存令牌登录成功，账号已保存'
+    switch (t.reason) {
+      case 'bad-password':
+        return 'Steam 说密码不对（Invalid Password）——账号名不是邮箱，检查一下大小写'
+      case 'steam-guard':
+        return 'Steam 要一个 Steam Guard 验证码，填到上面后再点一次「验证并保存」'
+      case 'mobile-timeout':
+        return '等手机确认超时了 —— 在 Steam App 右下角盾牌里点「确认登录」后再试'
+      case 'rate-limit':
+        return 'Steam 暂时限制了登录尝试（Rate Limit），等几分钟再试'
+      case 'no-steamcmd':
+        return '找不到 steamcmd.exe —— 先在上面把 SDK 路径配对'
+      case 'no-account':
+        return '先填 Steam 账号名'
+      default:
+        return t.error || '登录没成功，也没认出具体原因'
+    }
+  }
+  return ''
+})
+
+async function verifyAndSave() {
+  const acct = accountDraft.value.trim()
+  if (!acct) return flash('先填 Steam 账号名', 'bad')
+  if (loginPhase.value === 'checking') return
+  saving.value = true
+  loginPhase.value = 'checking'
+  loginResult.value = null
+  try {
+    const t = await testTypedLogin(acct, passwordDraft.value, guardCode.value)
+    loginResult.value = t
+    if (!t.ok) {
+      guardCode.value = ''
+      loginPhase.value = 'fail'
+      return
+    }
+    await window.api.settings.save({ account: acct })
+    if (passwordDraft.value) {
+      const r = await window.api.settings.setPassword(passwordDraft.value)
+      if (!r?.ok) {
+        loginPhase.value = 'fail'
+        return flash(r?.error || '密码没存上', 'bad')
+      }
+      passwordDraft.value = ''
+      state.hasPassword = true
+    }
+    loginPhase.value = 'ok'
+    await reloadSettings()
+    flash('登录验证通过，账号和密码已保存')
+  } catch (e) {
+    loginResult.value = { ok: false, reason: 'error', error: String(e?.message || e) }
+    loginPhase.value = 'fail'
+  } finally {
+    saving.value = false
+  }
+}
 
 /* ---- Web API 密钥 ---- */
 const apiKeyDraft = ref('')
@@ -193,27 +269,6 @@ async function savePaths() {
   }
 }
 
-async function saveAccount() {
-  const acct = accountDraft.value.trim()
-  saving.value = true
-  try {
-    await window.api.settings.save({ account: acct })
-    await reloadSettings()
-    flash(acct ? '账号已保存' : '账号已清空')
-  } finally {
-    saving.value = false
-  }
-}
-
-async function savePw() {
-  if (!passwordDraft.value) return flash('密码为空', 'bad')
-  const res = await window.api.settings.setPassword(passwordDraft.value)
-  passwordDraft.value = ''
-  if (!res.ok) return flash(res.error, 'bad')
-  await reloadSettings()
-  flash('密码已用 DPAPI 加密保存，只有当前 Windows 用户能解密')
-}
-
 /* ---- 工具自身的更新 ---- */
 
 const u = computed(() => state.update)
@@ -327,25 +382,58 @@ function openExternal(url) {
             <span v-if="!state.encryptionAvailable" class="pill pill-bad">系统不支持加密存储</span>
           </div>
 
-          <div class="mt-3.5 flex gap-2">
-            <input
-              v-model="accountDraft"
-              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
-              placeholder="Steam 构建账号名"
-              @keydown.enter="saveAccount"
-            />
-            <button class="btn no-drag" :disabled="saving" @click="saveAccount">保存</button>
-          </div>
+          <div class="mt-3.5 flex flex-col gap-2.5">
+            <div class="flex gap-2">
+              <input
+                v-model="accountDraft"
+                class="flex-[3] h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
+                placeholder="Steam 账号名（不是邮箱）"
+                @keydown.enter="verifyAndSave"
+              />
+              <input
+                v-model="passwordDraft"
+                type="password"
+                class="flex-[2] h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
+                placeholder="Steam 密码（留空就先不存）"
+                @keydown.enter="verifyAndSave"
+              />
+              <button class="btn btn-primary no-drag shrink-0" :disabled="saving" @click="verifyAndSave">
+                <LoaderCircle v-if="saving" :size="13" class="mr-1.5 drop-spin" />
+                <Check v-else-if="loginPhase === 'ok'" :size="13" class="mr-1.5" />
+                {{ saving ? '正在验证…' : '验证并保存' }}
+              </button>
+            </div>
 
-          <div class="mt-2.5 flex gap-2">
-            <input
-              v-model="passwordDraft"
-              type="password"
-              class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
-              placeholder="Steam 账号密码"
-              @keydown.enter="savePw"
-            />
-            <button class="btn no-drag" :disabled="!state.encryptionAvailable" @click="savePw">加密保存</button>
+            <label v-if="needGuard" class="flex flex-col gap-1.5">
+              <span class="text-label text-muted">Steam Guard 验证码</span>
+              <input
+                v-model="guardCode"
+                placeholder="例如 K4F2B"
+                autocomplete="one-time-code"
+                class="h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-accent/45 placeholder:tracking-normal"
+                @keydown.enter="verifyAndSave"
+              />
+            </label>
+
+            <div
+              v-if="loginPhase !== 'idle' && loginMsg"
+              class="rounded-card border px-3 py-2.5 flex items-start gap-2"
+              :class="{
+                'border-accent/34 bg-accent/7': loginPhase === 'checking',
+                'border-success/30 bg-success/[0.07]': loginPhase === 'ok',
+                'border-amber/28 bg-amber/6': loginPhase === 'fail'
+              }"
+            >
+              <LoaderCircle v-if="loginPhase === 'checking'" :size="14" class="shrink-0 mt-0.5 text-accent drop-spin" />
+              <Check v-else-if="loginPhase === 'ok'" :size="14" class="shrink-0 mt-0.5 text-success" />
+              <TriangleAlert v-else :size="14" class="shrink-0 mt-0.5 text-warn" />
+              <span
+                class="text-label leading-relaxed"
+                :class="loginPhase === 'checking' ? 'text-accent' : loginPhase === 'ok' ? 'text-success' : 'text-warn'"
+              >
+                {{ loginMsg }}
+              </span>
+            </div>
           </div>
 
           <div class="mt-3 pt-3 border-t border-line-soft flex items-center gap-2 flex-wrap">
@@ -362,9 +450,6 @@ function openExternal(url) {
               忘记账号
             </button>
           </div>
-          <p class="mt-2 mb-0 text-label text-faint leading-relaxed">
-            登录、密码、验证码、手机确认都在内置控制台里，手机确认那一刻会直接在界面上提示。
-          </p>
         </section>
 
       </div>

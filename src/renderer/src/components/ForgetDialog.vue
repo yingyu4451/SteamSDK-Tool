@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import gsap from 'gsap'
-import { ShieldOff, Check, LoaderCircle, TriangleAlert, FolderOpen } from '@lucide/vue'
+import { ShieldOff, Check, LoaderCircle, TriangleAlert } from '@lucide/vue'
 import { state, closeForget, doForgetLogin } from '../store.js'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
 
@@ -45,11 +45,6 @@ function onForgetClick() {
   doForgetLogin()
 }
 
-async function openBackup() {
-  const p = result.value?.backupDir
-  if (p) await window.api.shell.openPath(p)
-}
-
 onMounted(async () => {
   await nextTick()
   if (el.value) {
@@ -91,19 +86,6 @@ onUnmounted(disarm)
           <div v-if="result.skipped?.length" class="rounded-card border border-amber/30 bg-amber/7 px-3.5 py-2.5 text-label text-warn">
             <div v-for="(s, i) in result.skipped" :key="i">{{ s }}</div>
           </div>
-
-          <div v-if="result.backupDir" class="rounded-card border border-line bg-black/50 px-3.5 py-2.5">
-            <div class="text-label text-muted leading-relaxed">
-              清之前整份备份在这里，后悔了把里面的文件拷回去就行：
-            </div>
-            <div class="mt-1.5 flex items-center gap-2 min-w-0">
-              <code class="font-mono text-micro text-accent break-all min-w-0">{{ result.backupDir }}</code>
-              <button class="btn btn-sm px-2.5  shrink-0" @click="openBackup">
-                <FolderOpen :size="12" />
-                打开
-              </button>
-            </div>
-          </div>
         </template>
 
         <!-- 清之前：列清单 -->
@@ -123,10 +105,6 @@ onUnmounted(disarm)
                 <div class="text-micro font-mono text-faint break-all">{{ it.detail }}</div>
               </div>
             </div>
-          </div>
-
-          <div class="rounded-card border border-line bg-black/50 px-3.5 py-2.5 text-label text-muted leading-relaxed">
-            清之前会整份备份到 SDK 根目录下的 <code class="font-mono text-accent">_login-backup-…</code>，后悔了能拷回来。
           </div>
 
           <div

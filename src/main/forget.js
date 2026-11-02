@@ -6,12 +6,12 @@
  *      和 Accounts（记住的账号名），以及 userdata\<id>\ 这个用户档案
  *   2) 我们应用自己存的：credentials.bin（DPAPI 加密的密码）、settings.json 里的 account
  *
- * 清之前整份备份到 SDK 根目录下，后悔了能把目录拷回去。
+ * 不做备份 —— 用户就是要清干净，留一份反而是隐患。
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { loadSettings, saveSettings, credentialsPath, settingsFileDir } from './store.js'
+import { loadSettings, saveSettings, credentialsPath } from './store.js'
 import { getPaths, readSteamLogin } from './sdk.js'
 
 /**
@@ -130,42 +130,16 @@ export function describeLogin(settings) {
 }
 
 /**
- * 真清。先整份备份，再逐项处理。
- * 每一项独立 try —— 某一项失败不该把其余项也带崩。
+ * 真清。逐项处理，每一项独立 try —— 某一项失败不该把其余项也带崩。
  */
-export function forgetLogin(settings, { backup = true } = {}) {
+export function forgetLogin(settings) {
   const s = settings || loadSettings()
   const p = getPaths(s)
   const before = describeLogin(s)
   const removed = []
   const skipped = []
-  const stamp = new Date()
-    .toLocaleString('sv-SE')
-    .replace(/[: ]/g, '-')
-    .replace(/-(\d{2})$/, '$1')
-  let backupDir = ''
 
   const pick = (k) => before.items.find((x) => x.key === k) || {}
-
-  // ---- 备份 ----
-  if (backup && before.any) {
-    try {
-      backupDir = path.join(p.sdkRoot || s.sdkRoot, `_login-backup-${stamp}`)
-      fs.mkdirSync(path.join(backupDir, 'config'), { recursive: true })
-      fs.mkdirSync(path.join(backupDir, 'logs'), { recursive: true })
-      fs.mkdirSync(path.join(backupDir, 'appdata'), { recursive: true })
-      if (fs.existsSync(pick('token').where)) fs.copyFileSync(pick('token').where, path.join(backupDir, 'config', 'config.vdf'))
-      const ud = pick('profile').where
-      if (fs.existsSync(ud)) fs.cpSync(ud, path.join(backupDir, 'userdata'), { recursive: true })
-      const lp = pick('log').where
-      if (fs.existsSync(lp)) fs.copyFileSync(lp, path.join(backupDir, 'logs', 'console_log.txt'))
-      const cp = pick('password').where
-      if (fs.existsSync(cp)) fs.copyFileSync(cp, path.join(backupDir, 'appdata', 'credentials.bin'))
-      fs.copyFileSync(path.join(settingsFileDir(), 'settings.json'), path.join(backupDir, 'appdata', 'settings.json'))
-    } catch {
-      backupDir = ''
-    }
-  }
 
   // ---- 1) steamcmd：令牌 + 账号名 ----
   const configPath = pick('token').where
@@ -246,5 +220,5 @@ export function forgetLogin(settings, { backup = true } = {}) {
     }
   }
 
-  return { ok: true, removed, skipped, backupDir, before, after: describeLogin(loadSettings()) }
+  return { ok: true, removed, skipped, before, after: describeLogin(loadSettings()) }
 }

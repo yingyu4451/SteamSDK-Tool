@@ -13,7 +13,6 @@ import {
   testTypedLogin,
   finishOnboard,
   onboardMode,
-  goSettings,
   checkLogin
 } from '../store.js'
 
@@ -25,7 +24,7 @@ useDialogA11y(el, () => {
   if (state.onboard?.open) finishOnboard()
 }, { isOpen: () => !!o.value?.open })
 
-const STEPS = ['欢迎', 'SDK 路径', 'Steam 账号']
+const STEPS = ['欢迎', 'SDK 路径', '登录 Steam 账号']
 
 const sdkOk = computed(() => !!state.sdk?.contentBuilderExists)
 /** 'auto' = 选的是自动找到的那个；'manual' = 手动填的 */
@@ -114,7 +113,6 @@ watch(
       rowUsesRealLogin.value = false
       guardCode.value = ''
       machineLogin.value = null
-      overrideLogin.value = false
       if (o.value.step === 2) probeMachineLogin()
     }
   }
@@ -125,8 +123,6 @@ watch(
  * 查不到则什么都不说，只显示输入框：一进门先吃一个否定结论很讨厌。 */
 const machineLogin = ref(null)
 const machineChecking = ref(false)
-/** 已登录，但用户点了「换个账号」要覆盖 */
-const overrideLogin = ref(false)
 
 async function probeMachineLogin() {
   if (machineChecking.value) return
@@ -146,8 +142,8 @@ watch(
   }
 )
 
-/** 已经登录过、且用户没要求换账号 → 这一步没什么可填的 */
-const alreadyIn = computed(() => !!machineLogin.value?.ready && !overrideLogin.value)
+/** 已经登录过 → 这一步没什么可填的 */
+const alreadyIn = computed(() => !!machineLogin.value?.ready)
 
 /** 状态行只在「正在验证」或「验证过」的时候出现 —— 没查过就不替用户下结论 */
 const rowShow = computed(() => checkPhase.value === 'checking' || loginChecked.value)
@@ -309,7 +305,12 @@ function skip() {
           <span class="text-label" :class="i === o.step ? 'text-ink' : 'text-faint'">{{ name }}</span>
           <span v-if="i < STEPS.length - 1" class="w-6 h-px bg-line mx-1" />
         </button>
-        <button class="ml-auto btn btn-sm px-3 " @click="skip">跳过教程</button>
+        <button
+          class="ml-auto text-label text-accent hover:text-ink bg-transparent border-0 p-0 cursor-pointer transition-colors"
+          @click="skip"
+        >
+          跳过教程
+        </button>
       </div>
 
       <div class="px-6 py-5">
@@ -359,10 +360,6 @@ function skip() {
               >
             </div>
           </div>
-
-          <p class="text-label text-faint mt-3.5 mb-0 leading-relaxed">
-            用过的可以直接「跳过教程」，所有设置都在「设置」里，随时能改。
-          </p>
         </template>
 
         <!-- ── 1 SDK 路径 ── -->
@@ -411,7 +408,9 @@ function skip() {
             </button>
           </div>
 
+          <!-- 自动找到可用的 SDK 时不需要手动指定；没找到、或找到的都缺 steamcmd 才露出来 -->
           <div
+            v-if="!o.candidates.length || !o.candidates.some((c) => c.hasSteamcmd)"
             class="mt-4 flex flex-col gap-2 rounded-card border p-3 transition-colors"
             :class="
               mode === 'manual'
@@ -444,15 +443,12 @@ function skip() {
             >
               <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
             </button>
-            <p class="mt-2 mb-0 text-micro text-faint">
-              官方 SDK 里没有 build.ps1 / check.ps1 —— 这是本工具自带的，选好路径后会自动写进 ContentBuilder。
-            </p>
           </div>
         </template>
 
         <!-- ── 2 Steam 账号 ── -->
         <template v-else>
-          <h2 class="text-title font-semibold m-0">Steam 账号</h2>
+          <h2 class="text-title font-semibold m-0">登录 Steam 账号</h2>
 
           <!-- 一进来就查到已经登录过：直接给结论，不用再填一遍 -->
           <div
@@ -472,12 +468,6 @@ function skip() {
             <p class="mt-1.5 mb-0 text-label text-muted leading-relaxed">
               steamcmd 里存着这个账号的登录令牌，构建不用再输密码。直接点「完成」就行。
             </p>
-            <button
-              class="mt-2 text-label text-faint hover:text-muted bg-transparent border-0 p-0 cursor-pointer underline decoration-dotted"
-              @click="overrideLogin = true"
-            >
-              换个账号
-            </button>
           </div>
 
           <!-- 没登录过（或者用户要换账号）：才让人填 -->
@@ -598,13 +588,6 @@ function skip() {
           @click="onboardGo(o.step - 1)"
         >
           上一步
-        </button>
-        <button
-          v-else
-          class="text-label text-faint hover:text-muted bg-transparent border-0 p-0 cursor-pointer underline decoration-dotted"
-          @click="goSettings(); finishOnboard()"
-        >
-          我自己去设置里配
         </button>
         <div class="flex-1" />
         <button v-if="o.step === 2" class="btn" :disabled="checkPhase === 'checking'" @click="skip">
