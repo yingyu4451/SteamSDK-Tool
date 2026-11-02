@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Download, ShieldOff, Wrench, Minus, Plus, LoaderCircle, Check, TriangleAlert } from '@lucide/vue'
 import ChangelogDialog from './ChangelogDialog.vue'
-import LoginConsole from './LoginConsole.vue'
 import {
   state,
   rescan,
@@ -45,8 +44,6 @@ const saving = ref(false)
 const message = ref(null)
 /** 更新日志弹窗 */
 const changelogOpen = ref(false)
-/** 内置登录控制台（node-pty + steamcmd） */
-const loginConsoleOpen = ref(false)
 
 /* ---- 登录凭据：跟教程第三步一样，真的登一次，成功了才存 ----
  * 只把账号密码写进磁盘、不验证是没意义的 —— 密码打错了照样「已保存」，
@@ -71,7 +68,7 @@ const loginMsg = computed(() => {
       case 'bad-password':
         return 'Steam 说密码不对（Invalid Password）——账号名不是邮箱，检查一下大小写'
       case 'steam-guard':
-        return 'Steam 要一个 Steam Guard 验证码，填到上面后再点一次「验证并保存」'
+        return 'Steam 要一个 Steam Guard 验证码，填到上面后再点一次「登录 Steam」'
       case 'mobile-timeout':
         return '等手机确认超时了 —— 在 Steam App 右下角盾牌里点「确认登录」后再试'
       case 'rate-limit':
@@ -400,7 +397,7 @@ function openExternal(url) {
               <button class="btn btn-primary no-drag shrink-0 px-3" :disabled="saving" @click="verifyAndSave">
                 <LoaderCircle v-if="saving" :size="13" class="mr-1.5 drop-spin" />
                 <Check v-else-if="loginPhase === 'ok'" :size="13" class="mr-1.5" />
-                {{ saving ? '正在验证…' : '验证并保存' }}
+                {{ saving ? '正在登录…' : '登录 Steam' }}
               </button>
             </div>
 
@@ -437,10 +434,9 @@ function openExternal(url) {
           </div>
 
           <div class="mt-3 pt-3 border-t border-line-soft flex items-center gap-2 flex-wrap">
-            <button class="btn no-drag" @click="loginConsoleOpen = true">登录 Steam</button>
             <button
-              class="link-btn no-drag"
-              title="内置控制台打不开时，退回系统命令行窗口登录"
+              class="btn no-drag"
+              title="打开系统命令行窗口，自己用 steamcmd 登录（内置窗口打不开时用这个）"
               @click="openLogin"
             >
               外置窗口
@@ -632,10 +628,5 @@ function openExternal(url) {
     </div>
   </div>
 
-  <LoginConsole
-    :open="loginConsoleOpen"
-    :account="state.settings?.account || ''"
-    @close="loginConsoleOpen = false"
-  />
   <ChangelogDialog :open="changelogOpen" @close="changelogOpen = false" />
 </template>
