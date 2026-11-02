@@ -394,11 +394,6 @@ function openExternal(url) {
                 placeholder="Steam 密码"
                 @keydown.enter="verifyAndSave"
               />
-              <button class="btn btn-primary no-drag shrink-0 px-3" :disabled="saving" @click="verifyAndSave">
-                <LoaderCircle v-if="saving" :size="13" class="mr-1.5 drop-spin" />
-                <Check v-else-if="loginPhase === 'ok'" :size="13" class="mr-1.5" />
-                {{ saving ? '正在登录…' : '登录 Steam' }}
-              </button>
             </div>
 
             <label v-if="needGuard" class="flex flex-col gap-1.5">
@@ -433,17 +428,23 @@ function openExternal(url) {
             </div>
           </div>
 
-          <div class="mt-3 pt-3 border-t border-line-soft flex items-center gap-2 flex-wrap">
+          <!-- 三个按钮始终同一行：左边外置窗口/忘记账号，右边登录 Steam -->
+          <div class="mt-3 pt-3 border-t border-line-soft flex items-center gap-2 flex-nowrap">
             <button
-              class="btn no-drag"
+              class="btn no-drag shrink-0"
               title="打开系统命令行窗口，自己用 steamcmd 登录（内置窗口打不开时用这个）"
               @click="openLogin"
             >
               外置窗口
             </button>
-            <button class="btn btn-danger no-drag" @click="openForget">
+            <button class="btn btn-danger no-drag shrink-0" @click="openForget">
               <ShieldOff :size="14" />
               忘记账号
+            </button>
+            <button class="btn btn-primary no-drag shrink-0 ml-auto px-3" :disabled="saving" @click="verifyAndSave">
+              <LoaderCircle v-if="saving" :size="13" class="mr-1.5 drop-spin" />
+              <Check v-else-if="loginPhase === 'ok'" :size="13" class="mr-1.5" />
+              {{ saving ? '正在登录…' : '登录 Steam' }}
             </button>
           </div>
         </section>
