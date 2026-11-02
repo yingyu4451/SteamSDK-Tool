@@ -6,6 +6,9 @@
 #
 # 这个映射由 `pnpm approve-builds` 维护，也可以手改。
 allowBuilds:
+  # node-pty 自带 win32-x64 预编译（N-API），不需要跑 node-gyp 编译；
+  # 显式 false 可避免 pnpm 11 报 ERR_PNPM_IGNORED_BUILDS。
+  node-pty: false
   # Electron 44 的 package.json 里没有 scripts 字段，二进制靠
   # node_modules/electron/index.js 首次调用时惰性下载；CI 里我们显式跑
   # `node node_modules/electron/install.js`，本地也跑一次。

@@ -55,11 +55,17 @@
   --color-console: #080d14;
   --color-close: #c33a3a;
 
+  /* 用户字体要求：英文/数字 = JetBrains Mono（IntelliJ 默认字体），
+     中文 = MiSans。两种字体本机都已安装；JetBrains Mono 没有汉字字形，
+     汉字会自动落到后面的 MiSans。Motiva Sans / Inter 不再参与字体栈。 */
   --font-sans:
-    'Motiva Sans', 'Inter', 'MiSans', 'MiSans Normal', 'Microsoft YaHei UI',
+    'JetBrains Mono', 'MiSans', 'MiSans Normal', 'Microsoft YaHei UI',
     'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
   --font-mono:
-    'JetBrains Mono', 'Cascadia Mono', 'SF Mono', ui-monospace, 'Consolas', monospace;
+    'JetBrains Mono', 'Cascadia Mono', 'MiSans', 'MiSans Normal',
+    'Microsoft YaHei UI', 'Microsoft YaHei', ui-monospace, monospace;
+  /* 预置的代码/日志块（pre/code 等）默认字体也走同一套，避免浏览器默认等宽 */
+  --default-mono-font-family: var(--font-mono);
 
   /* 圆角：控件 2px 锐角，well/卡片 4px（拉开一个可感知台阶）。 */
   --radius-card: 4px;
@@ -104,8 +110,8 @@ body,
 body {
   background: var(--color-base);
   color: var(--color-muted);
-  /* 新版商店正文字体：Motiva Sans（不可得时用 Segoe UI / MiSans / 雅黑兜底）。
-     路径、日志、数字用 --font-mono 单独指定。 */
+  /* 用户要求的字体：英文/数字走 JetBrains Mono，中文走 MiSans（见 :root 的
+     --font-sans）。路径、日志、数字额外显式指定 --font-mono，含义相同。 */
   font-family: var(--font-sans);
   font-size: var(--text-body);
   -webkit-font-smoothing: antialiased;
