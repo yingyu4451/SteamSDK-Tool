@@ -380,17 +380,17 @@ function openExternal(url) {
           </div>
 
           <div class="mt-3.5 flex flex-col gap-2.5">
-            <div class="flex gap-2 items-center">
+            <div class="flex flex-wrap gap-2 items-center">
               <input
                 v-model="accountDraft"
-                class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
+                class="flex-1 basis-[200px] min-w-[150px] h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
                 placeholder="Steam 账号名（不是邮箱）"
                 @keydown.enter="verifyAndSave"
               />
               <input
                 v-model="passwordDraft"
                 type="password"
-                class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
+                class="flex-1 basis-[200px] min-w-[150px] h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
                 placeholder="Steam 密码"
                 @keydown.enter="verifyAndSave"
               />
