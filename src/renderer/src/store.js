@@ -99,8 +99,6 @@ export const state = reactive({
   verify: { busy: false, error: null, needsKey: false, data: null },
   // 「后台构建 / 分支」面板：最近构建 + 各分支当前 BuildID
   buildPanel: { busy: false, error: null, data: null, appId: '' },
-  // 上传后自动核对后台 BuildID 的结果：{ appId, buildId, latest, ok, at }
-  lastBuildCheck: null,
   /**
    * 「本次忽略」的待处理项 —— 按 App 目录名分组，只存在内存里。
    * 重开应用就清空，所以它和永久忽略是两件事。
@@ -1362,8 +1360,7 @@ export function clearBuildPanel() {
 }
 
 /* ------------------------------------------------------------------ *
- *  上传后自动核对：日志里的 BuildID 是否真的成了后台最新构建
- *  「steamcmd 说 Successfully finished」和「后台真有这个 BuildID」是两件事。
+ *  上传完成提示：从日志里取 BuildID，只汇报「已上传」，不去核对后台最新构建
  * ------------------------------------------------------------------ */
 
 export async function verifyUploadedBuild(appId, logs) {
@@ -1376,38 +1373,8 @@ export async function verifyUploadedBuild(appId, logs) {
     pushLog('system', '这次日志里没有 BuildID —— 不是正式上传（Preview / 本地构建都不带 BuildID）')
     return
   }
-  if (!state.hasApiKey) {
-    pushLog('system', `本次构建 BuildID ${buildId}（没有 Web API 密钥，跳过后台核对）`)
-    return
-  }
-
-  pushLog('system', `正在核对后台：BuildID ${buildId}…`)
-  try {
-    const res = await api.steam.builds(id)
-    if (!res?.ok) {
-      pushLog('stderr', `后台核对失败：${res?.error || '未知错误'}`)
-      return
-    }
-    const latest = (res.builds || [])[0] || null
-    const ok = !!latest && String(latest.buildid) === String(buildId)
-    state.lastBuildCheck = { appId: id, buildId, latest: latest ? latest.buildid : '', ok, at: Date.now() }
-    if (ok) {
-      pushLog('system', `✔ 后台最新构建就是 BuildID ${buildId} —— 内容已经进 Steam 后台`)
-      toast(`已上传，后台确认 BuildID ${buildId}`)
-    } else if (!latest) {
-      pushLog('system', `后台还没列出构建记录（BuildID ${buildId}），可能还在处理 —— 稍后点「同步 Depot」再看一次`)
-      toast('上传完成，但后台构建列表还没刷新出来', 'bad')
-    } else {
-      pushLog(
-        'stderr',
-        `⚠ BuildID ${buildId} 已经上传，但后台最新构建是 ${latest.buildid} —— 可能之前的构建比它新，或这次没生效`
-      )
-      toast(`注意：后台最新构建是 ${latest.buildid}，不是 ${buildId}`, 'bad')
-    }
-    void loadBuildPanel(true)
-  } catch (e) {
-    pushLog('stderr', `后台核对失败：${e.message}`)
-  }
+  pushLog('system', `✔ 已上传：BuildID ${buildId}`)
+  toast(`已上传（BuildID ${buildId}）`)
 }
 
 /* ------------------------------------------------------------------ *
