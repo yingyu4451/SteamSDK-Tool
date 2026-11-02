@@ -383,21 +383,21 @@ function openExternal(url) {
           </div>
 
           <div class="mt-3.5 flex flex-col gap-2.5">
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
               <input
                 v-model="accountDraft"
-                class="flex-[3] h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
+                class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
                 placeholder="Steam 账号名（不是邮箱）"
                 @keydown.enter="verifyAndSave"
               />
               <input
                 v-model="passwordDraft"
                 type="password"
-                class="flex-[2] h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
-                placeholder="Steam 密码（留空就先不存）"
+                class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
+                placeholder="Steam 密码"
                 @keydown.enter="verifyAndSave"
               />
-              <button class="btn btn-primary no-drag shrink-0" :disabled="saving" @click="verifyAndSave">
+              <button class="btn btn-primary no-drag shrink-0 px-3" :disabled="saving" @click="verifyAndSave">
                 <LoaderCircle v-if="saving" :size="13" class="mr-1.5 drop-spin" />
                 <Check v-else-if="loginPhase === 'ok'" :size="13" class="mr-1.5" />
                 {{ saving ? '正在验证…' : '验证并保存' }}
