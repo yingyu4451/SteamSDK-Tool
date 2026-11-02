@@ -87,6 +87,7 @@ const loginMsg = computed(() => {
 async function verifyAndSave() {
   const acct = accountDraft.value.trim()
   if (!acct) return flash('先填 Steam 账号名', 'bad')
+  if (!passwordDraft.value.trim()) return flash('先填 Steam 密码', 'bad')
   if (loginPhase.value === 'checking') return
   saving.value = true
   loginPhase.value = 'checking'
@@ -441,7 +442,11 @@ function openExternal(url) {
               <ShieldOff :size="14" />
               忘记账号
             </button>
-            <button class="btn btn-primary no-drag shrink-0 ml-auto px-3" :disabled="saving" @click="verifyAndSave">
+            <button
+              class="btn btn-primary no-drag shrink-0 ml-auto px-3"
+              :disabled="saving || !accountDraft.trim() || !passwordDraft.trim()"
+              @click="verifyAndSave"
+            >
               <LoaderCircle v-if="saving" :size="13" class="mr-1.5 drop-spin" />
               <Check v-else-if="loginPhase === 'ok'" :size="13" class="mr-1.5" />
               {{ saving ? '正在登录…' : '登录 Steam' }}
