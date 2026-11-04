@@ -223,6 +223,14 @@ function onFolderClick(id) {
   toggleFolder(id)
 }
 
+/** 拖动文件夹时临时按「收起」渲染，松手后自动恢复原来的展开/收起状态（不改 settings） */
+function isFolderDragging(id) {
+  return folderDrag.value.active && folderDrag.value.id === id
+}
+function folderLooksCollapsed(f) {
+  return !!f?.collapsed || isFolderDragging(f?.id)
+}
+
 /** 渲染清单：文件夹（含子卡片）+ 未分类小标题 + 未分类卡片，交给 TransitionGroup 做 FLIP */
 const rows = computed(() => {
   const out = []
@@ -763,7 +771,7 @@ function healthTitle(app) {
               :style="folderHeadStyle(row.folder)"
               role="button"
               tabindex="0"
-              :aria-expanded="!row.folder.collapsed"
+              :aria-expanded="!folderLooksCollapsed(row.folder)"
               :title="`${row.folder.collapsed ? '展开' : '折叠'}「${row.folder.name}」；拖动标题行可排序；把 App 拖到这里分类`"
               @pointerdown="(e) => onFolderPointerDown(e, row.folder)"
               @click="onFolderClick(row.folder.id)"
@@ -771,7 +779,7 @@ function healthTitle(app) {
               @keydown.space.prevent="toggleFolder(row.folder.id)"
             >
               <FolderOpen
-                v-if="!row.folder.collapsed"
+                v-if="!folderLooksCollapsed(row.folder)"
                 :size="14"
                 class="shrink-0"
                 :style="{ color: folderColor(row.folder) }"
@@ -904,7 +912,7 @@ function healthTitle(app) {
               </div>
             </Teleport>
 
-            <div class="folder-body" :class="row.folder.collapsed ? 'is-collapsed' : ''">
+            <div class="folder-body" :class="folderLooksCollapsed(row.folder) ? 'is-collapsed' : ''">
               <div class="folder-inner">
                 <div class="flex flex-col gap-1.5 p-2 pt-1.5">
                   <AppCard
@@ -988,7 +996,7 @@ function healthTitle(app) {
     >
       <div class="flex items-center gap-2 min-w-0">
         <FolderOpen
-          v-if="!dragFolder.collapsed"
+          v-if="!folderLooksCollapsed(dragFolder)"
           :size="14"
           class="shrink-0"
           :style="{ color: folderColor(dragFolder) }"
