@@ -111,8 +111,16 @@ const metaLine = computed(() => {
 
 const platLabel = (id) => PLATFORM_LABEL[id] || id || ''
 
-/** 最近一次把打包文件导入这个 Depot 的时间（拖文件进来时记的） */
-const importedAt = computed(() => Number(current.value?.meta?.importedAt || 0) || 0)
+/**
+ * 导入时间：优先用「拖文件导入」时记下的时间；老 Depot 没记录时，
+ * 退回用内容目录里最新文件的修改时间（仍能看出这批包是什么时候的）。
+ */
+const importedInfo = computed(() => {
+  const rec = Number(current.value?.meta?.importedAt || 0) || 0
+  if (rec) return { ms: rec, from: 'record' }
+  const fallback = Number(current.value?.analysis?.newestUploadMtime || 0) || 0
+  return fallback ? { ms: fallback, from: 'files' } : null
+})
 
 async function createDir(d) {
   const res = await window.api.app.ensureContentDir(state.selectedDir, d.file)
@@ -265,9 +273,17 @@ async function openPath(p) {
             <span class="shrink-0 w-16 pt-1 text-faint">脚本</span>
             <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
           </div>
-          <div v-if="importedAt" class="flex items-center gap-2 text-label min-w-0">
+          <div
+            v-if="importedInfo"
+            class="flex items-center gap-2 text-label min-w-0"
+            :title="
+              importedInfo.from === 'record'
+                ? '用「导入文件」导入这个 Depot 时记录的时间'
+                : '这个 Depot 没有导入记录；显示的是内容目录里最新文件的修改时间'
+            "
+          >
             <span class="shrink-0 w-16 text-faint">导入时间</span>
-            <span class="font-mono text-muted">{{ fmtTime(importedAt) }}</span>
+            <span class="font-mono text-muted">{{ fmtTime(importedInfo.ms) }}</span>
           </div>
           <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-label min-w-0">
             <span class="shrink-0 w-16 text-faint">存档保护</span>

@@ -180,12 +180,15 @@ function walk(dir, base = dir, out = []) {
     if (e.isDirectory()) walk(full, base, out)
     else if (e.isFile()) {
       let size = 0
+      let mtime = 0
       try {
-        size = fs.statSync(full).size
+        const st = fs.statSync(full)
+        size = st.size
+        mtime = st.mtimeMs
       } catch {
         /* 文件被占用，忽略 */
       }
-      out.push({ full, rel: path.relative(base, full), size })
+      out.push({ full, rel: path.relative(base, full), size, mtime })
     }
   }
   return out
@@ -212,6 +215,7 @@ export function analyzeContent(contentRoot, exclusions = []) {
       exists: false,
       fileCount: 0,
       totalBytes: 0,
+      newestUploadMtime: 0,
       excludedCount: 0,
       excludedBytes: 0,
       uploadCount: 0,
@@ -244,6 +248,8 @@ export function analyzeContent(contentRoot, exclusions = []) {
     exists: true,
     fileCount: files.length,
     totalBytes: sum(files),
+    // 会被上传的文件里最新的修改时间 —— 用作「导入时间」的后备来源
+    newestUploadMtime: included.reduce((a, f) => Math.max(a, f.mtime || 0), 0),
     excludedCount: excluded.length,
     excludedBytes: sum(excluded),
     uploadCount: included.length,
