@@ -223,12 +223,10 @@ function onFolderClick(id) {
   toggleFolder(id)
 }
 
-/** 拖动文件夹时临时按「收起」渲染，松手后自动恢复原来的展开/收起状态（不改 settings） */
-function isFolderDragging(id) {
-  return folderDrag.value.active && folderDrag.value.id === id
-}
+/** 拖动文件夹时所有文件夹都临时按「收起」渲染（列表更短、落点更清楚），松手后全部恢复原状态 */
 function folderLooksCollapsed(f) {
-  return !!f?.collapsed || isFolderDragging(f?.id)
+  if (!f) return false
+  return !!f.collapsed || folderDrag.value.active
 }
 
 /** 渲染清单：文件夹（含子卡片）+ 未分类小标题 + 未分类卡片，交给 TransitionGroup 做 FLIP */
