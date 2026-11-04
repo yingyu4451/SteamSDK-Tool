@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { fmtSize, fmtInt } from '../format.js'
+import { fmtSize, fmtInt, fmtTime } from '../format.js'
 import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL, depotUploadEnabled, toggleDepotUpload } from '../store.js'
 import PathLink from './PathLink.vue'
 import EmptyState from './EmptyState.vue'
@@ -110,6 +110,9 @@ const metaLine = computed(() => {
 })
 
 const platLabel = (id) => PLATFORM_LABEL[id] || id || ''
+
+/** 最近一次把打包文件导入这个 Depot 的时间（拖文件进来时记的） */
+const importedAt = computed(() => Number(current.value?.meta?.importedAt || 0) || 0)
 
 async function createDir(d) {
   const res = await window.api.app.ensureContentDir(state.selectedDir, d.file)
@@ -261,6 +264,10 @@ async function openPath(p) {
           <div class="flex items-start gap-2 text-label min-w-0">
             <span class="shrink-0 w-16 pt-1 text-faint">脚本</span>
             <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
+          </div>
+          <div v-if="importedAt" class="flex items-center gap-2 text-label min-w-0">
+            <span class="shrink-0 w-16 text-faint">导入时间</span>
+            <span class="font-mono text-muted">{{ fmtTime(importedAt) }}</span>
           </div>
           <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-label min-w-0">
             <span class="shrink-0 w-16 text-faint">存档保护</span>

@@ -188,6 +188,11 @@ async function doApply() {
     const made = (state.detail?.depots || []).find((x) => String(x.id) === String(pick.depotId))
     const file = r.file || made?.file || ''
     if (!file) return
+    // 刚补进来的 Depot 立刻选中它：否则本轮 depots 刷新后 effPick 变 null，
+    // 单选会跳回「新建一个 Depot」，看起来像平台选项被改掉了
+    target.value = file
+    backendPick.value = null
+    newPick.value = false
     // 后台补进来的 Depot 内容目录默认是 <项目文件夹><平台>，
     // 所以这里是「复制进内容目录」，让 win64 / macos 这些目录真正装下东西。
     const root = String(made?.contentRoot || '').trim()
@@ -356,7 +361,7 @@ async function doApply() {
             <div v-if="bk.busy" class="text-micro text-faint">正在读后台…</div>
             <div v-else-if="bk.error && !bk.depots.length" class="text-micro text-faint">
               没读到后台：{{ bk.error }}
-              <button class="link-btn" @click="dropLookupBackend">重试</button>
+              <button class="link-btn" @click="dropLookupBackend(true)">重试</button>
             </div>
             <div v-else-if="bk.done && !bk.depots.length" class="text-micro text-faint">
               后台的 Depot 本地都配齐了{{ bk.appName ? `（${bk.appName}）` : '' }}。

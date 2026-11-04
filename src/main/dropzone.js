@@ -10,6 +10,7 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { platformById, platformFromOsArch } from './vdf-edit.js'
 import { addDepot, updateDepotFields } from './sdk.js'
+import { setDepotMeta } from './store.js'
 
 const ZIP_EXT = ['.zip']
 const ARCHIVE_EXT = ['.zip', '.7z', '.rar', '.tar', '.gz', '.xz', '.tar.gz']
@@ -505,11 +506,23 @@ export async function applyDrop(spec, settings) {
   } catch {}
   cleanupProbe(settings)
 
+  // 这个 Depot 的打包文件是刚刚导进去的 —— 记下时间，Depot 详情里显示
+  const depotId =
+    String(spec?.depotId || '').trim() || (String(depotFile).match(/depot_(\d+)_/i)?.[1] || '')
+  const importedAt = Date.now()
+  if (/^\d+$/.test(depotId)) {
+    try {
+      setDepotMeta(depotId, { importedAt })
+    } catch {}
+  }
+
   return {
     ok: true,
     mode,
     platform,
     depotFile,
+    depotId,
+    importedAt,
     contentRoot,
     srcDir,
     extractedTo,

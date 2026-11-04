@@ -167,7 +167,7 @@ export const state = reactive({
     startedAt: 0,
     progress: null,
     // 拖放窗口里的「读后台」：后台有、本地还没配的 Depot
-    backend: { busy: false, done: false, error: '', needsCreds: false, appName: '', via: '', depots: [] }
+    backend: { busy: false, done: false, error: '', needsCreds: false, appName: '', appId: '', via: '', depots: [] }
   },
   // 工具自身的更新（GitHub Releases）
   update: {
@@ -2244,7 +2244,7 @@ export function closeDrop() {
  * 为什么值得自动跑：后台如果已经有一个同平台的 Depot，而本地只有别的平台，
  * 那么窗口默认给出的「新建一个 Depot（AppID+1）」就会撞上一个已经存在的 ID。
  */
-export async function dropLookupBackend() {
+export async function dropLookupBackend(force = false) {
   const dir = state.selectedDir
   const appId = String(state.detail?.appId || '').trim()
   const box = state.drop.backend
@@ -2253,6 +2253,10 @@ export async function dropLookupBackend() {
     box.done = true
     return
   }
+  // 已经读过同一个 App 就不重复跑（steamcmd 路线一次要十几秒）
+  if (!force && box.busy) return
+  if (!force && box.done && String(box.appId || '') === appId) return
+  box.appId = appId
   box.busy = true
   box.error = ''
   box.done = false
@@ -2322,6 +2326,24 @@ export async function dropAnalyze(target) {
   // 先把窗口支起来。4 GB 的压缩包解压要好几分钟，那段时间里
   // 主进程是忙的 —— 不留点动的东西，用户只会以为程序挂了。
   state.drop.data = { pending: true, target: p, name: p.split(/[\\/]/).pop() }
+
+  // 鼠标一松（确认导入）就提前去后台读 Depot 列表：等分析完再读要多等十几秒，
+  // 等用户点「同步并导入」才读就更晚了。已经读过同一个 App 会直接跳过。
+  const appIdNow = String(state.detail?.appId || '').trim()
+  if (String(state.drop.backend.appId || '') !== appIdNow) {
+    state.drop.backend = {
+      busy: false,
+      done: false,
+      error: '',
+      needsCreds: false,
+      appName: '',
+      appId: appIdNow,
+      via: '',
+      depots: []
+    }
+  }
+  void dropLookupBackend()
+
   try {
     const res = await api.drop.analyze(p)
     if (!res || res.ok === false) {

@@ -99,9 +99,11 @@ export function setDepotMeta(depotId, meta) {
     name: meta.name != null ? String(meta.name).trim() : cur.name || '',
     language: meta.language != null ? String(meta.language) : cur.language || 'all',
     os: meta.os != null ? String(meta.os) : cur.os || '',
-    arch: meta.arch != null ? String(meta.arch) : cur.arch || ''
+    arch: meta.arch != null ? String(meta.arch) : cur.arch || '',
+    // 最近一次把打包文件导入到这个 Depot 的时间（毫秒时间戳）
+    importedAt: meta.importedAt != null ? Number(meta.importedAt) || 0 : cur.importedAt || 0
   }
-  const keep = Boolean(merged.name || merged.os || merged.arch)
+  const keep = Boolean(merged.name || merged.os || merged.arch || merged.importedAt)
   if (!keep) delete next[id]
   else next[id] = merged
   saveSettings({ depotMeta: next })
