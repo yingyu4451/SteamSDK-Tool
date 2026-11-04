@@ -235,30 +235,42 @@ async function openPath(p) {
           </div>
         </div>
 
-        <!-- 数字 -->
-        <div v-if="a" class="mt-3 grid grid-cols-4 gap-3">
-          <div>
-            <div class="text-micro text-faint tracking-wide">磁盘文件</div>
+        <!-- 体积统计：一整块，四个格子用竖线隔开 -->
+        <div
+          v-if="a"
+          class="mt-3 flex items-center rounded-card border border-line-soft bg-black/15 px-3 py-2"
+        >
+          <div class="flex-1 min-w-0">
+            <div class="text-micro text-faint">磁盘文件</div>
             <div class="num text-lead font-semibold mt-0.5">{{ fmtInt(a.fileCount) }}</div>
           </div>
-          <div>
-            <div class="text-micro text-faint tracking-wide">总体积</div>
+          <div class="w-px self-stretch bg-line-soft/70 mx-2"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-micro text-faint">总体积</div>
             <div class="num text-lead font-semibold mt-0.5">{{ fmtSize(a.totalBytes) }}</div>
           </div>
-          <div>
-            <div class="text-micro tracking-wide" :class="a.excludedCount ? 'text-amber' : 'text-faint'">被排除</div>
-            <div class="num text-lead font-semibold mt-0.5" :class="a.excludedCount ? 'text-amber' : 'text-faint'">
+          <div class="w-px self-stretch bg-line-soft/70 mx-2"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-micro" :class="a.excludedCount ? 'text-amber' : 'text-faint'">被排除</div>
+            <div
+              class="num text-lead font-semibold mt-0.5"
+              :class="a.excludedCount ? 'text-amber' : 'text-faint'"
+            >
               {{ fmtInt(a.excludedCount) }}
             </div>
           </div>
-          <div>
-            <div class="text-micro text-accent tracking-wide">会上传</div>
+          <div class="w-px self-stretch bg-line-soft/70 mx-2"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-micro text-accent">会上传</div>
             <div class="num text-lead font-semibold mt-0.5 text-accent">{{ fmtInt(a.uploadCount) }}</div>
           </div>
         </div>
 
-        <div class="mt-2.5 flex flex-col gap-1">
-          <div class="flex items-start gap-2 text-label min-w-0">
+        <!-- 路径与备注：一整块，逐行分隔，避免散落 -->
+        <div
+          class="mt-2 rounded-card border border-line-soft bg-black/15 px-3 divide-y divide-line-soft/60"
+        >
+          <div class="flex items-start gap-2 text-label min-w-0 py-2">
             <span class="shrink-0 w-16 pt-1 text-faint">内容目录</span>
             <PathLink
               v-if="a?.contentRoot"
@@ -269,13 +281,13 @@ async function openPath(p) {
             />
             <span v-else class="text-faint">未设置</span>
           </div>
-          <div class="flex items-start gap-2 text-label min-w-0">
+          <div class="flex items-start gap-2 text-label min-w-0 py-2">
             <span class="shrink-0 w-16 pt-1 text-faint">脚本</span>
             <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
           </div>
           <div
             v-if="importedInfo"
-            class="flex items-center gap-2 text-label min-w-0"
+            class="flex items-center gap-2 text-label min-w-0 py-2"
             :title="
               importedInfo.from === 'record'
                 ? '用「导入文件」导入这个 Depot 时记录的时间'
@@ -285,13 +297,13 @@ async function openPath(p) {
             <span class="shrink-0 w-16 text-faint">导入时间</span>
             <span class="font-mono text-muted">{{ fmtTime(importedInfo.ms) }}</span>
           </div>
-          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-label min-w-0">
+          <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-label min-w-0 py-2">
             <span class="shrink-0 w-16 text-faint">存档保护</span>
             <span class="font-mono break-all text-muted">
               {{ current.userConfig.join('、') }}
             </span>
           </div>
-          <div v-else class="flex items-center gap-2 text-label min-w-0">
+          <div v-else class="flex items-center gap-2 text-label min-w-0 py-2">
             <span class="shrink-0 w-16 text-faint">存档保护</span>
             <span class="text-amber">没标任何玩家数据文件</span>
           </div>
