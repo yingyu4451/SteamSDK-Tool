@@ -183,8 +183,9 @@ function onFolderPointerDown(e, folder) {
     }
     d.ghostTop = ev.clientY - d.grabY
     const cur = d.preview.indexOf(d.id)
+    // folderInsertionAt() 是在「不含被拖文件夹」的列表里算的插入位，所以直接就是最终下标，
+    // 不能再按「含自己」的列表做 cur<target 的减一修正（否则最顶上的文件夹拖不下去）。
     let target = folderInsertionAt(ev.clientY, d.id)
-    if (cur < target) target -= 1
     target = Math.max(0, Math.min(target, d.preview.length - 1))
     if (target !== cur) {
       const next = d.preview.filter((x) => x !== d.id)
