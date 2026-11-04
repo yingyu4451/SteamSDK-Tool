@@ -716,6 +716,20 @@ export function setAppOrder(dirNames) {
   api.settings.save({ appOrder: order }).catch(() => {})
 }
 
+/** 文件夹拖动排序：按 id 重排 folders；未知 id 忽略，没列到的补在末尾 */
+export function setFolderOrder(ids) {
+  const byId = new Map(state.folders.map((f) => [f.id, f]))
+  const next = []
+  for (const id of ids || []) {
+    const f = byId.get(String(id))
+    if (f && !next.includes(f)) next.push(f)
+  }
+  for (const f of state.folders) if (!next.includes(f)) next.push(f)
+  if (next.length === state.folders.length && next.every((f, i) => f.id === state.folders[i].id)) return
+  state.folders = next
+  persistFolders()
+}
+
 // ---- Apps 文件夹：只是本地分类，不动磁盘上的任何文件 ----
 
 /** 文件夹可选颜色（按顺序给新文件夹分配，也可手动改） */

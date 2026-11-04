@@ -21,6 +21,7 @@ import {
   rescan,
   openWizard,
   setAppOrder,
+  setFolderOrder,
   createFolder,
   renameFolder,
   setFolderColor,
@@ -109,10 +110,118 @@ function containerApps(folderId) {
 }
 
 const folderGroups = computed(() =>
-  state.folders.map((f) => ({ folder: f, items: containerApps(f.id) }))
+  orderedFolders.value.map((f) => ({ folder: f, items: containerApps(f.id) }))
 )
 const looseApps = computed(() => containerApps(''))
 const hasFolders = computed(() => state.folders.length > 0)
+
+// ---- 文件夹拖动排序：拖标题行上下移动，实时让位，松手存 settings.folders 顺序 ----
+const folderDrag = ref({
+  active: false,
+  id: '',
+  startY: 0,
+  ghostTop: 0,
+  ghostLeft: 0,
+  ghostW: 0,
+  grabY: 0,
+  preview: []
+})
+let lastFolderDragEndAt = 0
+
+/** 拖动中按 preview 顺序显示文件夹；没拖动时就是 settings.folders 的顺序 */
+const orderedFolders = computed(() => {
+  const d = folderDrag.value
+  if (!d.active || !d.preview.length) return state.folders
+  const map = new Map(state.folders.map((f) => [f.id, f]))
+  const arr = d.preview.map((id) => map.get(id)).filter(Boolean)
+  return arr.length === state.folders.length ? arr : state.folders
+})
+
+const dragFolder = computed(() =>
+  folderDrag.value.active
+    ? state.folders.find((f) => f.id === folderDrag.value.id) || null
+    : null
+)
+
+function folderBoxes() {
+  return listEl.value ? [...listEl.value.querySelectorAll('[data-folder-box]')] : []
+}
+
+/** 指针落在第几个槽位前（按每个文件夹框的中线判断，返回插入下标） */
+function folderInsertionAt(clientY, excludeId) {
+  const boxes = folderBoxes().filter((el) => el.dataset.folderBox !== excludeId)
+  for (let i = 0; i < boxes.length; i++) {
+    const r = boxes[i].getBoundingClientRect()
+    if (clientY < r.top + r.height / 2) return i
+  }
+  return boxes.length
+}
+
+function onFolderPointerDown(e, folder) {
+  if (e.button !== 0) return
+  // 「调色 / 重命名 / 删除」按钮和重命名输入框不触发拖动
+  if (e.target?.closest?.('button, input, [data-color-toggle]')) return
+  const rect = e.currentTarget.getBoundingClientRect()
+  const pointerId = e.pointerId
+  folderDrag.value = {
+    active: false,
+    id: folder.id,
+    startY: e.clientY,
+    ghostTop: rect.top,
+    ghostLeft: rect.left,
+    ghostW: rect.width,
+    grabY: e.clientY - rect.top,
+    preview: state.folders.map((f) => f.id)
+  }
+  const move = (ev) => {
+    if (ev.pointerId !== pointerId) return
+    const d = folderDrag.value
+    if (!d.active) {
+      if (Math.abs(ev.clientY - d.startY) < 4) return
+      d.active = true
+      d.preview = state.folders.map((f) => f.id)
+    }
+    d.ghostTop = ev.clientY - d.grabY
+    const cur = d.preview.indexOf(d.id)
+    let target = folderInsertionAt(ev.clientY, d.id)
+    if (cur < target) target -= 1
+    target = Math.max(0, Math.min(target, d.preview.length - 1))
+    if (target !== cur) {
+      const next = d.preview.filter((x) => x !== d.id)
+      next.splice(target, 0, d.id)
+      d.preview = next
+    }
+    ev.preventDefault()
+  }
+  const up = (ev) => {
+    if (ev.pointerId !== pointerId) return
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', up)
+    const d = folderDrag.value
+    if (d.active) {
+      lastFolderDragEndAt = Date.now()
+      setFolderOrder(d.preview)
+    }
+    folderDrag.value = {
+      active: false,
+      id: '',
+      startY: 0,
+      ghostTop: 0,
+      ghostLeft: 0,
+      ghostW: 0,
+      grabY: 0,
+      preview: []
+    }
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', up)
+}
+
+function onFolderClick(id) {
+  // 刚拖完的那一下 click 不要当成折叠/展开
+  if (Date.now() - lastFolderDragEndAt < 350) return
+  toggleFolder(id)
+}
 
 /** 渲染清单：文件夹（含子卡片）+ 未分类小标题 + 未分类卡片，交给 TransitionGroup 做 FLIP */
 const rows = computed(() => {
@@ -633,23 +742,31 @@ function healthTitle(app) {
             :key="row.key"
             :data-folder-box="row.folder.id"
             class="rounded-card folder-box border relative transition-colors"
-            :class="drag.active && drag.dropFolder === row.folder.id ? '' : 'border-line/70 bg-black/18'"
+            :class="[
+              drag.active && drag.dropFolder === row.folder.id ? '' : 'border-line/70 bg-black/18',
+              folderDrag.active && folderDrag.id === row.folder.id ? 'opacity-45' : ''
+            ]"
             :style="folderBoxStyle(row.folder)"
           >
             <div
               :data-folder-head="row.folder.id"
               class="folder-head group relative flex items-center gap-1.5 h-9 px-2.5 py-1 select-none"
               :class="[
-                drag.active ? 'cursor-copy is-dragging' : 'cursor-pointer',
-                !drag.active && !row.folder.collapsed ? 'is-open' : '',
+                drag.active
+                  ? 'cursor-copy is-dragging'
+                  : folderDrag.active && folderDrag.id === row.folder.id
+                    ? 'cursor-grabbing'
+                    : 'cursor-grab',
+                !drag.active && !folderDrag.active && !row.folder.collapsed ? 'is-open' : '',
                 drag.active && drag.dropFolder === row.folder.id ? 'bg-accent/12' : ''
               ]"
               :style="folderHeadStyle(row.folder)"
               role="button"
               tabindex="0"
               :aria-expanded="!row.folder.collapsed"
-              :title="`${row.folder.collapsed ? '展开' : '折叠'}「${row.folder.name}」；把 App 拖到这里分类`"
-              @click="toggleFolder(row.folder.id)"
+              :title="`${row.folder.collapsed ? '展开' : '折叠'}「${row.folder.name}」；拖动标题行可排序；把 App 拖到这里分类`"
+              @pointerdown="(e) => onFolderPointerDown(e, row.folder)"
+              @click="onFolderClick(row.folder.id)"
               @keydown.enter.prevent="toggleFolder(row.folder.id)"
               @keydown.space.prevent="toggleFolder(row.folder.id)"
             >
@@ -856,6 +973,36 @@ function healthTitle(app) {
       </div>
       <div v-if="dragApp.setLive" class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-micro num">
         <span class="text-amber break-all">{{ dragApp.setLive }}</span>
+      </div>
+    </div>
+
+    <!-- 拖动文件夹时跟随指针的浮层（原文件夹留在列表里占位并变淡） -->
+    <div
+      v-if="folderDrag.active && dragFolder"
+      class="fixed z-[60] pointer-events-none rounded-card border border-accent bg-surface-3 px-2.5 py-2 shadow-pop"
+      :style="{
+        left: folderDrag.ghostLeft + 'px',
+        top: folderDrag.ghostTop + 'px',
+        width: folderDrag.ghostW + 'px'
+      }"
+    >
+      <div class="flex items-center gap-2 min-w-0">
+        <FolderOpen
+          v-if="!dragFolder.collapsed"
+          :size="14"
+          class="shrink-0"
+          :style="{ color: folderColor(dragFolder) }"
+          :stroke-width="2.1"
+        />
+        <FolderClosed
+          v-else
+          :size="14"
+          class="shrink-0"
+          :style="{ color: folderColor(dragFolder) }"
+          :stroke-width="1.9"
+        />
+        <span class="text-body font-normal truncate text-ink">{{ dragFolder.name }}</span>
+        <GripVertical class="ml-auto shrink-0 text-faint/70" :size="12" :stroke-width="2" />
       </div>
     </div>
 
