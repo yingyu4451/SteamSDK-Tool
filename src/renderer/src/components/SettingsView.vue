@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { Download, ShieldOff, Wrench, Minus, Plus, LoaderCircle, Check, TriangleAlert } from '@lucide/vue'
+import { Download, ShieldOff, Wrench, Minus, Plus, LoaderCircle, Check, TriangleAlert, FolderOpen } from '@lucide/vue'
 import ChangelogDialog from './ChangelogDialog.vue'
 import {
   state,
@@ -299,6 +299,14 @@ function fmtDate(iso) {
 function openExternal(url) {
   window.api.shell.openExternal(url)
 }
+
+/** 打开 SDK 里的构建目录（tools\ContentBuilder） */
+async function openContentBuilder() {
+  const p = state.sdk?.contentBuilder
+  if (!p) return
+  const r = await window.api.shell.openPath(p)
+  if (!r?.ok) state.toast = { text: r?.error || '打不开构建目录', tone: 'bad' }
+}
 </script>
 
 <template>
@@ -332,6 +340,18 @@ function openExternal(url) {
               @click="openExternal(SDK_DOWNLOAD)"
             >
               <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
+            </button>
+            <button
+              class="btn btn-sm px-2.5  no-drag"
+              :disabled="!state.sdk?.contentBuilderExists"
+              :title="
+                state.sdk?.contentBuilderExists
+                  ? `在资源管理器里打开构建目录：${state.sdk.contentBuilder}`
+                  : '还没检测到构建目录，先把上面的 SDK 路径指到解压后的 SteamSDK'
+              "
+              @click="openContentBuilder"
+            >
+              <FolderOpen :size="13" class="mr-1.5" /> 构建目录
             </button>
             <span v-if="!state.sdk?.sdkRootExists" class="text-micro text-amber">
               还没装 SDK —— 下完解压到任意目录，再把上面的路径指过去

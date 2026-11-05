@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import gsap from 'gsap'
-import { state, closeDrop, dropApply, openDepotSlide, dropLookupBackend, dropSyncDepot } from '../store.js'
+import { state, closeDrop, dropApply, dropLookupBackend, dropSyncDepot } from '../store.js'
 import { PLATFORM_LABEL } from '../store.js'
 import { fmtSize } from '../format.js'
 import { X } from '@lucide/vue'
@@ -12,7 +12,6 @@ const el = ref(null)
 const d = computed(() => state.drop.data)
 
 useDialogA11y(el, closeDrop, { isOpen: () => !!d.value })
-const busy = computed(() => state.drop.busy || state.drop.busy)
 
 /** 已经等了多少秒 —— 秒数一直在跳，就是在告诉用户「没死，还在动」 */
 const elapsed = ref(0)
@@ -43,8 +42,6 @@ onUnmounted(() => {
 
 /** 目标 Depot：'' = 新建，否则是 depotFile */
 const target = ref('')
-/** bind = 把这个文件夹当成内容目录；copy = 复制进现有内容目录 */
-const mode = ref('bind')
 /** 新建时的字段 */
 const newDepotId = ref('')
 const platform = ref('')
@@ -67,44 +64,47 @@ const platformChoices = computed(() => {
 /** 同平台的 depot（最可能是用户要放的那个） */
 const samePlatform = computed(() => depots.value.filter((x) => x.platformId === suggested.value))
 
+/** 选中的那个现有 Depot（没选就是新建） */
+const pickedDepot = computed(() => depots.value.find((x) => x.file === target.value) || null)
+
+/** 这次要落到哪个平台目录：现有 Depot 按它自己的平台，新建按选中的平台 */
+const destPlatform = computed(() => {
+  if (effPick.value) return effPick.value.platform || suggested.value || 'win64'
+  if (pickedDepot.value) return pickedDepot.value.platformId || suggested.value || 'win64'
+  return platform.value || suggested.value || 'win64'
+})
+
+/** 导入只有一种方式：把内容复制进项目文件夹下的 <平台> 子目录（win64 / macos …） */
+const destRoot = computed(() => {
+  const base = String(state.detail?.contentRoot || '').replace(/[\\/]+$/, '')
+  return base ? `${base}\\${destPlatform.value}` : ''
+})
+
 const newDepotFile = computed(() => {
   if (target.value) return ''
   const p = platform.value || suggested.value || 'win64'
   return newDepotId.value.trim() ? `depot_${newDepotId.value.trim()}_${p}.vdf` : ''
 })
 
-/** 新建 Depot 时内容落在项目文件夹下的 <平台> 子目录（win64 / macos …） */
-const newContentRoot = computed(() => {
-  const base = String(state.detail?.contentRoot || '').replace(/[\\/]+$/, '')
-  const p = platform.value || suggested.value || 'win64'
-  return base ? `${base}\\${p}` : ''
-})
-
 const canApply = computed(() => {
-  if (!d.value?.ok || state.drop.busy) return false
+  if (!d.value?.ok || state.drop.busy || !destRoot.value) return false
   if (effPick.value) return true
   if (!target.value) return /^\d+$/.test(newDepotId.value.trim())
-  if (mode.value === 'copy') {
-    const dep = depots.value.find((x) => x.file === target.value)
-    return !!dep?.contentRoot
-  }
   return true
 })
 
 const willDo = computed(() => {
   if (!d.value?.ok) return ''
   const what = d.value.kind === 'archive' ? '解压后的内容' : '这个文件夹'
-  if (effPick.value) return ''
+  const dest = destRoot.value || '（项目文件夹还没设置）'
+  if (effPick.value) {
+    return `把${what}复制进 ${dest}，并把后台 Depot ${effPick.value.depotId} 的内容目录指到这里`
+  }
   if (!target.value) {
-    return newContentRoot.value
-      ? `把${what}复制进 ${newContentRoot.value}，并作为新 Depot ${newDepotId.value.trim()} 的内容目录`
-      : `把${what}当作新 Depot ${newDepotId.value.trim()} 的内容目录`
+    return `把${what}复制进 ${dest}，并作为新 Depot ${newDepotId.value.trim()} 的内容目录`
   }
-  const dep = depots.value.find((x) => x.file === target.value)
-  if (mode.value === 'copy') {
-    return `把${what}复制进 ${dep?.contentRoot || '（没内容目录）'}`
-  }
-  return `把 ${dep?.platformId ? PLATFORM_LABEL[dep.platformId] : ''} Depot ${dep?.id || ''} 的内容目录指向${what}（不复制）`
+  const dep = pickedDepot.value
+  return `把${what}复制进 ${dest}，并把 ${PLATFORM_LABEL[dep?.platformId] || ''} Depot ${dep?.id || ''} 的内容目录指到这里`
 })
 
 /** 会新写出来的脚本文件名 */
@@ -119,7 +119,6 @@ watch(d, (v) => {
   backendPick.value = null
   newPick.value = false
   if (!v) return
-  mode.value = 'bind'
   platform.value = v.platform || ''
   depotName.value = v.appIdGuess ? `${state.selectedDir || ''} ${PLATFORM_LABEL[v.platform] || ''}`.trim() : ''
   const same = (state.detail?.depots || []).filter((x) => x.platformId === v.platform)
@@ -179,8 +178,9 @@ function pickBackend(row) {
   target.value = ''
 }
 
-/** 补一个后台 Depot 进来，然后把拖进来的东西指过去 */
+/** 补一个后台 Depot 进来，然后把拖进来的东西复制过去 */
 async function doApply() {
+  if (!destRoot.value) return
   const pick = effPick.value
   if (pick) {
     const r = await dropSyncDepot(pick.depotId, pick.platform)
@@ -193,29 +193,22 @@ async function doApply() {
     target.value = file
     backendPick.value = null
     newPick.value = false
-    // 后台补进来的 Depot 内容目录默认是 <项目文件夹><平台>，
-    // 所以这里是「复制进内容目录」，让 win64 / macos 这些目录真正装下东西。
-    const root = String(made?.contentRoot || '').trim()
+    // 补进来的 Depot 也统一复制进 <项目文件夹>\<平台>
     await dropApply({
       depotFile: file,
-      mode: root ? 'copy' : 'bind',
       platform: pick.platform,
       depotId: '',
       depotName: '',
-      contentRoot: root
+      contentRoot: destRoot.value
     })
     return
   }
-  const newRoot = newContentRoot.value
   await dropApply({
     depotFile: target.value,
-    mode: target.value ? mode.value : newRoot ? 'copy' : 'bind',
-    platform: platform.value || suggested.value || 'win64',
-    depotId: newDepotId.value,
-    depotName: depotName.value,
-    contentRoot: target.value
-      ? depots.value.find((x) => x.file === target.value)?.contentRoot || ''
-      : newRoot
+    platform: destPlatform.value,
+    depotId: target.value ? '' : newDepotId.value,
+    depotName: target.value ? '' : depotName.value,
+    contentRoot: destRoot.value
   })
 }
 </script>
@@ -250,6 +243,10 @@ async function doApply() {
             <div class="text-body text-ink num">{{ phaseText }}</div>
             <div class="text-label text-faint text-center leading-relaxed max-w-90">
               压缩包会先在这里解开再数一遍。包大的话要等几分钟 —— 别关窗口，也别再拖一次。
+            </div>
+            <div v-if="bk.busy" class="flex items-center gap-2 text-label text-muted">
+              <span class="drop-spinner drop-spinner-sm" />
+              <span>同时在读取后台 Depot…</span>
             </div>
           </div>
         </Transition>
@@ -290,6 +287,16 @@ async function doApply() {
             <div v-if="d.hasAppBundle" class="mt-2 text-label text-amber">
               macOS 的 .app bundle 传上去容易坏签名 —— 跑「检查文件」能看到详情，Valve 的 tools\ContentPrep 是专门处理这个的。
             </div>
+          </div>
+
+          <!-- 文件已经读完，但后台 Depot 清单可能还在读：
+               这里要明说，不然用户会以为列表里就这么几个 Depot。 -->
+          <div
+            v-if="bk.busy"
+            class="flex items-center gap-2.5 rounded-card border border-line bg-surface-2/60 px-3.5 py-2.5"
+          >
+            <span class="drop-spinner drop-spinner-sm" />
+            <span class="text-label text-muted">文件已经读完，后台 Depot 还在读取…列表稍后会自动补全。</span>
           </div>
 
           <!-- 放哪个 Depot -->
@@ -357,9 +364,8 @@ async function doApply() {
               </label>
             </div>
 
-            <!-- 后台读取状态 -->
-            <div v-if="bk.busy" class="text-micro text-faint">正在读后台…</div>
-            <div v-else-if="bk.error && !bk.depots.length" class="text-micro text-faint">
+            <!-- 后台读取状态（读取中在文件分析结果上方已有明显提示，这里只报结果） -->
+            <div v-if="bk.error && !bk.depots.length" class="text-micro text-faint">
               没读到后台：{{ bk.error }}
               <button class="link-btn" @click="dropLookupBackend(true)">重试</button>
             </div>
@@ -402,16 +408,10 @@ async function doApply() {
               </label>
             </div>
 
-            <!-- 已经有了：直接指过去 or 复制进去 -->
-            <div v-if="target" class="flex items-center gap-2 flex-wrap pl-3">
-              <label class="flex items-center gap-1.5 text-label text-muted cursor-pointer select-none">
-                <input type="radio" value="bind" :checked="mode === 'bind'" class="accent-accent" @change="mode = 'bind'" />
-                直接指过去（不复制）
-              </label>
-              <label class="flex items-center gap-1.5 text-label text-muted cursor-pointer select-none">
-                <input type="radio" value="copy" :checked="mode === 'copy'" class="accent-accent" @change="mode = 'copy'" />
-                复制进现有内容目录
-              </label>
+            <!-- 导入只有一种方式：复制进项目文件夹下的平台目录 -->
+            <div v-if="destRoot" class="flex items-baseline gap-1.5 pl-3 text-label text-muted">
+              <span>内容会复制到</span>
+              <span class="font-mono text-micro text-faint break-all" :title="destRoot">{{ destRoot }}</span>
             </div>
           </div>
 
@@ -433,7 +433,7 @@ async function doApply() {
           :disabled="!canApply"
           @click="doApply"
         >
-          {{ state.drop.busy ? '处理中…' : effPick ? '同步并导入' : target ? '导入' : '新建并导入' }}
+          {{ state.drop.busy ? '处理中…' : effPick ? '同步并导入' : target ? '复制并导入' : '新建并导入' }}
         </button>
       </footer>
     </div>

@@ -910,6 +910,13 @@ select:focus {
   border-top-color: var(--color-accent);
   animation: drop-spin 0.75s linear infinite;
 }
+/* 状态行里用的小圈 */
+.drop-spinner-sm {
+  width: 13px;
+  height: 13px;
+  border-width: 2px;
+  flex: none;
+}
 @keyframes drop-spin {
   to {
     transform: rotate(360deg);

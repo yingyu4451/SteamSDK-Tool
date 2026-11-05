@@ -384,9 +384,9 @@ export async function analyzeTarget(target, settings, onProgress) {
 /**
  * 第二步：放。
  *
- * mode:
- *   bind —— 把这个文件夹直接当作 Depot 的内容目录（不复制，推荐）
- *   copy —— 把里面的东西复制进 Depot 现有的内容目录
+ * 只有一种做法：把源文件夹里的内容复制进「项目文件夹\<平台>」，
+ * 再把目标 Depot 的 contentRoot 指到那个目录（新建 Depot 时 contentRoot 直接就是它）。
+ * 源和目标是同一个目录时跳过复制，不算错误。
  *
  * depotFile 为空表示要新建一个 Depot。
  */
@@ -394,16 +394,36 @@ export async function applyDrop(spec, settings) {
   const appDirName = String(spec?.appDirName || '').trim()
   if (!appDirName) return { ok: false, error: '先选一个 App' }
 
-  const mode = spec?.mode === 'copy' ? 'copy' : 'bind'
+  // 目标就是界面算好的「项目文件夹\<平台>」，没有它没法放
+  const contentRootInput = String(spec?.contentRoot || '').trim()
+  if (!contentRootInput) {
+    return { ok: false, error: '没拿到要放进去的项目平台目录 —— 先在界面上选一个项目文件夹' }
+  }
+  const contentRootAbs = path.resolve(contentRootInput)
 
-  // ---- 1. 先把东西落到磁盘上 ----
+  const platform = String(spec?.platform || '').trim() || 'win64'
+  const plat = platformById(platform)
+
+  // depotFile 为空 = 新建 Depot。新建前先把能静态校验的错挡掉，
+  // 别等复制完几十 G 才报「DepotID 不是数字」。
+  const depotFileInput = String(spec?.depotFile || '').trim()
+  const newDepotId = String(spec?.depotId || '').trim()
+  if (!depotFileInput) {
+    if (!/^\d+$/.test(newDepotId)) return { ok: false, error: 'DepotID 必须是数字' }
+    const osArch = spec?.os && spec?.arch ? platformFromOsArch(spec.os, spec.arch) : null
+    if (osArch && osArch !== platform) {
+      return { ok: false, error: `系统 + 架构组合出来是 ${platformById(osArch).label}，和选的 ${plat.label} 不一致` }
+    }
+  }
+
+  // ---- 1. 先把源文件夹落到磁盘上 ----
   let srcDir = ''
   let extractedTo = ''
   if (spec?.kind === 'archive') {
     /* 分析那一步已经把包解到 .drop-probe 了，这里接着用，不再解一遍
      * （再解要多花十几秒、多占一份空间）。
      * 但 .drop-probe 是临时目录、回头会被清掉，所以先把解出来的东西
-     * 挪到一个稳定位置再绑 —— 否则内容目录会指向一个随时消失的地方。 */
+     * 挪到 buildsRoot 下暂存，复制完再删掉。 */
     const reused = String(spec?.dir || '').trim()
     const buildsRoot = String(settings?.buildsRoot || path.dirname(spec.archive)).trim()
     const probeRoot = path.join(buildsRoot, '.drop-probe')
@@ -413,15 +433,27 @@ export async function applyDrop(spec, settings) {
       path.resolve(reused).toLowerCase().startsWith(path.resolve(probeRoot).toLowerCase() + path.sep)
     if (inProbe) {
       const stable = path.join(buildsRoot, path.basename(reused))
-      try {
-        if (fs.existsSync(stable)) fs.rmSync(stable, { recursive: true, force: true })
-        fs.renameSync(reused, stable)
-      } catch {
-        // 跨卷之类挪不动的，退回复制
-        fs.cpSync(reused, stable, { recursive: true, force: true })
+      // 暂存目录和项目平台目录撞上时（比如包名正好等于项目文件夹名）不能挪：
+      // 清掉暂存目录可能连项目文件夹一起删掉，复制也会踩到自己。这种情况直接从探测区复制。
+      const stableAbs = path.resolve(stable).toLowerCase()
+      const targetAbs = contentRootAbs.toLowerCase()
+      const collide =
+        stableAbs === targetAbs ||
+        stableAbs.startsWith(targetAbs + path.sep) ||
+        targetAbs.startsWith(stableAbs + path.sep)
+      if (collide) {
+        srcDir = reused
+      } else {
+        try {
+          if (fs.existsSync(stable)) fs.rmSync(stable, { recursive: true, force: true })
+          fs.renameSync(reused, stable)
+        } catch {
+          // 跨卷之类挪不动的，退回复制
+          fs.cpSync(reused, stable, { recursive: true, force: true })
+        }
+        srcDir = stable
+        extractedTo = stable
       }
-      srcDir = stable
-      extractedTo = stable
     } else if (reused && fs.existsSync(reused)) {
       srcDir = reused
     } else {
@@ -436,75 +468,63 @@ export async function applyDrop(spec, settings) {
     srcDir = String(spec?.dir || spec?.target || '').trim()
   }
   if (!srcDir || !fs.existsSync(srcDir)) return { ok: false, error: `找不到要导入的文件夹：${srcDir}` }
+  const srcAbs = path.resolve(srcDir)
 
-  const platform = String(spec?.platform || '').trim() || 'win64'
-  const plat = platformById(platform)
-
-  // ---- 2. 找到（或新建）目标 Depot ----
-  let depotFile = String(spec?.depotFile || '').trim()
-  let contentRoot = String(spec?.contentRoot || '').trim()
-  let created = null
-
-  if (!depotFile) {
-    const depotId = String(spec?.depotId || '').trim()
-    if (!/^\d+$/.test(depotId)) return { ok: false, error: 'DepotID 必须是数字' }
-    const osArch = spec?.os && spec?.arch ? platformFromOsArch(spec.os, spec.arch) : null
-    if (osArch && osArch !== platform) {
-      return { ok: false, error: `系统 + 架构组合出来是 ${platformById(osArch).label}，和选的 ${plat.label} 不一致` }
-    }
-    const res = addDepot(
-      appDirName,
-      {
-        depotId,
-        platform,
-        contentRoot: mode === 'bind' ? srcDir : contentRoot || '',
-        name: String(spec?.depotName || '').trim() || `${appDirName} ${plat.label}`,
-        os: spec?.os || '',
-        arch: spec?.arch || '',
-        language: spec?.language || 'all',
-        allowDuplicatePlatform: !!spec?.allowDuplicatePlatform
-      },
-      settings
-    )
-    if (!res || res.ok === false) return { ok: false, error: res?.error || '新建 Depot 失败' }
-    created = res
-    depotFile = res.file || ''
-    contentRoot = res.contentRoot || srcDir
-  }
-
-  if (mode === 'bind') {
-    if (!depotFile) return { ok: false, error: '没定位到 Depot 脚本' }
-    const r = updateDepotFields(appDirName, depotFile, { contentRoot: srcDir }, settings)
-    if (r && r.ok === false) return { ok: false, error: r.error }
-    contentRoot = srcDir
-  } else {
-    if (!contentRoot) return { ok: false, error: '这个 Depot 还没有内容目录 —— 换成「直接指过去」或者先在抽屉里填一个' }
-    const abs = path.resolve(contentRoot)
-    if (path.resolve(srcDir) === abs) {
-      return { ok: false, error: '要复制的文件夹就是内容目录本身' }
-    }
-    fs.mkdirSync(contentRoot, { recursive: true })
+  // 解压暂存/探测目录用完就清，成功失败都不留多余副本。
+  const cleanupStaging = () => {
     try {
-      fs.cpSync(srcDir, contentRoot, { recursive: true, force: true })
-    } catch (e) {
-      return { ok: false, error: `复制失败：${e.message}` }
-    }
+      if (extractedTo) {
+        const abs = path.resolve(extractedTo)
+        const root = path.resolve(String(settings?.buildsRoot || path.dirname(extractedTo)))
+        const inRoot = abs.toLowerCase().startsWith(root.toLowerCase() + path.sep)
+        if (inRoot && abs.toLowerCase() !== contentRootAbs.toLowerCase()) {
+          fs.rmSync(abs, { recursive: true, force: true })
+        }
+      }
+    } catch {}
+    cleanupProbe(settings)
   }
 
-  // ---- 3. 临时解压缓存用完就清 ----
-  // bind：目录已被挪到 buildsRoot\<包名> 当内容目录，.drop-probe 只剩空壳；
-  // copy：内容已复制进 contentRoot，解压出来的副本没必要再留一份。
+  // ---- 2. 复制进项目平台目录，再把目标 Depot 的 contentRoot 指过去 ----
+  let depotFile = depotFileInput
+  let created = null
   try {
-    if (extractedTo && mode === 'copy') {
-      const abs = path.resolve(extractedTo)
-      const root = path.resolve(String(settings?.buildsRoot || path.dirname(extractedTo)))
-      const inRoot = abs.toLowerCase().startsWith(root.toLowerCase() + path.sep)
-      if (inRoot && abs !== path.resolve(contentRoot)) {
-        fs.rmSync(abs, { recursive: true, force: true })
+    // 源就是目标（用户把项目平台目录自己拖了进来）时跳过复制，不报错
+    if (srcAbs.toLowerCase() !== contentRootAbs.toLowerCase()) {
+      try {
+        fs.mkdirSync(contentRootAbs, { recursive: true })
+        fs.cpSync(srcAbs, contentRootAbs, { recursive: true, force: true })
+      } catch (e) {
+        return { ok: false, error: `复制失败：${e.message}` }
       }
     }
-  } catch {}
-  cleanupProbe(settings)
+
+    if (!depotFile) {
+      const res = addDepot(
+        appDirName,
+        {
+          depotId: newDepotId,
+          platform,
+          contentRoot: contentRootAbs,
+          name: String(spec?.depotName || '').trim() || `${appDirName} ${plat.label}`,
+          os: spec?.os || '',
+          arch: spec?.arch || '',
+          language: spec?.language || 'all',
+          allowDuplicatePlatform: !!spec?.allowDuplicatePlatform
+        },
+        settings
+      )
+      if (!res || res.ok === false) return { ok: false, error: res?.error || '新建 Depot 失败' }
+      created = res
+      depotFile = res.file || ''
+    } else {
+      // 已有 Depot：不管它之前指向哪儿，一律重指到项目平台目录
+      const r = updateDepotFields(appDirName, depotFile, { contentRoot: contentRootAbs }, settings)
+      if (r && r.ok === false) return { ok: false, error: r.error || '更新 Depot 内容目录失败' }
+    }
+  } finally {
+    cleanupStaging()
+  }
 
   // 这个 Depot 的打包文件是刚刚导进去的 —— 记下时间，Depot 详情里显示
   const depotId =
@@ -518,12 +538,12 @@ export async function applyDrop(spec, settings) {
 
   return {
     ok: true,
-    mode,
+    mode: 'copy',
     platform,
     depotFile,
     depotId,
     importedAt,
-    contentRoot,
+    contentRoot: contentRootAbs,
     srcDir,
     extractedTo,
     created: created ? { depotId: spec.depotId, depotFile: created.file } : null

@@ -5,14 +5,25 @@ const api = window.api
 /* 构建输出控制台按 App 分开：每个 App 一份缓冲区，切走再切回来还在。
    没有选中 App 时（「全部检查配置」）落在 '__all__' 这一份。 */
 const consoleBuckets = new Map()
-function consoleBucket() {
-  const key = state.selectedDir || '__all__'
+function bucketFor(dirName) {
+  const key = dirName || '__all__'
   let b = consoleBuckets.get(key)
   if (!b) {
     b = { logs: [], lastExit: null }
     consoleBuckets.set(key, b)
   }
   return b
+}
+function consoleBucket() {
+  return bucketFor(state.selectedDir)
+}
+/** 往某个 App 的输出缓冲区里写：构建跑着的时候用户可能已经切走，
+ *  输出得回到它自己的窗口，不能塞进「当前选中」的那个。 */
+function pushLogTo(dirName, stream, line) {
+  const b = bucketFor(dirName)
+  b.logs.push({ stream, line, t: Date.now() })
+  // 控制台上限，防止长时间构建把内存吃满
+  if (b.logs.length > 4000) b.logs.splice(0, b.logs.length - 4000)
 }
 
 export const state = reactive({
@@ -82,6 +93,12 @@ export const state = reactive({
   /** 构建因为缺 Steam Guard 验证码失败时，在这里放 {preview, local}，界面据此弹输码框 */
   askGuard: null,
   runGuardCode: '',
+  /**
+   * 本次运行的目标 App：{ dirName, appId, appName }。
+   * 跑的过程中用户可能切去别的 App —— 完成通知、上传标记都得按这个来，
+   * 不能读「当前选中的是谁」。
+   */
+  runTarget: null,
   /** 登录测试期间主进程推过来的进度：{kind:'mobile'} = 等用户在手机上点确认 */
   loginWait: null,
 
@@ -1377,18 +1394,18 @@ export function clearBuildPanel() {
  *  上传完成提示：从日志里取 BuildID，只汇报「已上传」，不去核对后台最新构建
  * ------------------------------------------------------------------ */
 
-export async function verifyUploadedBuild(appId, logs) {
+export async function verifyUploadedBuild(appId, logs, appName = '', dirName = '') {
   const id = String(appId || '')
   if (!id) return
   const text = (Array.isArray(logs) ? logs : []).join('\n')
   const hits = [...text.matchAll(/\(BuildID\s+(\d+)\)/g)]
   const buildId = hits.length ? hits[hits.length - 1][1] : ''
   if (!buildId) {
-    pushLog('system', '这次日志里没有 BuildID —— 不是正式上传（Preview / 本地构建都不带 BuildID）')
+    pushLogTo(dirName, 'system', '这次日志里没有 BuildID —— 不是正式上传（Preview / 本地构建都不带 BuildID）')
     return
   }
-  pushLog('system', `✔ 已上传：BuildID ${buildId}`)
-  toast(`已上传（BuildID ${buildId}）`)
+  pushLogTo(dirName, 'system', `✔ 已上传：BuildID ${buildId}`)
+  toast(appName ? `已上传 ${appName}（BuildID ${buildId}）` : `已上传（BuildID ${buildId}）`)
 }
 
 /* ------------------------------------------------------------------ *
@@ -1925,17 +1942,28 @@ export function clearLogs() {
   state.uploaded = null
 }
 
+/** 记下这次运行是哪个 App —— 跑完时界面可能已经切走了 */
+function captureRunTarget() {
+  return {
+    dirName: state.selectedDir || '',
+    appId: String(state.detail?.appId || ''),
+    appName: state.selectedDir || ''
+  }
+}
+
 export async function runCheck() {
   if (state.running) return
   clearLogs()
   state.running = true
   state.runKind = 'check'
+  state.runTarget = captureRunTarget()
   pushLog('system', `> check.ps1 ${state.selectedDir ? `-App ${state.selectedDir}` : '(全部)'}`)
   const res = await api.run.check(state.selectedDir || undefined)
   if (!res.ok) {
     pushLog('stderr', res.error || '启动失败')
     state.running = false
     state.runKind = null
+    state.runTarget = null
   } else {
     state.runId = res.id
   }
@@ -1962,6 +1990,8 @@ export async function runBuild({ preview, password, local, guardCode }) {
   state.runPreview = !!preview
   state.runLocal = !!local
   state.runGuardCode = String(guardCode || '').trim()
+  // 目标 App 在启动时就记下来：构建期间用户很可能去别的 App 看东西
+  state.runTarget = captureRunTarget()
   pushLog(
     'system',
     `> build.ps1 -App ${state.selectedDir}${preview ? ' -Preview' : ''}${local ? ' -Local' : ''}`
@@ -1976,6 +2006,7 @@ export async function runBuild({ preview, password, local, guardCode }) {
 
   state.running = false
   state.runKind = null
+  state.runTarget = null
 
   if (res.needsPassword) {
     // 不把这条当成错误刷进日志，而是弹输入行让用户补密码
@@ -2044,9 +2075,7 @@ export async function answerPrompt(text) {
 }
 
 export function pushLog(stream, line) {
-  state.logs.push({ stream, line, t: Date.now() })
-  // 控制台上限，防止长时间构建把内存吃满
-  if (state.logs.length > 4000) state.logs.splice(0, state.logs.length - 4000)
+  pushLogTo(state.selectedDir, stream, line)
 }
 
 /* ------------------------------------------------------------------ *
@@ -2113,8 +2142,11 @@ export function wireEvents() {
   })
 
   api.run.onData((d) => {
-    if (d.stream === 'system') pushLog('system', d.line)
-    else pushLog(d.stream, d.line)
+    const stream = d.stream === 'system' ? 'system' : d.stream
+    // 这次输出属于哪个 App 就写回哪个 App —— 中途切走了也别把 A 的日志塞进 B 的窗口
+    const to = state.runTarget?.dirName
+    if (to !== undefined && to !== null && to !== state.selectedDir) pushLogTo(to, stream, d.line)
+    else pushLog(stream, d.line)
   })
 
   api.run.onPrompt((d) => {
@@ -2128,9 +2160,18 @@ export function wireEvents() {
     const kind = state.runKind
     const wasPreview = state.runPreview
     const wasLocal = state.runLocal
-    const appName = state.selectedDir || ''
+    // 这次运行的目标 App —— 跑的过程中用户可能已经切走，完成提示按它来
+    const runTarget = state.runTarget || {
+      dirName: state.selectedDir || '',
+      appId: String(state.detail?.appId || ''),
+      appName: state.selectedDir || ''
+    }
+    state.runTarget = null
+    const appName = runTarget.appName || ''
+    const targetDir = runTarget.dirName || ''
+    const targetLogs = bucketFor(targetDir).logs
     state.lastExit = { code, at: Date.now(), kind }
-    pushLog(code === 0 ? 'system' : 'stderr', `— 进程结束，退出码 ${code} —`)
+    pushLogTo(targetDir, code === 0 ? 'system' : 'stderr', `— 进程结束，退出码 ${code} —`)
     state.runKind = null
     state.runLocal = false
 
@@ -2138,7 +2179,7 @@ export function wireEvents() {
      * steamcmd 那句提示走 stdout，接管道时是块缓冲的、未必刷得出来，
      * 所以 runner 的 onPrompt 不一定抓得到 —— 退出后扫一遍日志兜底。 */
     if (code !== 0) {
-      const text = (state.logs || []).map((l) => l.line).join('\n')
+      const text = (targetLogs || []).map((l) => l.line).join('\n')
       if (
         /Account Logon Denied|Invalid Login Auth Code|Steam Guard code|Two-factor code|has not been authenticated for your account/i.test(
           text
@@ -2174,11 +2215,13 @@ export function wireEvents() {
     // 正式上传成功 -> 记下来，界面上给一个直接跳 Steamworks 的入口
     // 本地服务器构建不算上传 —— 一个字节都没到 Steam
     if (code === 0 && kind === 'build' && !wasPreview && !wasLocal) {
-      state.uploaded = { appId: state.detail?.appId || '', at: Date.now() }
-      // 从日志里取 BuildID，只汇报「已上传」，不核对后台最新构建
+      state.uploaded = { appId: runTarget.appId || '', at: Date.now() }
+      // 从这次运行的日志里取 BuildID，只汇报「已上传」，不核对后台最新构建
       void verifyUploadedBuild(
-        String(state.detail?.appId || ''),
-        (state.logs || []).map((l) => l.line)
+        String(runTarget.appId || ''),
+        (targetLogs || []).map((l) => l.line),
+        appName,
+        targetDir
       )
     }
 
@@ -2193,16 +2236,17 @@ export function wireEvents() {
             : wasPreview
               ? 'Preview 完成'
               : '上传完成'
+    const who = appName || '全部 App'
     const body =
       code !== 0
-        ? `${appName} · 退出码 ${code}`
+        ? `${who} · 退出码 ${code}`
         : kind === 'check'
-          ? `${appName} · 结构与排除规则都没问题`
+          ? `${who} · 结构与排除规则都没问题`
           : wasLocal
-            ? `${appName} · 重启 Steam 后就能从本机下到`
+            ? `${who} · 重启 Steam 后就能从本机下到`
             : wasPreview
-              ? `${appName} · 空跑成功，没有上传任何东西`
-              : `${appName} · 去 Steamworks 把这次构建设为 live`
+              ? `${who} · 空跑成功，没有上传任何东西`
+              : `${who} · 去 Steamworks 把这次构建设为 live`
     api.notify(title, body).catch(() => {})
 
     reloadDetail()
@@ -2219,12 +2263,15 @@ export async function runCheckAll() {
   clearLogs()
   state.running = true
   state.runKind = 'check'
+  // 全部 App 一起查：提示里不写具体 App 名，写成「全部 App」
+  state.runTarget = { ...captureRunTarget(), appName: '' }
   pushLog('system', '> check.ps1（所有 App）')
   const res = await api.run.check(undefined)
   if (!res.ok) {
     pushLog('stderr', res.error || '启动失败')
     state.running = false
     state.runKind = null
+    state.runTarget = null
   } else {
     state.runId = res.id
   }
@@ -2395,12 +2442,7 @@ export async function dropApply(spec) {
     closeDrop()
     await rescan()
     await reloadDetail()
-    toast(
-      res.mode === 'copy'
-        ? `已复制进 ${res.contentRoot}`
-        : `内容目录已指到 ${res.contentRoot}`,
-      'ok'
-    )
+    toast(`已复制进 ${res.contentRoot}`, 'ok')
     return res
   } catch (e) {
     state.drop.error = e.message

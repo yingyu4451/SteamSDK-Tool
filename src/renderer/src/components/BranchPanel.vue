@@ -7,12 +7,14 @@ import {
   loadBuildPanel
 } from '../store.js'
 import { RefreshCw, Plus } from '@lucide/vue'
+import BranchManageDialog from './BranchManageDialog.vue'
 
 const creating = ref(false)
 const draft = ref('')
 const inputEl = ref(null)
 const busy = ref(false)
 const message = ref(null)
+const manageOpen = ref(false)
 
 const appId = computed(() => state.detail?.appId || selectedApp.value?.appId)
 const current = computed(() => state.detail?.setLive || '')
@@ -105,13 +107,10 @@ function confirmNew() {
   apply(v)
 }
 
-function openExternal(url) {
-  window.api.shell.openExternal(url)
-}
-
 watch(appId, () => {
   creating.value = false
   draft.value = ''
+  manageOpen.value = false
 })
 </script>
 
@@ -177,8 +176,8 @@ watch(appId, () => {
         <button
           class="btn btn-sm"
           :disabled="!appId"
-          title="在 Steamworks 后台打开这个 App 的分支页"
-          @click="openExternal(`https://partner.steamgames.com/apps/branches/${appId}`)"
+          title="管理本机记录的分支；后台分支只读"
+          @click="manageOpen = true"
         >
           管理分支
         </button>
@@ -215,5 +214,8 @@ watch(appId, () => {
         {{ message.text }}
       </div>
     </Transition>
+
+    <!-- 管理分支：合并后台 / 本机记录，只在本机增删 -->
+    <BranchManageDialog :open="manageOpen" @close="manageOpen = false" />
   </section>
 </template>

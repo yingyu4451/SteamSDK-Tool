@@ -19,7 +19,7 @@ import {
   clearPreflight
 } from '../store.js'
 import { fmtSize } from '../format.js'
-import { CheckCircle2, Eye, FileCog, FolderOpen, LoaderCircle, Lock, PackageSearch, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Upload, X } from '@lucide/vue'
+import { CheckCircle2, Eye, FileCog, LoaderCircle, Lock, PackageSearch, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Upload } from '@lucide/vue'
 import EmptyState from './EmptyState.vue'
 
 const confirming = ref(false)
@@ -86,10 +86,6 @@ onBeforeUnmount(() => clearTimeout(timer))
 
 async function openExternal(url) {
   await window.api.shell.openExternal(url)
-}
-async function openPath(p) {
-  const r = await window.api.shell.openPath(p)
-  if (!r.ok) alert(r.error)
 }
 
 const partner = (seg) => `https://partner.steamgames.com/apps/${seg}/${appId.value}`
@@ -225,16 +221,6 @@ watch(
       <SquareArrowOutUpRight :size="15" :stroke-width="1.9" />
       查看生成版本
     </button>
-
-    <div class="flex-1" />
-    <div class="flex items-center gap-1.5">
-      <button class="btn no-drag" :disabled="!state.sdk?.contentBuilder" @click="openPath(state.sdk.contentBuilder)">
-        <FolderOpen :size="14" class="mr-1.5" /> 构建目录
-      </button>
-      <button class="btn no-drag" :disabled="!appId" @click="openExternal(partner('builds'))">
-        <SquareArrowOutUpRight :size="14" class="mr-1.5" /> Steamworks
-      </button>
-    </div>
 
     <Transition
       enter-active-class="transition duration-200"
