@@ -66,6 +66,7 @@ import {
   incrementalInstall
 } from './updater.js'
 import { analyzeTarget, applyDrop, cleanupProbe } from './dropzone.js'
+import { clearAppAchievements } from './steam-console.js'
 import { localStatus, startLocal, stopLocal, probePort, steamDevCfg, writeSteamDevCfg } from './localserver.js'
 import {
   PLATFORMS,
@@ -1155,6 +1156,45 @@ function registerIpc() {
     } catch (e) {
       return { ok: false, error: e.message }
     }
+  })
+
+  /* ---- 清空成就：走本机 Steam 客户端控制台，不联网、不需要 Web API 密钥 ---- */
+  ipcMain.handle('achievements:clear', async (_e, { dirName } = {}) => {
+    const s = loadSettings()
+    const app = dirName ? readApp(dirName, s) : null
+    if (!app || app.error) return { ok: false, error: app?.error || '没选中 App。' }
+    if (!app.appId) return { ok: false, error: '这个 App 的构建脚本里没有 AppID，清不了成就。' }
+
+    // 先把工具窗口放到前台：Windows 只允许前台进程把别的窗口切到前面，
+    // 这里主动确认一次，成功率比单靠用户点击时高。
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      try {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.show()
+        mainWindow.focus()
+      } catch {
+        /* 窗口状态拿不到就算了 */
+      }
+    }
+
+    const res = await clearAppAchievements(app.appId)
+
+    // 清完成就把工具窗口还回来（Steam 刚被切到前台）
+    try {
+      app.focus({ steal: true })
+    } catch {
+      /* 老系统上 steal 不支持就算了 */
+    }
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      try {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.show()
+        mainWindow.focus()
+      } catch {
+        /* 窗口已经没了就算了 */
+      }
+    }
+    return { ...res, appId: app.appId }
   })
 
   /* ---- 执行 ---- */

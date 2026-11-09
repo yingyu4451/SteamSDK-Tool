@@ -186,6 +186,8 @@ export const state = reactive({
     // 拖放窗口里的「读后台」：后台有、本地还没配的 Depot
     backend: { busy: false, done: false, error: '', needsCreds: false, appName: '', appId: '', via: '', depots: [] }
   },
+  // 清空成就弹窗：{ open, busy, error, done, appName, appId, message }
+  clearAchievements: null,
   // 工具自身的更新（GitHub Releases）
   update: {
     current: '',
@@ -2449,6 +2451,59 @@ export async function dropApply(spec) {
     return { ok: false, error: e.message }
   } finally {
     state.drop.busy = false
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  清空成就（本机 Steam 控制台）
+ * ------------------------------------------------------------------ */
+
+/** 打开清空成就弹窗：先把当前 App 的名字 / AppID 固定下来，弹窗只负责确认。 */
+export function openClearAchievements() {
+  const d = state.detail
+  if (!d || d.error || !d.appId) return toast('先选一个有 AppID 的 App', 'bad')
+  state.clearAchievements = {
+    open: true,
+    busy: false,
+    error: '',
+    done: false,
+    appName: d.dirName || state.selectedDir || '',
+    appId: String(d.appId),
+    message: ''
+  }
+}
+
+export function closeClearAchievements() {
+  if (state.clearAchievements?.busy) return
+  state.clearAchievements = null
+}
+
+/**
+ * 真正去清空：主进程会短暂把 Steam 切到前台，在 Steam 控制台里执行
+ * `reset_all_stats <AppID>`，然后盯 console_log.txt 确认结果，再切回来。
+ * 不需要 Web API 密钥，也不联网。
+ */
+export async function clearAchievementsNow() {
+  const c = state.clearAchievements
+  if (!c || c.busy || !state.selectedDir) return null
+  c.busy = true
+  c.error = ''
+  c.done = false
+  try {
+    const res = await api.steam.clearAchievements(state.selectedDir)
+    if (!res || res.ok === false) {
+      c.error = res?.error || '清空失败'
+      return res
+    }
+    c.done = true
+    c.message = res.line || ''
+    toast(`已清空 ${c.appName} 的 Steam 成就`, 'ok')
+    return res
+  } catch (e) {
+    c.error = e.message
+    return { ok: false, error: e.message }
+  } finally {
+    c.busy = false
   }
 }
 

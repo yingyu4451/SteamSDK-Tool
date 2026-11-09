@@ -105,7 +105,9 @@ const api = {
     testKey: () => ipcRenderer.invoke('api:testKey'),
     verifyApp: (dirName, via) => ipcRenderer.invoke('api:verifyApp', { dirName, via }),
     appDepots: (appId, via) => ipcRenderer.invoke('api:appDepots', { appId, via }),
-    builds: (appId, via) => ipcRenderer.invoke('api:builds', { appId, via })
+    builds: (appId, via) => ipcRenderer.invoke('api:builds', { appId, via }),
+    /** 清空当前账号在这个 App 下的全部成就（本机 Steam 控制台，不走网络） */
+    clearAchievements: (dirName) => ipcRenderer.invoke('achievements:clear', { dirName })
   },
 
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),

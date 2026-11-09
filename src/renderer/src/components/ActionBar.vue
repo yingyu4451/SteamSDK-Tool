@@ -16,10 +16,11 @@ import {
   goSettings,
   openDepotSlide,
   runPreflight,
-  clearPreflight
+  clearPreflight,
+  openClearAchievements
 } from '../store.js'
 import { fmtSize } from '../format.js'
-import { CheckCircle2, Eye, FileCog, LoaderCircle, Lock, PackageSearch, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Upload } from '@lucide/vue'
+import { CheckCircle2, Eye, FileCog, LoaderCircle, Lock, PackageSearch, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Trophy, Upload } from '@lucide/vue'
 import EmptyState from './EmptyState.vue'
 
 const confirming = ref(false)
@@ -220,6 +221,18 @@ watch(
     >
       <SquareArrowOutUpRight :size="15" :stroke-width="1.9" />
       查看生成版本
+    </button>
+
+    <div class="flex-1" />
+
+    <button
+      class="btn no-drag"
+      :disabled="!appId || state.running || !state.detail || !!state.detail.error || state.clearAchievements?.busy"
+      title="清空本机 Steam 账号在这个 App 下的全部成就（Steam 控制台执行，不联网、不需要密钥）"
+      @click="openClearAchievements()"
+    >
+      <Trophy :size="15" :stroke-width="1.9" />
+      清空成就
     </button>
 
     <Transition

@@ -24,6 +24,7 @@ import DeleteAppDialog from './components/DeleteAppDialog.vue'
 import AdoptOrphansDialog from './components/AdoptOrphansDialog.vue'
 import ForgetDialog from './components/ForgetDialog.vue'
 import DropDialog from './components/DropDialog.vue'
+import ClearAchievementsDialog from './components/ClearAchievementsDialog.vue'
 import OnboardGuide from './components/OnboardGuide.vue'
 import { Upload } from '@lucide/vue'
 
@@ -177,6 +178,7 @@ function onLeave(el, done) {
     <AdoptOrphansDialog />
     <ForgetDialog />
     <DropDialog />
+    <ClearAchievementsDialog />
     <OnboardGuide />
 
     <!-- 拖着东西悬在窗口上 -->
