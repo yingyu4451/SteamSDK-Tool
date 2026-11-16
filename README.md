@@ -1,8 +1,8 @@
-# SteamSDK 上传工作台
+# SteamSDK Tool
 
 一个给 Steam 开发者用的桌面工具：**一份 SteamSDK 管所有 App / Depot / 版本**，不用给每个版本复制一份 SDK，也不用记 steamcmd 的命令行。
 
-界面参考 Steam 自己的视觉风格，Vue 3 + Electron，Windows 免安装包。
+界面参考 Steam 自己的视觉风格，Vue 3 + Electron，Windows 免安装包，界面支持**中文 / English**（设置里切换，即时生效）。
 
 > **下载**：[最新版本](https://github.com/yingyu4451/SteamSDK-Tool/releases/latest) —— 装完第一次打开会有三步引导。
 
@@ -173,7 +173,7 @@ App 名字就是 `scripts/` 下的文件夹名，**可以有空格和括号** �
 - 密码用 **Windows DPAPI**（Electron `safeStorage`）加密后落在本机，只有当前 Windows 用户能解；
 - **不写进命令行参数**，通过环境变量传给 `build.ps1`，再由 PowerShell 管道灌进 steamcmd 的 stdin；
 - 输出里如果出现密码会被替换成 `********`；
-- 不想存也行 —— 每次正式上传时界面会问你要。更省事的做法是点「登录一次」，在弹出的真控制台里 `login` 一次，steamcmd 自己会缓存凭据。
+- 不想存也行 —— 每次正式上传时界面会问你要。更省事的做法是点「登录 Steam」，在弹出的真控制台里 `login` 一次，steamcmd 自己会缓存凭据。
 
 Web API 密钥（可选）同样用 DPAPI 加密存在本机。
 

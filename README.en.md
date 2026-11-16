@@ -1,4 +1,4 @@
-# SteamSDK Upload Workbench
+# SteamSDK Tool
 
 A desktop tool for Steam developers: **one SteamSDK install manages every App / Depot / build**, so you don't copy the SDK per version and don't have to memorise steamcmd flags.
 
@@ -10,7 +10,7 @@ The UI follows Steam's own visual language. Vue 3 + Electron, Windows installer.
 
 > The app runs in **English or Chinese** — pick one under **Settings → Language**, or leave it on *Follow system*. Switching takes effect immediately, no restart.
 
-![Workbench](docs/workbench.png)
+![Workbench](docs/en/workbench.png)
 
 ---
 
@@ -29,7 +29,7 @@ This tool folds all of that into one window: **one App = one project folder, wit
 
 ## Quick start
 
-1. Download and run `SteamSDK Tool-x.y.z-setup.exe`;
+1. Download and run `SteamSDK-Tool-x.y.z-setup.exe`;
 2. Follow the three-step guide on first launch: **① confirm the SteamSDK path → ② enter your Steam account → ③ create or pick an App**;
    - Returning users can click **Skip tutorial**; everything lives on the Settings page;
 3. Click **Read backend** — it lists the Depots already configured for this App in Steamworks, and ticking one fills in the real DepotID;
@@ -38,8 +38,8 @@ This tool folds all of that into one window: **one App = one project folder, wit
 
 <table>
 <tr>
-<td width="50%"><img src="docs/onboard.png" alt="First-run guide"><br><sub>Three-step first-run guide — returning users can skip it</sub></td>
-<td width="50%"><img src="docs/wizard.png" alt="New App"><br><sub>New App: reads real backend DepotIDs, platforms are drag-sortable</sub></td>
+<td width="50%"><img src="docs/en/onboard.png" alt="First-run guide"><br><sub>Three-step first-run guide — returning users can skip it</sub></td>
+<td width="50%"><img src="docs/en/wizard.png" alt="New App"><br><sub>New App: reads real backend DepotIDs, platforms are drag-sortable</sub></td>
 </tr>
 </table>
 
@@ -115,11 +115,11 @@ Drag a **folder or zip archive** straight from Explorer into the window:
 
 Zip files are extracted to a temp directory, and a single wrapping folder is unwrapped automatically. Only `.zip` is supported today (`.7z` / `.rar` must be extracted manually first).
 
-![Drag and drop](docs/drop.png)
+![Drag and drop](docs/en/drop.png)
 
 ### Checking the files
 
-The **检查文件 (Check files)** button catches things **检查配置 (Check config) can't see but Steam will choke on**:
+The **Check files** button catches things **Check config** can't see but Steam will choke on:
 
 - Illegal characters in filenames, and over-long paths (relative path > 200 chars, or a single segment > 120);
 - Case collisions (`Readme.txt` next to `README.TXT` — Steam depots are case-sensitive, Windows players get a clash);
@@ -158,11 +158,11 @@ The alternative — parse to objects and re-serialise — wipes them all out. Th
 
 ### There's a manual inside the app
 
-The sidebar's **使用手册** entry is built in and works offline: what each toolbar button actually checks, the three core concepts, what not to ship, and how branches work. It has a search box that filters sections.
+The sidebar's **Manual** entry is built in and works offline: what each toolbar button actually checks, the three core concepts, what not to ship, and how branches work. It has a search box that filters sections.
 
-![Manual](docs/manual.png)
+![Manual](docs/en/manual.png)
 
-For first-time setup, click **新手教程** in the manual header to walk through it again (find the SDK → enter your account).
+For first-time setup, click **Quick start** in the manual header to walk through it again (find the SDK → enter your account).
 
 ### Spaces in app names
 
@@ -221,7 +221,7 @@ $env:ELECTRON_MIRROR='https://npmmirror.com/mirrors/electron/'
 pnpm dist
 # 3. publish — the tag MUST be vX.Y.Z, that's what the updater looks for
 gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md `
-  "release\SteamSDK Tool-0.2.0-setup.exe" "release\SteamSDK Tool-0.2.0-portable.exe"
+  "release\SteamSDK-Tool-0.2.0-setup.exe" "release\SteamSDK-Tool-0.2.0-portable.exe"
 ```
 
 > Upload both. If only the setup is published, portable users get an installer — downloadable, but the wrong thing.

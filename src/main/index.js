@@ -102,9 +102,9 @@ import { setLanguage, currentLanguage, systemLocale, t } from './i18n.js'
 
 let mainWindow = null
 
-/** 窗口标题（任务栏 / Alt+Tab 显示的那个），跟着界面语言走 */
+/** 窗口标题（任务栏 / Alt+Tab 显示的那个）。中英两种界面都叫这个名字，所以不走 t() */
 function windowTitle() {
-  return t('SteamSDK 上传工作台')
+  return 'SteamSDK Tool'
 }
 
 /**
@@ -849,7 +849,7 @@ function registerIpc() {
       depotArchByOs: DEPOT_ARCH_BY_OS,
       depotLanguages: DEPOT_LANGUAGES,
       suggestedDepotId: suggestDepotId(appId),
-      suggestedContentRoot: defaultContentRoot(name || '<App名>', platform, s), // i18n-ignore 建议路径的占位符
+      suggestedContentRoot: defaultContentRoot(name || t('<App名>'), platform, s),
       buildsRoot: s.buildsRoot,
       defaultExclusions: defaultExclusionsFor(platform),
       allDefaultExclusions: DEFAULT_EXCLUSIONS

@@ -336,7 +336,7 @@ function skip() {
               <path d="M186 152 128 186v50l58-34z" fill="#245c8c" />
             </svg>
             <div>
-              <h2 class="text-title font-semibold m-0">{{ t('SteamSDK 上传工作台') }}</h2>
+              <h2 class="text-title font-semibold m-0">SteamSDK Tool</h2>
               <p class="text-label text-muted mt-1 mb-0">
                 {{ t('一份 SDK 管所有 App / Depot / 版本，不用给每个版本复制一份 SDK。') }}
               </p>

@@ -3,8 +3,6 @@
  * 用法见 src/shared/i18n/core.js 顶部。键一律加引号——中文键里常有空格和括号。
  */
 export default {
-  'SteamSDK 上传工作台': 'SteamSDK Upload Workbench',
-
   // —— TitleBar：运行状态 ——
   '检查配置中': 'Checking config',
   'Preview 中': 'Previewing',

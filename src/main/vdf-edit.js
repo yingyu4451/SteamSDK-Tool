@@ -415,7 +415,7 @@ export function renderAppVdf({
   const vdf = `// ============================================================================
 //  ${name || 'App ' + appId}  --  AppID ${appId}
 //
-//  由 SteamSDK 上传工作台生成。内容目录放在 SDK 外面，一份 SDK 可以管所有${/* i18n-ignore */ ''}
+//  由 SteamSDK Tool 生成。内容目录放在 SDK 外面，一份 SDK 可以管所有${/* i18n-ignore */ ''}
 //  App / Depot / 版本，不需要复制 SDK，也不需要复制文件夹。${/* i18n-ignore */ ''}
 //
 //  这个 App 管 ${depots.length} 个 Depot（${depots.map((d) => d.platform || d.id).join(' + ')}）：${/* i18n-ignore */ ''}

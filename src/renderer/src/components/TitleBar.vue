@@ -63,7 +63,7 @@ const win = window.api.win
         <polygon points="70,152 128,186 128,236 70,202" fill="#3f92c9" />
         <polygon points="186,152 128,186 128,236 186,202" fill="#245c8c" />
       </svg>
-      <span class="s-brand whitespace-nowrap">{{ t('SteamSDK 上传工作台') }}</span>
+      <span class="s-brand whitespace-nowrap">SteamSDK Tool</span>
     </div>
 
     <div class="h-4 w-px bg-line" />
