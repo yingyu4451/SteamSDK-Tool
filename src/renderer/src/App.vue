@@ -11,6 +11,7 @@ import {
   zoomStep,
   zoomReset
 } from './store.js'
+import { t } from './i18n/index.js'
 import TitleBar from './components/TitleBar.vue'
 import Sidebar from './components/Sidebar.vue'
 import WorkbenchView from './components/WorkbenchView.vue'
@@ -139,7 +140,7 @@ function onLeave(el, done) {
         <!-- 启动失败 -->
         <div v-if="state.booted && state.bootError" class="p-8">
           <div class="card p-6 border-danger/35">
-            <div class="text-lead font-semibold text-danger mb-2">启动失败</div>
+            <div class="text-lead font-semibold text-danger mb-2">{{ t('启动失败') }}</div>
             <div class="text-body text-muted">{{ state.bootError }}</div>
           </div>
         </div>
@@ -150,7 +151,7 @@ function onLeave(el, done) {
             <div
               class="w-7 h-7 rounded-full border-2 border-line border-t-accent animate-spin"
             />
-            正在读取 SDK…
+            {{ t('正在读取 SDK…') }}
           </div>
         </div>
 
@@ -196,10 +197,10 @@ function onLeave(el, done) {
         <div class="relative flex flex-col items-center gap-2 text-accent pointer-events-none">
           <Upload :size="32" :stroke-width="1.8" />
           <div class="text-body font-semibold">
-            松手就分析
+            {{ t('松手就分析') }}
           </div>
           <div class="text-label text-muted">
-            文件夹，或者 .zip
+            {{ t('文件夹，或者 .zip') }}
           </div>
         </div>
       </div>

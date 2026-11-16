@@ -7,6 +7,7 @@ import {
   loadBuildPanel
 } from '../store.js'
 import { RefreshCw, Plus } from '@lucide/vue'
+import { t, num } from '../i18n/index.js'
 import BranchManageDialog from './BranchManageDialog.vue'
 
 const creating = ref(false)
@@ -62,9 +63,9 @@ const branches = computed(() => {
 function branchTitle(b) {
   if (b.backend && b.buildid) {
     const desc = b.description ? ` · ${b.description}` : ''
-    return `后台 BuildID ${b.buildid}${desc}`
+    return t('后台 BuildID {id}{desc}', { id: b.buildid, desc })
   }
-  return b.backend ? '后台分支（Web API）' : '本机记下的分支'
+  return b.backend ? t('后台分支（Web API）') : t('本机记下的分支')
 }
 
 function toggleCreating() {
@@ -86,11 +87,13 @@ async function apply(branch) {
   try {
     const res = await setBranch(branch)
     if (!res.ok) {
-      message.value = { tone: 'bad', text: res.error || '写入失败' }
+      message.value = { tone: 'bad', text: res.error || t('写入失败') }
     } else {
       message.value = {
         tone: 'ok',
-        text: branch ? `SetLive 已切成 "${branch}"` : '已清空 SetLive：构建只生成，不自动设到任何分支'
+        text: branch
+          ? t('SetLive 已切成 "{branch}"', { branch })
+          : t('已清空 SetLive：构建只生成，不自动设到任何分支')
       }
       creating.value = false
       draft.value = ''
@@ -117,23 +120,23 @@ watch(appId, () => {
 <template>
   <section class="card p-5 flex flex-col min-w-0" v-reveal="{ delay: 0.05 }">
     <header class="flex items-center gap-2 flex-wrap">
-      <h2 class="font-semibold tracking-tight m-0">分支 / SetLive</h2>
+      <h2 class="font-semibold tracking-tight m-0">{{ t('分支 / SetLive') }}</h2>
       <span
         class="pill"
         :class="current ? 'pill-warn' : 'pill-idle'"
-        :title="current ? `SetLive = ${current}` : 'SetLive 为空：构建只生成，不会自动切到任何分支'"
+        :title="current ? `SetLive = ${current}` : t('SetLive 为空：构建只生成，不会自动切到任何分支')"
       >
-        {{ current || '未设置' }}
+        {{ current || t('未设置') }}
       </span>
       <span class="ml-auto flex items-center gap-1.5">
         <span v-if="hasKey" class="text-micro text-faint">
-          {{ backendBusy ? '读取后台分支…' : backendBetas.length ? `${backendBetas.length} 个后台分支` : '后台分支未读到' }}
+          {{ backendBusy ? t('读取后台分支…') : backendBetas.length ? t('{n} 个后台分支', { n: num(backendBetas.length) }) : t('后台分支未读到') }}
         </span>
         <button
           v-if="hasKey"
           class="btn btn-sm px-2"
           :disabled="backendBusy || !appId"
-          title="从后台刷新分支（Web API GetAppBetas）"
+          :title="t('从后台刷新分支（Web API GetAppBetas）')"
           @click="loadBuildPanel(true)"
         >
           <RefreshCw :size="13" :stroke-width="1.9" :class="backendBusy ? 'animate-spin' : ''" />
@@ -141,7 +144,7 @@ watch(appId, () => {
       </span>
     </header>
 
-    <div class="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="分支">
+    <div class="mt-3 flex flex-wrap items-center gap-1.5" role="group" :aria-label="t('分支')">
       <button
         v-for="b in branches"
         :key="b.key"
@@ -157,29 +160,29 @@ watch(appId, () => {
         class="btn btn-sm no-drag"
         :class="!current ? 'btn-selected' : ''"
         :disabled="busy"
-        title="清空 SetLive：构建只生成，不自动设到任何分支（default 分支要在后台网页手动设 live）"
+        :title="t('清空 SetLive：构建只生成，不自动设到任何分支（default 分支要在后台网页手动设 live）')"
         @click="apply('')"
       >
-        不设分支
+        {{ t('不设分支') }}
       </button>
       <span class="ml-auto flex items-center gap-1.5">
         <button
           class="btn btn-sm"
           :class="creating ? 'border-accent text-accent' : ''"
           :disabled="busy"
-          title="新建一个 beta 分支：只写本地 vdf 的 SetLive，后台还要在 Steamworks 里配"
+          :title="t('新建一个 beta 分支：只写本地 vdf 的 SetLive，后台还要在 Steamworks 里配')"
           @click="toggleCreating"
         >
           <Plus :size="13" :stroke-width="2" />
-          新建分支
+          {{ t('新建分支') }}
         </button>
         <button
           class="btn btn-sm"
           :disabled="!appId"
-          title="管理本机记录的分支；后台分支只读"
+          :title="t('管理本机记录的分支；后台分支只读')"
           @click="manageOpen = true"
         >
-          管理分支
+          {{ t('管理分支') }}
         </button>
       </span>
     </div>
@@ -189,13 +192,13 @@ watch(appId, () => {
         ref="inputEl"
         v-model="draft"
         type="text"
-        placeholder="新分支名，例如 qa / internal"
+        :placeholder="t('新分支名，例如 qa / internal')"
         class="flex-1 h-8 px-3 rounded-input bg-surface border border-line text-body text-ink placeholder:text-faint outline-none focus:border-accent/45 transition-colors"
         @keydown.enter="confirmNew"
         @keydown.esc="creating = false"
       />
-      <button class="btn btn-sm px-3" :disabled="busy || !draft.trim()" @click="confirmNew">写入</button>
-      <button class="btn btn-sm px-2" :disabled="busy" @click="creating = false">取消</button>
+      <button class="btn btn-sm px-3" :disabled="busy || !draft.trim()" @click="confirmNew">{{ t('写入') }}</button>
+      <button class="btn btn-sm px-2" :disabled="busy" @click="creating = false">{{ t('取消') }}</button>
     </div>
 
     <Transition

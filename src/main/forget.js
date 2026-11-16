@@ -13,6 +13,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { loadSettings, saveSettings, credentialsPath } from './store.js'
 import { getPaths, readSteamLogin } from './sdk.js'
+import { t } from './i18n.js'
 
 /**
  * 从文本里删掉一个 "KEY" { ... } 块。
@@ -86,36 +87,36 @@ export function describeLogin(settings) {
   const items = [
     {
       key: 'token',
-      label: 'steamcmd 缓存的登录令牌',
-      detail: sc.cached ? '有（下次构建可以免密）' : '没有',
+      label: t('steamcmd 缓存的登录令牌'),
+      detail: sc.cached ? t('有（下次构建可以免密）') : t('没有'),
       present: sc.cached,
       where: configPath
     },
     {
       key: 'account',
-      label: 'steamcmd 记住的账号名',
-      detail: sc.account || s.account || '没有',
+      label: t('steamcmd 记住的账号名'),
+      detail: sc.account || s.account || t('没有'),
       present: !!(sc.account || s.account),
       where: configPath
     },
     {
       key: 'profile',
-      label: 'steamcmd 的用户档案',
-      detail: users.length ? users.join('、') : '没有',
+      label: t('steamcmd 的用户档案'),
+      detail: users.length ? users.join(t('、')) : t('没有'),
       present: users.length > 0,
       where: userdataDir
     },
     {
       key: 'password',
-      label: '本机保存的密码',
-      detail: fs.existsSync(credPath) ? '已加密存盘' : '没有',
+      label: t('本机保存的密码'),
+      detail: fs.existsSync(credPath) ? t('已加密存盘') : t('没有'),
       present: fs.existsSync(credPath),
       where: credPath
     },
     {
       key: 'log',
-      label: '构建日志里的账号名',
-      detail: logNames.length ? logNames.join('、') : '没有',
+      label: t('构建日志里的账号名'),
+      detail: logNames.length ? logNames.join(t('、')) : t('没有'),
       present: logNames.length > 0,
       where: logPath
     }
@@ -148,11 +149,11 @@ export function forgetLogin(settings) {
       const orig = fs.readFileSync(configPath, 'utf8')
       let next = dropBlock(orig, 'ConnectCache')
       next = dropBlock(next, 'Accounts')
-      if (!countBraces(next)) throw new Error('花括号不配平，没敢写回去')
+      if (!countBraces(next)) throw new Error(t('花括号不配平，没敢写回去'))
       fs.writeFileSync(configPath, next, 'utf8')
-      removed.push('steamcmd 的登录令牌和账号名')
+      removed.push(t('steamcmd 的登录令牌和账号名'))
     } catch (e) {
-      skipped.push(`config.vdf 没清掉：${e.message}`)
+      skipped.push(t('config.vdf 没清掉：{message}', { message: e.message }))
     }
   }
 
@@ -164,9 +165,9 @@ export function forgetLogin(settings) {
         if (n === 'anonymous') continue
         fs.rmSync(path.join(ud, n), { recursive: true, force: true })
       }
-      removed.push('steamcmd 的用户档案')
+      removed.push(t('steamcmd 的用户档案'))
     } catch (e) {
-      skipped.push(`用户档案没删掉：${e.message}`)
+      skipped.push(t('用户档案没删掉：{message}', { message: e.message }))
     }
   }
 
@@ -175,12 +176,12 @@ export function forgetLogin(settings) {
     const cp = credentialsPath()
     if (fs.existsSync(cp)) {
       fs.unlinkSync(cp)
-      removed.push('本机保存的密码')
+      removed.push(t('本机保存的密码'))
     }
     saveSettings({ account: '', rememberPassword: false })
-    removed.push('设置里记住的账号名')
+    removed.push(t('设置里记住的账号名'))
   } catch (e) {
-    skipped.push(`本地凭据没清掉：${e.message}`)
+    skipped.push(t('本地凭据没清掉：{message}', { message: e.message }))
   }
 
   // ---- 4) 日志里的账号名（只把名字换成 ***，不动日志本身）----
@@ -193,13 +194,16 @@ export function forgetLogin(settings) {
       try {
         const text = fs.readFileSync(logPath, 'utf8')
         const names = new Set([...namesInLog(text), pick('account').detail, s.account].filter(Boolean))
+        // 「没有」是 describeLogin 里「这项没有痕迹」的占位文案，不是账号名 —— 别把它当账号名抹掉。
+        // 判断和生成都走同一个 t()，换成英文界面（None）时这条比较照样对得上。
+        const missing = t('没有')
         let next = text
         for (const n of names) {
-          if (n && n !== '没有' && n !== '***') next = next.split(n).join('***')
+          if (n && n !== missing && n !== '***') next = next.split(n).join('***')
         }
         if (next !== text) {
           fs.writeFileSync(logPath, next, 'utf8')
-          removed.push('构建日志里的账号名')
+          removed.push(t('构建日志里的账号名'))
         }
         done = true
       } catch (e) {
@@ -214,8 +218,10 @@ export function forgetLogin(settings) {
     }
     if (!done) {
       skipped.push(
-        `构建日志里的账号名没清掉 —— steamcmd 正占着这个日志文件。` +
-          `把它的控制台窗口关掉再点一次「忘记账号」就行。（${lastErr?.code || lastErr?.message}）`
+        t(
+          '构建日志里的账号名没清掉 —— steamcmd 正占着这个日志文件。把它的控制台窗口关掉再点一次「忘记账号」就行。（{reason}）',
+          { reason: lastErr?.code || lastErr?.message }
+        )
       )
     }
   }

@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { Trophy, Check, LoaderCircle, TriangleAlert } from '@lucide/vue'
 import { state, closeClearAchievements, clearAchievementsNow } from '../store.js'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t } from '../i18n/index.js'
 
 const el = ref(null)
 const c = computed(() => state.clearAchievements)
@@ -76,10 +77,10 @@ onUnmounted(disarm)
         <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
           <TriangleAlert :size="18" class="text-warn shrink-0 mt-0.5" />
           <div class="min-w-0">
-            <h2 id="ach-title" class="text-title font-semibold m-0">清空成就</h2>
+            <h2 id="ach-title" class="text-title font-semibold m-0">{{ t('清空成就') }}</h2>
             <p class="mt-1 mb-0 text-label text-faint leading-relaxed">
-              让本机 Steam 客户端执行 reset_all_stats，把当前登录账号在这个 App 下的成就和统计一起重置。
-              不联网，也不需要 Web API 密钥。
+              {{ t('让本机 Steam 客户端执行 reset_all_stats，把当前登录账号在这个 App 下的成就和统计一起重置。') }}
+              {{ t('不联网，也不需要 Web API 密钥。') }}
             </p>
           </div>
         </header>
@@ -92,9 +93,9 @@ onUnmounted(disarm)
           >
             <Check :size="15" class="text-success shrink-0 mt-0.5" />
             <div class="min-w-0 text-label leading-relaxed">
-              <div class="text-success">已清空 {{ c.appName }} 的 Steam 成就</div>
+              <div class="text-success">{{ t('已清空 {name} 的 Steam 成就', { name: c.appName }) }}</div>
               <div class="mt-1 text-muted">
-                清的是本机 Steam 客户端当前登录的账号。Steam 里的显示可能慢一步 —— 重启游戏或等一会儿再看。
+                {{ t('清的是本机 Steam 客户端当前登录的账号。Steam 里的显示可能慢一步 —— 重启游戏或等一会儿再看。') }}
               </div>
               <div v-if="c.message" class="mt-1.5 text-micro font-mono text-faint break-all">
                 {{ c.message }}
@@ -113,8 +114,8 @@ onUnmounted(disarm)
                 </div>
               </div>
               <div class="px-3.5 py-2.5 text-label text-muted leading-relaxed">
-                清的是<strong class="text-ink font-semibold">本机 Steam 客户端当前登录的账号</strong>的成就。
-                工具不需要密码，也不会上传任何东西。
+                {{ t('清的是') }}<strong class="text-ink font-semibold">{{ t('本机 Steam 客户端当前登录的账号') }}</strong>{{ t('的成就。') }}
+                {{ t('工具不需要密码，也不会上传任何东西。') }}
               </div>
             </div>
 
@@ -122,14 +123,14 @@ onUnmounted(disarm)
               class="rounded-card border border-amber/30 bg-amber/7 px-3.5 py-2.5 text-label text-warn leading-relaxed"
               :class="armed ? '' : 'hidden'"
             >
-              再点一次下面那个红色按钮才会真的清空。关掉窗口就取消。
+              {{ t('再点一次下面那个红色按钮才会真的清空。关掉窗口就取消。') }}
             </div>
 
             <div v-if="c.busy" class="flex items-start gap-2 text-label text-muted leading-relaxed py-1">
               <LoaderCircle :size="14" class="drop-spin-slow shrink-0 mt-0.5" />
               <span>
-                正在调用 Steam 控制台… 期间会短暂把 Steam 切到前台，清完自动切回来。
-                如果 Steam 弹出了别的窗口，可能会失败，重试一次即可。
+                {{ t('正在调用 Steam 控制台… 期间会短暂把 Steam 切到前台，清完自动切回来。') }}
+                {{ t('如果 Steam 弹出了别的窗口，可能会失败，重试一次即可。') }}
               </span>
             </div>
 
@@ -138,7 +139,7 @@ onUnmounted(disarm)
               class="rounded-card border border-danger/30 bg-danger/7 px-3.5 py-2.5 text-label text-danger"
             >
               <div>{{ c.error }}</div>
-              <button class="btn btn-sm mt-2 no-drag" :disabled="c.busy" @click="retry">重试</button>
+              <button class="btn btn-sm mt-2 no-drag" :disabled="c.busy" @click="retry">{{ t('重试') }}</button>
             </div>
           </template>
         </div>
@@ -146,7 +147,7 @@ onUnmounted(disarm)
         <footer class="px-5 py-3.5 border-t border-line flex items-center gap-2">
           <div class="flex-1" />
           <button class="btn" :disabled="c.busy" @click="closeClearAchievements">
-            {{ c.done ? '关闭' : '取消' }}
+            {{ c.done ? t('关闭') : t('取消') }}
           </button>
           <button
             v-if="!c.done"
@@ -155,7 +156,7 @@ onUnmounted(disarm)
             :disabled="c.busy"
             @click="onClearClick"
           >
-            {{ armed ? `确认清空（${left}）` : '清空全部成就' }}
+            {{ armed ? t('确认清空（{n}）', { n: left }) : t('清空全部成就') }}
           </button>
         </footer>
       </div>

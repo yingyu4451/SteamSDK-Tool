@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { ShieldOff, Check, LoaderCircle, TriangleAlert } from '@lucide/vue'
 import { state, closeForget, doForgetLogin } from '../store.js'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t } from '../i18n/index.js'
 
 const el = ref(null)
 const f = computed(() => state.forget)
@@ -63,9 +64,9 @@ onUnmounted(disarm)
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
         <TriangleAlert :size="18" class="text-warn shrink-0 mt-0.5" />
         <div class="min-w-0">
-          <h2 id="forget-title" class="text-title font-semibold m-0">忘记账号</h2>
+          <h2 id="forget-title" class="text-title font-semibold m-0">{{ t('忘记账号') }}</h2>
           <p class="mt-1 mb-0 text-label text-faint leading-relaxed">
-            清掉这台机器上所有的 Steam 登录痕迹，之后构建会重新问你要账号密码。
+            {{ t('清掉这台机器上所有的 Steam 登录痕迹，之后构建会重新问你要账号密码。') }}
           </p>
         </div>
       </header>
@@ -76,7 +77,7 @@ onUnmounted(disarm)
           <div class="rounded-card border border-success/30 bg-success/[0.07] px-3.5 py-3 flex items-start gap-2">
             <Check :size="15" class="text-success shrink-0 mt-0.5" />
             <div class="min-w-0 text-label leading-relaxed">
-              <div class="text-success">已清掉 {{ result.removed.length }} 项</div>
+              <div class="text-success">{{ t('已清掉 {n} 项', { n: result.removed.length }) }}</div>
               <ul class="mt-1.5 mb-0 pl-4 text-muted">
                 <li v-for="(r, i) in result.removed" :key="i">{{ r }}</li>
               </ul>
@@ -90,11 +91,11 @@ onUnmounted(disarm)
 
         <!-- 清之前：列清单 -->
         <template v-else>
-          <div class="text-label text-muted">会处理这些：</div>
+          <div class="text-label text-muted">{{ t('会处理这些：') }}</div>
 
           <div v-if="f.busy && !items.length" class="flex items-center gap-2 text-label text-faint py-2">
             <LoaderCircle :size="14" class="drop-spin-slow" />
-            正在检查…
+            {{ t('正在检查…') }}
           </div>
 
           <div v-else class="rounded-card border border-line divide-y divide-line">
@@ -111,7 +112,7 @@ onUnmounted(disarm)
             class="rounded-card border border-amber/30 bg-amber/7 px-3.5 py-2.5 text-label text-warn leading-relaxed"
             :class="armed ? '' : 'hidden'"
           >
-            再点一次下面那个红色按钮才会真的清。关掉窗口就取消。
+            {{ t('再点一次下面那个红色按钮才会真的清。关掉窗口就取消。') }}
           </div>
         </template>
 
@@ -122,7 +123,7 @@ onUnmounted(disarm)
 
       <footer class="px-5 py-3.5 border-t border-line flex items-center gap-2">
         <div class="flex-1" />
-        <button class="btn" @click="closeForget">{{ result ? '关闭' : '取消' }}</button>
+        <button class="btn" @click="closeForget">{{ result ? t('关闭') : t('取消') }}</button>
         <button
           v-if="!result"
           class="btn"
@@ -130,7 +131,7 @@ onUnmounted(disarm)
           :disabled="f.busy || !f.data?.any"
           @click="onForgetClick"
         >
-          {{ armed ? `确认清空（${left}）` : '清空登录数据' }}
+          {{ armed ? t('确认清空（{n}）', { n: left }) : t('清空登录数据') }}
         </button>
       </footer>
     </div>

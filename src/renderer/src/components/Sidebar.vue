@@ -32,6 +32,7 @@ import {
   folderAlphaOf,
   FOLDER_COLORS
 } from '../store.js'
+import { problemId, t } from '../i18n/index.js'
 import { useListStagger } from '../motion.js'
 import EmptyState from './EmptyState.vue'
 import AppCard from './AppCard.vue'
@@ -45,11 +46,12 @@ watch(
   { immediate: true }
 )
 
+// label 存的是中文 key，模板里用 t(n.label) 现翻（切语言才会跟着重渲染）
 const nav = [
-  { id: 'workbench', label: '工作台', icon: LayoutDashboard },
-  { id: 'history', label: '构建历史', icon: History },
-  { id: 'manual', label: '使用手册', icon: BookOpen },
-  { id: 'settings', label: '设置', icon: Settings }
+  { id: 'workbench', label: '工作台', icon: LayoutDashboard }, // i18n-ignore
+  { id: 'history', label: '构建历史', icon: History }, // i18n-ignore
+  { id: 'manual', label: '使用手册', icon: BookOpen }, // i18n-ignore
+  { id: 'settings', label: '设置', icon: Settings } // i18n-ignore
 ]
 
 const appCount = computed(() => state.apps.length)
@@ -642,7 +644,9 @@ function onCardClick(app) {
 function activeProblems(app) {
   const perm = new Set(app.problemsIgnored || [])
   const sess = new Set(state.sessionIgnored?.[app.dirName] || [])
-  return (app.problems || []).filter((t) => !perm.has(t) && !sess.has(t)).length
+  // 身份用固定中文渲染（problemId），界面语言不影响忽略状态
+  return (app.problems || []).filter((p) => !perm.has(problemId(p)) && !sess.has(problemId(p)))
+    .length
 }
 
 function healthOf(app) {
@@ -659,15 +663,15 @@ function healthOf(app) {
 function healthTitle(app) {
   const h = healthOf(app)
   if (h === 'bad') {
-    if ((app.depots || []).some((d) => d.missing)) return '有 Depot 的脚本文件不在了'
-    if (!app.appId) return '没有 AppID'
-    return 'AppID 和别的本地 App 撞车'
+    if ((app.depots || []).some((d) => d.missing)) return t('有 Depot 的脚本文件不在了')
+    if (!app.appId) return t('没有 AppID')
+    return t('AppID 和别的本地 App 撞车')
   }
   if (h === 'warn') {
     const n = activeProblems(app)
-    return n ? `有待处理 ${n} 项` : '项目文件夹不存在'
+    return n ? t('有待处理 {n} 项', { n }) : t('项目文件夹不存在')
   }
-  return '一切正常'
+  return t('一切正常')
 }
 </script>
 
@@ -683,7 +687,7 @@ function healthTitle(app) {
         @click="state.view = n.id"
       >
         <component :is="n.icon" :size="16" :stroke-width="1.8" class="shrink-0" />
-        {{ n.label }}
+        {{ t(n.label) }}
       </button>
     </nav>
 
@@ -695,16 +699,16 @@ function healthTitle(app) {
       <span class="num text-micro text-faint">{{ appCount }}</span>
       <button
         class="ml-auto w-7 h-7 grid place-items-center rounded-btn text-faint hover:text-accent hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent"
-        title="新建文件夹（把 App 拖进去分类）"
-        aria-label="新建文件夹"
+        :title="t('新建文件夹（把 App 拖进去分类）')"
+        :aria-label="t('新建文件夹')"
         @click="beginCreateFolder"
       >
         <FolderPlus :size="14" :stroke-width="2" />
       </button>
       <button
         class="w-7 h-7 grid place-items-center rounded-btn text-faint hover:text-accent hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent"
-        title="重新扫描 scripts 目录"
-        aria-label="重新扫描 scripts 目录"
+        :title="t('重新扫描 scripts 目录')"
+        :aria-label="t('重新扫描 scripts 目录')"
         @click="rescan"
       >
         <RefreshCw
@@ -715,8 +719,8 @@ function healthTitle(app) {
       </button>
       <button
         class="w-7 h-7 grid place-items-center rounded-btn text-faint hover:text-accent hover:bg-surface-2 transition-colors cursor-pointer border-0 bg-transparent"
-        title="新建 App（Demo / 正式版 / 新平台）"
-        aria-label="新建 App"
+        :title="t('新建 App（Demo / 正式版 / 新平台）')"
+        :aria-label="t('新建 App')"
         @click="openWizard"
       >
         <Plus :size="14" :stroke-width="2.2" />
@@ -734,7 +738,7 @@ function healthTitle(app) {
           ref="folderInput"
           v-model="folderName"
           class="flex-1 min-w-0 bg-transparent border-0 outline-none text-body text-ink"
-          placeholder="文件夹名称，回车创建"
+          :placeholder="t('文件夹名称，回车创建')"
           @keydown.enter.prevent="confirmCreateFolder"
           @keydown.esc.prevent="cancelCreateFolder"
           @blur="confirmCreateFolder"
@@ -771,7 +775,7 @@ function healthTitle(app) {
               role="button"
               tabindex="0"
               :aria-expanded="!folderLooksCollapsed(row.folder)"
-              :title="`${row.folder.collapsed ? '展开' : '折叠'}「${row.folder.name}」；拖动标题行可排序；把 App 拖到这里分类`"
+              :title="t('{action}「{name}」；拖动标题行可排序；把 App 拖到这里分类', { action: row.folder.collapsed ? t('展开') : t('折叠'), name: row.folder.name })"
               @pointerdown="(e) => onFolderPointerDown(e, row.folder)"
               @click="onFolderClick(row.folder.id)"
               @keydown.enter.prevent="toggleFolder(row.folder.id)"
@@ -809,19 +813,19 @@ function healthTitle(app) {
                   class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-btn bg-black/60 px-1.5 py-0.5"
                   @click.stop
                 >
-                  <span class="text-micro text-muted">删除？</span>
+                  <span class="text-micro text-muted">{{ t('删除？') }}</span>
                   <button
                     class="text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer px-1"
                     @click="cancelDeleteFolder"
                   >
-                    取消
+                    {{ t('取消') }}
                   </button>
                   <button
                     class="text-micro text-danger hover:text-ink bg-transparent border-0 cursor-pointer px-1 font-semibold"
-                    title="删除文件夹（里面的 App 回到未分类，App 本身不受影响）"
+                    :title="t('删除文件夹（里面的 App 回到未分类，App 本身不受影响）')"
                     @click="doDeleteFolder(row.folder.id)"
                   >
-                    删除
+                    {{ t('删除') }}
                   </button>
                 </span>
                 <span
@@ -830,7 +834,7 @@ function healthTitle(app) {
                 >
                   <button
                     class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 border-0 bg-transparent cursor-pointer"
-                    title="调色：颜色与边框亮度"
+                    :title="t('调色：颜色与边框亮度')"
                     data-color-toggle="1"
                     @click.stop="toggleColorPopover(row.folder.id, $event)"
                   >
@@ -838,14 +842,14 @@ function healthTitle(app) {
                   </button>
                   <button
                     class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 border-0 bg-transparent cursor-pointer"
-                    title="重命名文件夹"
+                    :title="t('重命名文件夹')"
                     @click.stop="beginRenameFolder(row.folder)"
                   >
                     <Pencil :size="12" :stroke-width="2" />
                   </button>
                   <button
                     class="w-6 h-6 grid place-items-center rounded-btn text-faint hover:text-danger hover:bg-danger/14 border-0 bg-transparent cursor-pointer"
-                    title="删除文件夹（会先确认；里面的 App 回到未分类）"
+                    :title="t('删除文件夹（会先确认；里面的 App 回到未分类）')"
                     @click.stop="askDeleteFolder(row.folder.id)"
                   >
                     <Trash2 :size="12" :stroke-width="2" />
@@ -880,11 +884,11 @@ function healthTitle(app) {
                   step="1"
                   class="pick-range pick-hue mt-2.5"
                   :value="Math.round(pickHsv.h * 360)"
-                  aria-label="色相"
+                  :aria-label="t('色相')"
                   @input="onHueInput"
                 />
                 <div class="mt-2 flex items-center gap-2">
-                  <span class="text-micro text-faint shrink-0">透明度</span>
+                  <span class="text-micro text-faint shrink-0">{{ t('透明度') }}</span>
                   <input
                     type="range"
                     min="0"
@@ -893,7 +897,7 @@ function healthTitle(app) {
                     class="pick-range pick-alpha flex-1"
                     :style="{ '--pick-color': pickColor }"
                     :value="Math.round(pickAlpha * 100)"
-                    aria-label="透明度（文件夹边框不透明度）"
+                    :aria-label="t('透明度（文件夹边框不透明度）')"
                     @input="onAlphaInput"
                   />
                   <span class="text-micro num text-ink w-9 text-right">{{ Math.round(pickAlpha * 100) }}%</span>
@@ -905,7 +909,7 @@ function healthTitle(app) {
                     class="ml-auto text-micro text-faint hover:text-ink bg-transparent border-0 cursor-pointer whitespace-nowrap"
                     @click="resetFolderLook(row.folder.id)"
                   >
-                    恢复默认
+                    {{ t('恢复默认') }}
                   </button>
                 </div>
               </div>
@@ -937,9 +941,9 @@ function healthTitle(app) {
             class="flex items-center gap-1.5 h-6 px-1 mt-1 text-micro text-faint select-none"
             :class="drag.active && drag.dropFolder === '' ? 'text-accent' : ''"
           >
-            <span class="tracking-wider uppercase">未分类</span>
+            <span class="tracking-wider uppercase">{{ t('未分类') }}</span>
             <span class="num">{{ looseApps.length }}</span>
-            <span class="ml-auto text-faint/70">{{ drag.active ? '拖到这里移出文件夹' : '' }}</span>
+            <span class="ml-auto text-faint/70">{{ drag.active ? t('拖到这里移出文件夹') : '' }}</span>
           </div>
 
           <!-- 未分类的 App 卡片 -->
@@ -1014,8 +1018,8 @@ function healthTitle(app) {
     </div>
 
     <div v-if="!state.apps.length && !state.scanning" class="px-3 pb-3">
-        <EmptyState compact :icon="FolderPlus" title="还没有 App" hint="点右上角 + 新建一个，或把游戏文件夹拖进窗口。">
-          <button class="btn btn-sm" @click="openWizard">新建 App</button>
+        <EmptyState compact :icon="FolderPlus" :title="t('还没有 App')" :hint="t('点右上角 + 新建一个，或把游戏文件夹拖进窗口。')">
+          <button class="btn btn-sm" @click="openWizard">{{ t('新建 App') }}</button>
         </EmptyState>
       </div>
 

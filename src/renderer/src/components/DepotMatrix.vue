@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { fmtSize, fmtInt, fmtTime } from '../format.js'
+import { t, listSeparator } from '../i18n/index.js'
 import { state, openDrawer, reloadDetail, toast, openDepotSlide, setActiveDepot, PLATFORM_LABEL, depotUploadEnabled, toggleDepotUpload } from '../store.js'
 import PathLink from './PathLink.vue'
 import EmptyState from './EmptyState.vue'
@@ -29,23 +30,25 @@ const current = computed(() => {
 
 function depotState(d) {
   if (!d) return { tone: 'idle', text: '' }
-  if (d.missing) return { tone: 'bad', text: '脚本缺失' }
-  if (!d.idMatches) return { tone: 'bad', text: 'DepotID 不一致' }
-  if (!d.analysis?.exists) return { tone: 'warn', text: '内容目录不存在' }
-  if (d.analysis.suspicious?.length) return { tone: 'warn', text: `${d.analysis.suspicious.length} 个可疑文件` }
-  return { tone: 'ok', text: '配置通过' }
+  if (d.missing) return { tone: 'bad', text: t('脚本缺失') }
+  if (!d.idMatches) return { tone: 'bad', text: t('DepotID 不一致') }
+  if (!d.analysis?.exists) return { tone: 'warn', text: t('内容目录不存在') }
+  if (d.analysis.suspicious?.length) {
+    return { tone: 'warn', text: t('{n} 个可疑文件', { n: d.analysis.suspicious.length }) }
+  }
+  return { tone: 'ok', text: t('配置通过') }
 }
 
 /** 「就绪」太笼统，悬停时把检查过哪几项写清楚 */
 function depotStateHint(d) {
   if (!d) return ''
-  if (d.missing) return 'app vdf 引用的 depot 脚本不存在'
-  if (!d.idMatches) return '脚本里的 DepotID 与 app vdf 里写的不一致'
-  if (!d.analysis?.exists) return 'vdf 里的内容目录不存在：点「创建目录」，或在编辑抽屉里改'
+  if (d.missing) return t('app vdf 引用的 depot 脚本不存在')
+  if (!d.idMatches) return t('脚本里的 DepotID 与 app vdf 里写的不一致')
+  if (!d.analysis?.exists) return t('vdf 里的内容目录不存在：点「创建目录」，或在编辑抽屉里改')
   if (d.analysis.suspicious?.length) {
-    return `内容目录里有 ${d.analysis.suspicious.length} 个可疑文件；跑一次「检查文件」看详情`
+    return t('内容目录里有 {n} 个可疑文件；跑一次「检查文件」看详情', { n: d.analysis.suspicious.length })
   }
-  return '配置检查通过：脚本存在、DepotID 与文件名一致、内容目录存在、没有可疑文件（来自「检查配置」；实际文件另看「检查文件」）'
+  return t('配置检查通过：脚本存在、DepotID 与文件名一致、内容目录存在、没有可疑文件（来自「检查配置」；实际文件另看「检查文件」）')
 }
 
 /** 文件检查（检查文件）的结果：按 Depot 单独检查、单独缓存；和上面的配置检查是两码事 */
@@ -54,25 +57,29 @@ function fileState(d) {
   // 收起弹层只清 state.preflight，每个 Depot 的结果留在这里
   const pf = state.preflightByDepot?.[state.selectedDir]?.[String(d.id)]
   if (!pf) {
-    return { tone: 'idle', text: '文件未检查', hint: `点上方「检查文件」只扫这一个 Depot（${d.id}）真正会被上传的文件` }
+    return {
+      tone: 'idle',
+      text: t('文件未检查'),
+      hint: t('点上方「检查文件」只扫这一个 Depot（{id}）真正会被上传的文件', { id: d.id })
+    }
   }
   const errs = pf.errors || 0
   const warns = pf.warns || 0
   if (errs) {
     return {
       tone: 'bad',
-      text: `文件 ${errs} 个问题`,
-      hint: `这个 Depot 扫出 ${errs} 个会拦住上传的文件问题（非法字符/超长路径/大小写冲突等）；点「检查文件」看详情`
+      text: t('文件 {n} 个问题', { n: errs }),
+      hint: t('这个 Depot 扫出 {n} 个会拦住上传的文件问题（非法字符/超长路径/大小写冲突等）；点「检查文件」看详情', { n: errs })
     }
   }
   if (warns) {
     return {
       tone: 'warn',
-      text: `文件 ${warns} 个警告`,
-      hint: `这个 Depot 扫出 ${warns} 个警告（符号链接 / macOS 元数据 / .app 包等），点「检查文件」看详情`
+      text: t('文件 {n} 个警告', { n: warns }),
+      hint: t('这个 Depot 扫出 {n} 个警告（符号链接 / macOS 元数据 / .app 包等），点「检查文件」看详情', { n: warns })
     }
   }
-  return { tone: 'ok', text: '文件通过', hint: '最近一次对这个 Depot 的「检查文件」没有发现会拦住上传的问题' }
+  return { tone: 'ok', text: t('文件通过'), hint: t('最近一次对这个 Depot 的「检查文件」没有发现会拦住上传的问题') }
 }
 
 function toneCls(t) {
@@ -124,15 +131,15 @@ const importedInfo = computed(() => {
 
 async function createDir(d) {
   const res = await window.api.app.ensureContentDir(state.selectedDir, d.file)
-  if (!res.ok) return toast(res.error || '创建失败', 'bad')
+  if (!res.ok) return toast(res.error || t('创建失败'), 'bad')
   await reloadDetail()
-  toast(res.created ? `已创建 ${res.contentRoot}` : `${res.contentRoot} 早就存在`)
+  toast(res.created ? t('已创建 {path}', { path: res.contentRoot }) : t('{path} 早就存在', { path: res.contentRoot }))
 }
 
 async function openPath(p) {
   if (!p) return
   const r = await window.api.shell.openPath(p)
-  if (!r.ok) toast(r.error || '打不开', 'bad')
+  if (!r.ok) toast(r.error || t('打不开'), 'bad')
 }
 </script>
 
@@ -142,7 +149,7 @@ async function openPath(p) {
       <h2 class="font-semibold tracking-tight m-0">Depot</h2>
       <span class="text-label text-faint num">{{ sortedDepots.length }}</span>
       <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="openDepotSlide()">
-        ＋ 新建 Depot
+        {{ t('＋ 新建 Depot') }}
       </button>
     </header>
 
@@ -180,7 +187,7 @@ async function openPath(p) {
           </div>
           <div class="mt-1 flex items-center gap-1.5 text-micro text-faint num min-w-0">
             <span class="font-mono truncate">{{ d.id }}</span>
-            <span v-if="!depotUploadEnabled(state.selectedDir, d.id)" class="shrink-0 text-amber">不上传</span>
+            <span v-if="!depotUploadEnabled(state.selectedDir, d.id)" class="shrink-0 text-amber">{{ t('不上传') }}</span>
           </div>
         </button>
         <!-- 只有图标的上传开关：按下=参与构建上传，弹起=构建时跳过 -->
@@ -193,11 +200,11 @@ async function openPath(p) {
           "
           :title="
             depotUploadEnabled(state.selectedDir, d.id)
-              ? '这个 Depot 会随构建上传；点击改为不上传'
-              : '这个 Depot 不会上传；点击改为上传'
+              ? t('这个 Depot 会随构建上传；点击改为不上传')
+              : t('这个 Depot 不会上传；点击改为上传')
           "
           :aria-pressed="depotUploadEnabled(state.selectedDir, d.id)"
-          :aria-label="`切换 ${platLabel(d.platform)} Depot 上传`"
+          :aria-label="t('切换 {platform} Depot 上传', { platform: platLabel(d.platform) })"
           @click.stop="toggleDepotUpload(d.id)"
         >
           <component
@@ -227,10 +234,10 @@ async function openPath(p) {
               class="btn btn-sm px-2.5  no-drag border-amber/30 text-amber hover:bg-amber/8"
               @click="createDir(current)"
             >
-              创建目录
+              {{ t('创建目录') }}
             </button>
             <button class="btn btn-sm px-2.5  no-drag" @click="openDrawer('depot', current.file)">
-              编辑
+              {{ t('编辑') }}
             </button>
           </div>
         </div>
@@ -241,17 +248,17 @@ async function openPath(p) {
           class="mt-3 flex items-center rounded-card border border-line-soft bg-black/15 px-3 py-2"
         >
           <div class="flex-1 min-w-0">
-            <div class="text-micro text-faint">磁盘文件</div>
+            <div class="text-micro text-faint">{{ t('磁盘文件') }}</div>
             <div class="num text-lead font-semibold mt-0.5">{{ fmtInt(a.fileCount) }}</div>
           </div>
           <div class="w-px self-stretch bg-line-soft/70 mx-2"></div>
           <div class="flex-1 min-w-0">
-            <div class="text-micro text-faint">总体积</div>
+            <div class="text-micro text-faint">{{ t('总体积') }}</div>
             <div class="num text-lead font-semibold mt-0.5">{{ fmtSize(a.totalBytes) }}</div>
           </div>
           <div class="w-px self-stretch bg-line-soft/70 mx-2"></div>
           <div class="flex-1 min-w-0">
-            <div class="text-micro" :class="a.excludedCount ? 'text-amber' : 'text-faint'">被排除</div>
+            <div class="text-micro" :class="a.excludedCount ? 'text-amber' : 'text-faint'">{{ t('被排除') }}</div>
             <div
               class="num text-lead font-semibold mt-0.5"
               :class="a.excludedCount ? 'text-amber' : 'text-faint'"
@@ -261,7 +268,7 @@ async function openPath(p) {
           </div>
           <div class="w-px self-stretch bg-line-soft/70 mx-2"></div>
           <div class="flex-1 min-w-0">
-            <div class="text-micro text-accent">会上传</div>
+            <div class="text-micro text-accent">{{ t('会上传') }}</div>
             <div class="num text-lead font-semibold mt-0.5 text-accent">{{ fmtInt(a.uploadCount) }}</div>
           </div>
         </div>
@@ -271,7 +278,7 @@ async function openPath(p) {
           class="mt-2 rounded-card border border-line-soft bg-black/15 px-3 divide-y divide-line-soft/60"
         >
           <div class="flex items-start gap-2 text-label min-w-0 py-2">
-            <span class="shrink-0 w-16 pt-1 text-faint">内容目录</span>
+            <span class="shrink-0 w-16 pt-1 text-faint">{{ t('内容目录') }}</span>
             <PathLink
               v-if="a?.contentRoot"
               :path="a.contentRoot"
@@ -279,10 +286,10 @@ async function openPath(p) {
               :exists="!!a.exists"
               class="min-w-0 flex-1"
             />
-            <span v-else class="text-faint">未设置</span>
+            <span v-else class="text-faint">{{ t('未设置') }}</span>
           </div>
           <div class="flex items-start gap-2 text-label min-w-0 py-2">
-            <span class="shrink-0 w-16 pt-1 text-faint">脚本</span>
+            <span class="shrink-0 w-16 pt-1 text-faint">{{ t('脚本') }}</span>
             <PathLink :path="scriptPath" kind="file" class="min-w-0 flex-1" />
           </div>
           <div
@@ -290,22 +297,22 @@ async function openPath(p) {
             class="flex items-center gap-2 text-label min-w-0 py-2"
             :title="
               importedInfo.from === 'record'
-                ? '用「导入文件」导入这个 Depot 时记录的时间'
-                : '这个 Depot 没有导入记录；显示的是内容目录里最新文件的修改时间'
+                ? t('用「导入文件」导入这个 Depot 时记录的时间')
+                : t('这个 Depot 没有导入记录；显示的是内容目录里最新文件的修改时间')
             "
           >
-            <span class="shrink-0 w-16 text-faint">导入时间</span>
+            <span class="shrink-0 w-16 text-faint">{{ t('导入时间') }}</span>
             <span class="font-mono text-muted">{{ fmtTime(importedInfo.ms) }}</span>
           </div>
           <div v-if="current.userConfig?.length" class="flex items-start gap-2 text-label min-w-0 py-2">
-            <span class="shrink-0 w-16 text-faint">存档保护</span>
+            <span class="shrink-0 w-16 text-faint">{{ t('存档保护') }}</span>
             <span class="font-mono break-all text-muted">
-              {{ current.userConfig.join('、') }}
+              {{ current.userConfig.join(listSeparator()) }}
             </span>
           </div>
           <div v-else class="flex items-center gap-2 text-label min-w-0 py-2">
-            <span class="shrink-0 w-16 text-faint">存档保护</span>
-            <span class="text-amber">没标任何玩家数据文件</span>
+            <span class="shrink-0 w-16 text-faint">{{ t('存档保护') }}</span>
+            <span class="text-amber">{{ t('没标任何玩家数据文件') }}</span>
           </div>
         </div>
       </div>
@@ -321,9 +328,9 @@ async function openPath(p) {
         :stroke-width="2.4"
         :class="['text-danger transition-transform', showSuspicious && 'rotate-90']"
       />
-          <span class="text-label font-normal text-danger">会被上传的可疑文件</span>
+          <span class="text-label font-normal text-danger">{{ t('会被上传的可疑文件') }}</span>
           <span class="num text-label text-faint">{{ a.suspicious.length }}</span>
-          <span class="ml-auto text-micro text-faint">这些应该加进 FileExclusion</span>
+          <span class="ml-auto text-micro text-faint">{{ t('这些应该加进 FileExclusion') }}</span>
         </button>
         <div class="collapsible" :class="{ 'is-open': showSuspicious }">
           <div>
@@ -352,9 +359,9 @@ async function openPath(p) {
         :stroke-width="2.4"
         :class="['text-amber transition-transform', showExcluded && 'rotate-90']"
       />
-          <span class="text-label font-normal text-amber">被 FileExclusion 挡下的文件</span>
+          <span class="text-label font-normal text-amber">{{ t('被 FileExclusion 挡下的文件') }}</span>
           <span class="num text-label text-faint">{{ a?.excludedCount || 0 }}</span>
-          <span class="ml-auto text-micro text-faint">只不上传，本地都还在</span>
+          <span class="ml-auto text-micro text-faint">{{ t('只不上传，本地都还在') }}</span>
         </button>
         <div class="collapsible" :class="{ 'is-open': showExcluded }">
           <div>
@@ -364,7 +371,7 @@ async function openPath(p) {
                   <code class="text-micro text-accent bg-accent/7 border border-accent/18 rounded px-1.5 py-0.5">
                     {{ rule }}
                   </code>
-                  <span class="num text-micro text-faint">{{ files.length }} 个</span>
+                  <span class="num text-micro text-faint">{{ files.length }} {{ t('个文件', { n: files.length }) }}</span>
                 </div>
                 <div
                   v-for="(f, i) in files.slice(0, 30)"
@@ -375,11 +382,11 @@ async function openPath(p) {
                   {{ f.rel }}
                 </div>
                 <div v-if="files.length > 30" class="text-micro text-faint pl-1">
-                  … 还有 {{ files.length - 30 }} 个
+                  {{ t('… 还有 {n} 个', { n: files.length - 30 }) }}
                 </div>
               </div>
               <div v-if="!excludedByRule.length" class="text-label text-faint py-1">
-                没有文件被排除。
+                {{ t('没有文件被排除。') }}
               </div>
             </div>
           </div>
@@ -388,7 +395,7 @@ async function openPath(p) {
     </div>
 
     <div v-else class="border-t border-line px-5 py-3">
-      <EmptyState compact :icon="Package" title="还没有 Depot" hint="点右上角「新建 Depot」，按平台各建一个 —— 一次构建会全平台一起传。" />
+      <EmptyState compact :icon="Package" :title="t('还没有 Depot')" :hint="t('点右上角「新建 Depot」，按平台各建一个 —— 一次构建会全平台一起传。')" />
     </div>
   </section>
 </template>

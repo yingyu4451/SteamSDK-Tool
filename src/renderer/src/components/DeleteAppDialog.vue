@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { state, closeDeleteDialog, confirmDelete } from '../store.js'
 import { fmtSize, fmtInt } from '../format.js'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t } from '../i18n/index.js'
 
 const el = ref(null)
 const btn = ref(null)
@@ -95,12 +96,12 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
     >
       <header class="px-6 pt-5 pb-4 border-b border-line">
         <h2 id="delete-app-title" class="text-title font-semibold m-0 text-danger">
-          删除 App「{{ d.dirName }}」
+          {{ t('删除 App「{name}」', { name: d.dirName }) }}
         </h2>
-        <p class="mt-1.5 mb-0 text-label text-danger">不可撤销。Steam 上已传的构建不受影响。</p>
+        <p class="mt-1.5 mb-0 text-label text-danger">{{ t('不可撤销。Steam 上已传的构建不受影响。') }}</p>
       </header>
 
-      <div v-if="d.loading" class="p-6 text-body text-muted">正在统计要删的东西…</div>
+      <div v-if="d.loading" class="p-6 text-body text-muted">{{ t('正在统计要删的东西…') }}</div>
 
       <div v-else-if="d.error" class="p-6 text-body text-danger">{{ d.error }}</div>
 
@@ -108,25 +109,25 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
         <!-- 脚本目录（一定会删） -->
         <div class="rounded-card border border-danger/22 bg-danger/5 p-3.5">
           <div class="flex items-center gap-2">
-            <span class="pill pill-bad">一定会删</span>
-            <span class="text-label font-normal">构建脚本目录</span>
+            <span class="pill pill-bad">{{ t('一定会删') }}</span>
+            <span class="text-label font-normal">{{ t('构建脚本目录') }}</span>
             <span class="ml-auto num text-label text-faint">
-              {{ d.info.scripts.files }} 个文件 · {{ fmtSize(d.info.scripts.bytes) }}
+              {{ t('{n} 个文件 · {size}', { n: d.info.scripts.files, size: fmtSize(d.info.scripts.bytes) }) }}
             </span>
           </div>
           <div class="mt-2 font-mono text-label text-danger/80 break-all">{{ d.info.scripts.path }}</div>
           <div class="mt-1.5 text-micro text-faint">
-            包含 app_{{ d.info.appId }}.vdf 和所有 depot 脚本。以后再想要这个版本，得重新建一遍。
+            {{ t('包含 app_{id}.vdf 和所有 depot 脚本。以后再想要这个版本，得重新建一遍。', { id: d.info.appId }) }}
           </div>
         </div>
 
         <!-- 内容目录（可选） -->
         <div class="rounded-card border border-line bg-surface p-3.5">
           <div class="flex items-center gap-2">
-            <span class="pill" :class="deletableContent.length ? 'pill-warn' : 'pill-idle'">可选</span>
-            <span class="text-label font-normal">内容目录</span>
+            <span class="pill" :class="deletableContent.length ? 'pill-warn' : 'pill-idle'">{{ t('可选') }}</span>
+            <span class="text-label font-normal">{{ t('内容目录') }}</span>
             <span v-if="deletableContent.length" class="ml-auto num text-label text-faint">
-              {{ fmtInt(contentTotals.files) }} 个文件 · {{ fmtSize(contentTotals.bytes) }}
+              {{ t('{n} 个文件 · {size}', { n: fmtInt(contentTotals.files), size: fmtSize(contentTotals.bytes) }) }}
             </span>
           </div>
 
@@ -136,8 +137,8 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
           >
             <input type="checkbox" v-model="d.deleteContent" class="accent-[#e24b4b] mt-0.5" />
             <span>
-              同时删除下面的内容目录
-              <span class="text-faint">（游戏构建产物，删了要重新打包，确认不需要了再勾）</span>
+              {{ t('同时删除下面的内容目录') }}
+              <span class="text-faint">{{ t('（游戏构建产物，删了要重新打包，确认不需要了再勾）') }}</span>
             </span>
           </label>
 
@@ -147,20 +148,20 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
               <span class="font-mono break-all flex-1" :class="c.exists ? 'text-muted' : 'text-faint line-through'">
                 {{ c.path }}
               </span>
-              <span v-if="!c.exists" class="text-faint shrink-0">不存在</span>
+              <span v-if="!c.exists" class="text-faint shrink-0">{{ t('不存在') }}</span>
               <span
                 v-else-if="!c.deletable"
                 class="text-amber shrink-0"
-                title="不在设置里的 buildsRoot 之内，为安全起见不会删"
+                :title="t('不在设置里的 buildsRoot 之内，为安全起见不会删')"
               >
-                跳过（不在 buildsRoot 内）
+                {{ t('跳过（不在 buildsRoot 内）') }}
               </span>
-              <span v-else class="num text-faint shrink-0">{{ fmtInt(c.files) }} 个 · {{ fmtSize(c.bytes) }}</span>
+              <span v-else class="num text-faint shrink-0">{{ t('{n} 个 · {size}', { n: fmtInt(c.files), size: fmtSize(c.bytes) }) }}</span>
             </div>
           </div>
 
           <div v-if="!deletableContent.length" class="mt-2 text-micro text-faint">
-            没有可删的内容目录，所以这次只会删脚本。
+            {{ t('没有可删的内容目录，所以这次只会删脚本。') }}
           </div>
         </div>
 
@@ -169,14 +170,14 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
           v-if="armed"
           class="rounded-card border border-danger/30 bg-danger/7 px-3.5 py-2.5 text-label text-danger"
         >
-          再点一次底下那个红色按钮才会真的删。改勾选或关掉窗口都会取消。
+          {{ t('再点一次底下那个红色按钮才会真的删。改勾选或关掉窗口都会取消。') }}
         </div>
       </div>
 
       <footer class="px-6 py-4 border-t border-line flex items-center gap-2">
-        <span class="text-micro text-faint">Steam 后台的 App / Depot 不受影响</span>
+        <span class="text-micro text-faint">{{ t('Steam 后台的 App / Depot 不受影响') }}</span>
         <div class="flex-1" />
-        <button class="btn no-drag" @click="closeDeleteDialog">取消</button>
+        <button class="btn no-drag" @click="closeDeleteDialog">{{ t('取消') }}</button>
         <button
           ref="btn"
           class="btn no-drag"
@@ -184,9 +185,9 @@ const canDelete = computed(() => !!d.value && !d.value.busy && !d.value.loading 
           :disabled="!canDelete"
           @click="onDeleteClick"
         >
-          <template v-if="d.busy">删除中…</template>
-          <template v-else-if="armed">确认删除（{{ left }}）</template>
-          <template v-else>删除这个 App</template>
+          <template v-if="d.busy">{{ t('删除中…') }}</template>
+          <template v-else-if="armed">{{ t('确认删除（{n}）', { n: left }) }}</template>
+          <template v-else>{{ t('删除这个 App') }}</template>
         </button>
       </footer>
     </div>

@@ -2,8 +2,14 @@
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { Minus, Square, Copy, X } from '@lucide/vue'
 import { state, goSettings, updateBuildScripts } from '../store.js'
+import { t, listSeparator } from '../i18n/index.js'
 
 const upd = computed(() => state.update?.data || null)
+
+/** 构建脚本哪几个要同步：中文用「、」分隔，英文用逗号 */
+const staleNames = computed(() =>
+  [...(state.scriptUpdate?.missing || []), ...(state.scriptUpdate?.stale || [])].join(listSeparator())
+)
 
 /* ---- 自己画的窗口按钮 ----
  * 用 frame:false + 这套按钮，而不是系统的 titleBarOverlay：
@@ -57,7 +63,7 @@ const win = window.api.win
         <polygon points="70,152 128,186 128,236 70,202" fill="#3f92c9" />
         <polygon points="186,152 128,186 128,236 186,202" fill="#245c8c" />
       </svg>
-      <span class="s-brand whitespace-nowrap">SteamSDK 上传工作台</span>
+      <span class="s-brand whitespace-nowrap">{{ t('SteamSDK 上传工作台') }}</span>
     </div>
 
     <div class="h-4 w-px bg-line" />
@@ -81,7 +87,7 @@ const win = window.api.win
         >
           <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
           <span class="text-label text-accent font-normal">
-            {{ state.runKind === 'check' ? '检查配置中' : state.runPreview ? 'Preview 中' : '上传中' }}
+            {{ state.runKind === 'check' ? t('检查配置中') : state.runPreview ? t('Preview 中') : t('上传中') }}
           </span>
         </div>
       </Transition>
@@ -90,35 +96,35 @@ const win = window.api.win
       <button
         v-if="state.scriptUpdate?.needsUpdate"
         class="pill pill-warn no-drag cursor-pointer border-0"
-        :title="`SDK 里的构建脚本和工具自带的版本不一致（${[...state.scriptUpdate.missing, ...state.scriptUpdate.stale].join('、')}）。点这里同步成工具自带版本 —— 不更新的话，上传时「关掉某个 Depot」之类的开关可能不生效。`"
+        :title="t('SDK 里的构建脚本和工具自带的版本不一致（{files}）。点这里同步成工具自带版本 —— 不更新的话，上传时「关掉某个 Depot」之类的开关可能不生效。', { files: staleNames })"
         :disabled="state.running"
         @click="updateBuildScripts()"
       >
         <span class="w-1.5 h-1.5 rounded-full bg-amber" />
-        构建脚本需更新
+        {{ t('构建脚本需更新') }}
       </button>
 
       <!-- 有新版本就点一下，直接去设置页 -->
       <button
         v-if="upd?.hasUpdate"
         class="pill pill-warn no-drag cursor-pointer border-0"
-        title="有新版本，点开去设置里更新"
+        :title="t('有新版本，点开去设置里更新')"
         @click="goSettings()"
       >
         <span class="w-1.5 h-1.5 rounded-full bg-amber" />
-        v{{ upd.latest }} 可更新
+        {{ t('v{version} 可更新', { version: upd.latest }) }}
       </button>
     </div>
 
     <!-- 窗口按钮：和顶栏内容盒同高（44px），宽也 44px，hover 是正方形 -->
     <div class="self-stretch flex items-stretch no-drag">
-      <button :class="WBTN" class="hover:bg-surface-3 hover:text-ink" title="最小化" @click="win.minimize()">
+      <button :class="WBTN" class="hover:bg-surface-3 hover:text-ink" :title="t('最小化')" @click="win.minimize()">
         <Minus :size="15" />
       </button>
       <button
         :class="WBTN"
         class="hover:bg-surface-3 hover:text-ink"
-        :title="maximized ? '向下还原' : '最大化'"
+        :title="maximized ? t('向下还原') : t('最大化')"
         @click="win.maximize()"
       >
         <Copy v-if="maximized" :size="13" />
@@ -127,7 +133,7 @@ const win = window.api.win
       <button
         :class="WBTN"
         class="hover:bg-close hover:text-white"
-        title="关闭"
+        :title="t('关闭')"
         @click="win.close()"
       >
         <X :size="16" />

@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, safeStorage } from 'electron'
+import { t } from './i18n.js'
 
 const DEFAULTS = {
   sdkRoot: 'D:\\SteamSDK',
@@ -28,7 +29,10 @@ const DEFAULTS = {
   // 就是要点到 Downloads 里的构建产物），不该每次开界面都报一遍。
   ignoredProblems: {},
   // 首次运行引导走完（或点了「跳过教程」）就置 true，之后不再弹
-  onboarded: false
+  onboarded: false,
+  // 界面语言：auto = 跟随系统（中文系统用中文，其余英文），zh / en 强制指定。
+  // 纯界面偏好，跟 SDK 文件没有关系，所以放这里而不是单独的文件。
+  language: 'auto'
 }
 
 let cache = null
@@ -91,7 +95,7 @@ export function rememberBranch(appId, branch) {
 
 export function setDepotMeta(depotId, meta) {
   const id = String(depotId || '').trim()
-  if (!id) return { ok: false, error: 'DepotID 不能为空' }
+  if (!id) return { ok: false, error: t('DepotID 不能为空') }
   const s = loadSettings()
   const next = { ...(s.depotMeta || {}) }
   const cur = next[id] || {}
@@ -141,13 +145,13 @@ export function readIgnoredProblems(appDirName) {
 
 export function setIgnoredProblem(appDirName, text, on) {
   const key = String(appDirName || '').trim()
-  const t = String(text || '').trim()
-  if (!key || !t) return { ok: false, error: '缺少 App 名或问题内容' }
+  const problemText = String(text || '').trim()
+  if (!key || !problemText) return { ok: false, error: t('缺少 App 名或问题内容') }
   const s = loadSettings()
   const all = { ...(s.ignoredProblems || {}) }
   const list = new Set(all[key] || [])
-  if (on) list.add(t)
-  else list.delete(t)
+  if (on) list.add(problemText)
+  else list.delete(problemText)
   if (list.size) all[key] = [...list]
   else delete all[key]
   saveSettings({ ignoredProblems: all })
@@ -189,7 +193,7 @@ async function decryptFile(file) {
 
 export async function savePassword(password) {
   if (!(await encryptionAvailable())) {
-    return { ok: false, error: '系统不支持安全存储（safeStorage 不可用），密码不会被保存' }
+    return { ok: false, error: t('系统不支持安全存储（safeStorage 不可用），密码不会被保存') }
   }
   try {
     const enc = await safeStorage.encryptStringAsync(String(password ?? ''))
@@ -243,11 +247,11 @@ export function settingsFileDir() {
 
 export async function saveApiKey(key) {
   if (!(await encryptionAvailable())) {
-    return { ok: false, error: '系统不支持安全存储（safeStorage 不可用），密钥不会被保存' }
+    return { ok: false, error: t('系统不支持安全存储（safeStorage 不可用），密钥不会被保存') }
   }
   const clean = String(key || '').trim()
   if (!/^[0-9A-Fa-f]{32}$/.test(clean)) {
-    return { ok: false, error: 'Web API 密钥应该是 32 位十六进制字符' }
+    return { ok: false, error: t('Web API 密钥应该是 32 位十六进制字符') }
   }
   try {
     fs.mkdirSync(path.dirname(apiKeyFile()), { recursive: true })

@@ -1,4 +1,5 @@
 import { reactive, computed } from 'vue'
+import { applyLanguage, t, listSeparator } from './i18n/index.js'
 
 const api = window.api
 
@@ -165,10 +166,11 @@ export const state = reactive({
       done: false,
       error: null,
       steps: [
-        { id: 'server', label: '启动内容服务器', state: 'idle', detail: '' },
-        { id: 'flag', label: '这个 App 标记成「先送本地」', state: 'idle', detail: '' },
-        { id: 'build', label: '跑一次构建，把内容写进服务器', state: 'idle', detail: '' },
-        { id: 'devcfg', label: '写 steam_dev.cfg', state: 'idle', detail: '' }
+        // 步骤名是显示用文案：state 里存中文，面板渲染时再 t(step.label) —— i18n-ignore
+        { id: 'server', label: '启动内容服务器', state: 'idle', detail: '' }, // i18n-ignore
+        { id: 'flag', label: '这个 App 标记成「先送本地」', state: 'idle', detail: '' }, // i18n-ignore
+        { id: 'build', label: '跑一次构建，把内容写进服务器', state: 'idle', detail: '' }, // i18n-ignore
+        { id: 'devcfg', label: '写 steam_dev.cfg', state: 'idle', detail: '' } // i18n-ignore
       ]
     },
     error: null
@@ -229,6 +231,8 @@ export const canRun = computed(() => !state.running && !!state.detail && !state.
 export async function boot() {
   try {
     const [s, status] = await Promise.all([api.settings.get(), api.sdk.status()])
+    // 界面语言要在第一屏之前定下来，免得中文闪一下再变英文
+    applyLanguage(s.settings, s.systemLocale)
     state.settings = s.settings
     state.uploadOff = { ...(s.settings?.uploadOff || {}) }
     state.appOrder = Array.isArray(s.settings?.appOrder) ? s.settings.appOrder.map(String) : []
@@ -237,7 +241,7 @@ export async function boot() {
         .filter((f) => f && f.id)
         .map((f) => ({
           id: String(f.id),
-          name: String(f.name || '未命名'),
+          name: String(f.name || '未命名'), // i18n-ignore 文件夹名要存进 settings.json
           collapsed: !!f.collapsed,
           color: String(f.color || '')
         }))
@@ -295,7 +299,7 @@ export async function onboardDetect() {
     o.candidates = (await api.sdk.detect()) || []
     // 「没找到」是第二步的问题，别在欢迎页就吓人
     if (!o.candidates.length && o.step === 1) {
-      o.error = '常见位置没找到 SteamSDK —— 手动选一下它所在的文件夹'
+      o.error = t('常见位置没找到 SteamSDK —— 手动选一下它所在的文件夹')
     }
   } catch (e) {
     o.error = e.message
@@ -327,7 +331,7 @@ export async function onboardApplySdk(root) {
   const o = state.onboard
   const dir = String(root || o.manual || '').trim()
   if (!dir) {
-    o.error = '先选一个 SteamSDK 目录'
+    o.error = t('先选一个 SteamSDK 目录')
     return false
   }
   o.busy = true
@@ -338,7 +342,7 @@ export async function onboardApplySdk(root) {
     state.sdk = st
     state.settings = { ...(state.settings || {}), sdkRoot: dir }
     if (!st.contentBuilderExists) {
-      o.error = `这个目录里没有 tools\\ContentBuilder —— ${dir}`
+      o.error = t('这个目录里没有 tools\\ContentBuilder —— {dir}', { dir })
       return false
     }
     o.manual = dir
@@ -383,7 +387,7 @@ export async function onboardSaveAccount() {
     if (o.password) {
       const r = await api.settings.setPassword(o.password)
       if (!r?.ok) {
-        o.error = r?.error || '密码没存上'
+        o.error = r?.error || t('密码没存上')
         return false
       }
       state.hasPassword = true
@@ -461,7 +465,7 @@ export async function doForgetLogin() {
     state.hasPassword = false
     state.settings = { ...(state.settings || {}), account: '' }
     await checkLogin()
-    toast(`已清掉 ${r?.removed?.length || 0} 项登录痕迹`)
+    toast(t('已清掉 {n} 项登录痕迹', { n: r?.removed?.length || 0 }))
   } catch (e) {
     state.forget = { ...state.forget, busy: false, error: String(e?.message || e) }
   }
@@ -515,7 +519,7 @@ export async function checkUpdateNow(quiet = false) {
       u.ready = ''
     } else {
       u.data = null
-      u.error = quiet ? null : r?.error || '检查失败'
+      u.error = quiet ? null : r?.error || t('检查失败')
     }
   } catch (e) {
     u.error = quiet ? null : e.message
@@ -529,7 +533,7 @@ export async function downloadUpdateNow() {
   const a = u.data?.asset
   // 装在系统里的版本走增量：不需要 asset（主进程自己读 latest.yml），
   // 但界面上还得有个「要不要下」的依据，所以没有 asset 也能往下走。
-  if (!a && !u.incremental) return toast('没读到安装包地址，过一会儿再点「检查更新」', 'bad')
+  if (!a && !u.incremental) return toast(t('没读到安装包地址，过一会儿再点「检查更新」'), 'bad')
   u.downloading = true
   u.got = 0
   // 增量下载时 actual total 来自 progress 事件（可能只有 1 MB 上下），先不摆整包大小
@@ -543,7 +547,7 @@ export async function downloadUpdateNow() {
     const r = await api.update.download(a?.url, a?.name)
     if (r?.ok && r.upToDate) {
       u.ready = null
-      toast('刚才那份已经是最新的了')
+      toast(t('刚才那份已经是最新的了'))
     } else if (r?.ok) {
       // 增量由 electron-updater 自己记账，不需要我们再传路径；
       // 整包才有 path，安装时要用它起安装程序。
@@ -553,9 +557,13 @@ export async function downloadUpdateNow() {
       u.estimate = r.estimateBytes || 0
       u.fullSize = r.fullBytes || 0
       const usedIncremental = !!r.incremental && r.differential !== false
-      toast(usedIncremental ? `增量包下好了（v${r.version}），点「重启并安装」` : '下载好了，点「重启并安装」')
+      toast(
+        usedIncremental
+          ? t('增量包下好了（v{version}），点「重启并安装」', { version: r.version })
+          : t('下载好了，点「重启并安装」')
+      )
     } else {
-      u.error = r?.error || '下载失败'
+      u.error = r?.error || t('下载失败')
       toast(u.error, 'bad')
     }
   } finally {
@@ -565,13 +573,13 @@ export async function downloadUpdateNow() {
 
 export async function installUpdateNow() {
   const u = state.update
-  if (!u.ready) return toast('先点「下载更新」', 'bad')
+  if (!u.ready) return toast(t('先点「下载更新」'), 'bad')
   // 增量下好的那份不用给路径 —— electron-updater 自己知道在哪
   const passPath = u.ready === '__updater__' ? undefined : u.ready
   const r = await api.update.install(passPath)
-  if (!r?.ok) return toast(r?.error || '安装失败', 'bad')
+  if (!r?.ok) return toast(r?.error || t('安装失败'), 'bad')
   // 便携版：主进程只把文件夹打开，替换得用户自己来
-  if (r.manual) toast('已经把新版所在的位置打开了 —— 关掉工具，替换掉你那个 exe')
+  if (r.manual) toast(t('已经把新版所在的位置打开了 —— 关掉工具，替换掉你那个 exe'))
 }
 
 export function openReleases() {
@@ -614,14 +622,14 @@ export async function refreshScriptUpdate() {
 }
 
 export async function updateBuildScripts() {
-  if (state.running) return toast('先等这次任务跑完再更新脚本', 'bad')
+  if (state.running) return toast(t('先等这次任务跑完再更新脚本'), 'bad')
   try {
     const r = await api.sdk.installScripts()
     if (r?.status) state.sdk = r.status
-    if (!r?.ok) return toast(r?.error || '构建脚本写入失败', 'bad')
+    if (!r?.ok) return toast(r?.error || t('构建脚本写入失败'), 'bad')
     await refreshScriptUpdate()
     const n = (r.written || []).length
-    toast(n ? `已更新 ${n} 个构建脚本` : '构建脚本已是最新')
+    toast(n ? t('已更新 {n} 个构建脚本', { n }) : t('构建脚本已是最新'))
   } catch (e) {
     toast(e.message, 'bad')
   }
@@ -656,7 +664,7 @@ export async function ignoreProblem(text, on = true) {
   const dir = state.selectedDir
   if (!dir || !text) return
   const res = await api.app.ignoreProblem(dir, text, on)
-  if (!res?.ok) return toast(res?.error || '没记下来', 'bad')
+  if (!res?.ok) return toast(res?.error || t('没记下来'), 'bad')
   if (res.app) state.detail = res.app
   // 侧栏那颗灯也要跟着变
   const row = state.apps.find((a) => a.dirName === dir)
@@ -664,7 +672,7 @@ export async function ignoreProblem(text, on = true) {
     row.problems = res.app.problems
     row.problemsIgnored = res.app.problemsIgnored
   }
-  toast(on ? '永久忽略了，重开也不会再提示' : '恢复提示')
+  toast(on ? t('永久忽略了，重开也不会再提示') : t('恢复提示'))
 }
 
 /** 只忽略这一次 —— 只存在内存里，重开应用就回来 */
@@ -673,7 +681,7 @@ export function ignoreProblemThisRun(text) {
   if (!dir || !text) return
   const list = state.sessionIgnored[dir] || (state.sessionIgnored[dir] = [])
   if (!list.includes(text)) list.push(text)
-  toast('这次先不提示了（重开应用会回来）')
+  toast(t('这次先不提示了（重开应用会回来）'))
 }
 
 /** 撤销「本次忽略」 */
@@ -790,7 +798,7 @@ export function folderOfApp(dirName) {
 }
 
 export function createFolder(name) {
-  const clean = String(name || '').trim() || '新建文件夹'
+  const clean = String(name || '').trim() || '新建文件夹' // i18n-ignore 默认名会存进 settings.json
   const folder = {
     id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     name: clean,
@@ -882,7 +890,7 @@ export async function toggleDepotUpload(depotId) {
     res = { ok: false, error: String(e?.message || e) }
   }
   if (!res?.ok) {
-    toast(res?.error || '切换失败', 'error')
+    toast(res?.error || t('切换失败'), 'error')
     return
   }
   const next = { ...(state.uploadOff || {}) }
@@ -890,7 +898,7 @@ export async function toggleDepotUpload(depotId) {
   if (list.length) next[dirName] = list
   else delete next[dirName]
   state.uploadOff = next
-  toast(enabled ? '这个 Depot 会随构建上传' : '已关闭这个 Depot 的上传，构建时跳过')
+  toast(enabled ? t('这个 Depot 会随构建上传') : t('已关闭这个 Depot 的上传，构建时跳过'))
 }
 
 export async function loadHistory() {
@@ -1011,7 +1019,7 @@ export function closeWizard() {
 
 /** 名字 / AppID 变了就重算所有「自动」字段：DepotID 依次 AppID+1、+2…，目录按名字+平台 */
 function autoAssign(w) {
-  const name = (w.name || '').trim() || '<App名>'
+  const name = (w.name || '').trim() || '<App名>' // i18n-ignore 只是拼内容目录路径用的占位名
   const idOk = /^\d+$/.test(String(w.appId).trim())
   let n = 0
   for (const p of w.platforms) {
@@ -1147,7 +1155,7 @@ export async function wizardLookup(via) {
   const id = String(w.appId || '').trim()
 
   if (!/^\d+$/.test(id)) {
-    w.lookup = { ...emptyLookup(), error: '先把 AppID 填成数字' }
+    w.lookup = { ...emptyLookup(), error: t('先把 AppID 填成数字') }
     return
   }
 
@@ -1205,14 +1213,16 @@ export async function wizardLookup(via) {
     appIdKnown: res.appIdKnown !== false,
     appName: res.appName || '',
     error: unmatched
-      ? `后台还有 ${unmatched} 个 Depot 没有平台行可放：先在平台表里加一行，再读一次。`
+      ? t('后台还有 {n} 个 Depot 没有平台行可放：先在平台表里加一行，再读一次。', { n: unmatched })
       : null
   }
 
   toast(
     filled
-      ? `已从后台填入 ${filled} 个 Depot${res.appName ? `（${res.appName}）` : ''}`
-      : '后台这个 App 下还没有 Depot',
+      ? res.appName
+        ? t('已从后台填入 {n} 个 Depot（{app}）', { n: filled, app: res.appName })
+        : t('已从后台填入 {n} 个 Depot', { n: filled })
+      : t('后台这个 App 下还没有 Depot'),
     filled ? 'ok' : 'bad'
   )
 }
@@ -1260,7 +1270,7 @@ export function wizardToggleSteamDepot(depotId, platform) {
 
   const target = platform || d.platform || nextFreePlatform(w)
   if (!target || !w.picks[target]) {
-    w.lookup.error = '平台行不够用了：先去平台表里加一行，再勾这个后台 Depot。'
+    w.lookup.error = t('平台行不够用了：先去平台表里加一行，再勾这个后台 Depot。')
     return
   }
   applySteamDepot(w, d, target)
@@ -1290,22 +1300,22 @@ export async function submitWizard() {
   w.error = null
 
   if (!picked.length) {
-    w.error = '至少要选一个平台'
+    w.error = t('至少要选一个平台')
     return
   }
   // 后台回来的 DepotID 是数字，本地是字符串 —— 一律 String() 再判，别假设类型
   const ids = picked.map((p) => String(p.depotId ?? '').trim())
   if (ids.some((x) => !/^\d+$/.test(x))) {
-    w.error = '每个平台的 DepotID 都必须是数字'
+    w.error = t('每个平台的 DepotID 都必须是数字')
     return
   }
   if (new Set(ids).size !== ids.length) {
-    w.error = 'DepotID 有重复'
+    w.error = t('DepotID 有重复')
     return
   }
   for (const p of picked) {
     if (!String(p.contentRoot ?? '').trim()) {
-      w.error = `${p.label} 的内容目录不能为空`
+      w.error = t('{platform} 的内容目录不能为空', { platform: p.label })
       return
     }
   }
@@ -1334,7 +1344,11 @@ export async function submitWizard() {
     await rescan()
     await selectApp(res.dirName)
     const made = (res.contentDirs || []).filter((c) => c.created).length
-    toast(`已创建 ${res.dirName}（${n} 个 Depot）` + (made ? `，并建好 ${made} 个内容目录` : ''))
+    toast(
+      made
+        ? t('已创建 {name}（{n} 个 Depot），并建好 {made} 个内容目录', { name: res.dirName, n, made })
+        : t('已创建 {name}（{n} 个 Depot）', { name: res.dirName, n })
+    )
   } finally {
     if (state.wizard) state.wizard.busy = false
   }
@@ -1352,7 +1366,7 @@ export async function renameApp(dirName, newName) {
   }
   if (!res.changed) return res
   state.selectedDir = res.dirName
-  toast(`已改名为 ${res.dirName}`)
+  toast(t('已改名为 {name}', { name: res.dirName }))
   await rescan()
   await selectApp(res.dirName)
   return res
@@ -1375,7 +1389,7 @@ export async function loadBuildPanel(force = false) {
     const res = await api.steam.builds(appId)
     if (state.selectedDir !== forDir) return { ok: false, stale: true }
     if (!res?.ok) {
-      state.buildPanel = { busy: false, error: res?.error || '读取失败', data: null, appId }
+      state.buildPanel = { busy: false, error: res?.error || t('读取失败'), data: null, appId }
       return res
     }
     state.buildPanel = { busy: false, error: null, data: res, appId }
@@ -1403,11 +1417,15 @@ export async function verifyUploadedBuild(appId, logs, appName = '', dirName = '
   const hits = [...text.matchAll(/\(BuildID\s+(\d+)\)/g)]
   const buildId = hits.length ? hits[hits.length - 1][1] : ''
   if (!buildId) {
-    pushLogTo(dirName, 'system', '这次日志里没有 BuildID —— 不是正式上传（Preview / 本地构建都不带 BuildID）')
+    pushLogTo(dirName, 'system', t('这次日志里没有 BuildID —— 不是正式上传（Preview / 本地构建都不带 BuildID）'))
     return
   }
-  pushLogTo(dirName, 'system', `✔ 已上传：BuildID ${buildId}`)
-  toast(appName ? `已上传 ${appName}（BuildID ${buildId}）` : `已上传（BuildID ${buildId}）`)
+  pushLogTo(dirName, 'system', t('✔ 已上传：BuildID {id}', { id: buildId }))
+  toast(
+    appName
+      ? t('已上传 {app}（BuildID {id}）', { app: appName, id: buildId })
+      : t('已上传（BuildID {id}）', { id: buildId })
+  )
 }
 
 /* ------------------------------------------------------------------ *
@@ -1483,7 +1501,7 @@ export function syncPickAll(on) {
 /** 把勾上的后台 Depot 加成本地 depot 脚本 */
 export async function syncAddSelected() {
   const picked = Object.keys(state.syncPicks)
-  if (!picked.length) return { ok: false, error: '一个都没勾' }
+  if (!picked.length) return { ok: false, error: t('一个都没勾') }
   const all = state.verify.data?.steamDepots || []
   const projectDir = state.detail?.contentRoot || ''
   // 勾选、项目文件夹、要写进哪个 App，全部在开跑之前定死 ——
@@ -1516,8 +1534,8 @@ export async function syncAddSelected() {
   if (state.selectedDir === forDir) await reloadDetail()
   await rescan()
   if (state.selectedDir === forDir) state.syncPicks = {}
-  if (failed.length) toast(`加了 ${added.length} 个，失败：${failed.join('；')}`, 'bad')
-  else toast(`已加入 ${added.length} 个 Depot`, 'ok')
+  if (failed.length) toast(t('加了 {n} 个，失败：{list}', { n: added.length, list: failed.join(t('；')) }), 'bad')
+  else toast(t('已加入 {n} 个 Depot', { n: added.length }), 'ok')
   return { ok: true, added, failed }
 }
 
@@ -1598,7 +1616,7 @@ export async function slideLookupBackend() {
   if (!s) return
   const id = String(s.appId || '').trim()
   if (!/^\d+$/.test(id)) {
-    s.lookupError = '这个 App 还没有 AppID，读不了后台'
+    s.lookupError = t('这个 App 还没有 AppID，读不了后台')
     return
   }
   s.lookupBusy = true
@@ -1610,10 +1628,10 @@ export async function slideLookupBackend() {
       s.backend = r.depots || []
       if (r.appName) s.appName = r.appName
     } else {
-      s.lookupError = r?.error || (r?.needsPassword ? '需要先在设置里保存 Steam 账号密码' : '读不到后台')
+      s.lookupError = r?.error || (r?.needsPassword ? t('需要先在设置里保存 Steam 账号密码') : t('读不到后台'))
     }
   } catch (e) {
-    if (state.depotSlide === s) s.lookupError = e.message || '读取失败'
+    if (state.depotSlide === s) s.lookupError = e.message || t('读取失败')
   } finally {
     if (state.depotSlide === s) s.lookupBusy = false
   }
@@ -1626,19 +1644,22 @@ export function slideDepotHint() {
   const id = String(s.depotId || '').trim()
   if (!/^\d+$/.test(id)) return null
   const local = (state.detail?.depots || []).find((d) => String(d.id) === id)
-  if (local) return { tone: 'bad', text: `本地已经有 Depot ${id}（${local.platformLabel || local.platform}）了` }
+  if (local) return { tone: 'bad', text: t('本地已经有 Depot {id}（{platform}）了', { id, platform: local.platformLabel || local.platform }) }
   const list = s.backend
   if (!list) {
-    return { tone: 'idle', text: '本地还没有这个 DepotID。点右上角「读后台」能核对后台有没有。' }
+    return { tone: 'idle', text: t('本地还没有这个 DepotID。点右上角「读后台」能核对后台有没有。') }
   }
   const hit = list.find((d) => String(d.depotId) === id)
   if (hit) {
+    const platform = hit.platformLabel || t('平台未知')
     return {
       tone: 'ok',
-      text: `后台有：${hit.platformLabel || '平台未知'}${hit.hasBuild ? ` · 最近构建 ${hit.buildId || hit.manifestId}` : ' · 还没有构建'}`
+      text: hit.hasBuild
+        ? t('后台有：{platform} · 最近构建 {id}', { platform, id: hit.buildId || hit.manifestId })
+        : t('后台有：{platform} · 还没有构建', { platform })
     }
   }
-  return { tone: 'warn', text: '后台这个 App 下没有这个 DepotID —— 要么打错了，要么后台还没建' }
+  return { tone: 'warn', text: t('后台这个 App 下没有这个 DepotID —— 要么打错了，要么后台还没建') }
 }
 
 export function closeDepotSlide() {
@@ -1649,9 +1670,9 @@ export function closeDepotSlide() {
 export function archOptionsFor(os) {
   const all = state.depotOptions?.arch || []
   const ids = state.depotOptions?.archByOs?.[os]
-  if (!ids || !ids.length) return all.length ? all : [{ id: '64', label: '64 位' }]
+  if (!ids || !ids.length) return all.length ? all : [{ id: '64', label: t('64 位') }]
   const list = all.filter((a) => ids.includes(a.id))
-  return list.length ? list : [{ id: '64', label: '64 位' }]
+  return list.length ? list : [{ id: '64', label: t('64 位') }]
 }
 
 /** 改平台（下拉框里换系统/架构）时，如果内容目录还是自动推的，就跟着变 */
@@ -1680,11 +1701,11 @@ export async function submitDepotSlide() {
   const s = state.depotSlide
   if (!s) return { ok: false }
   if (!/^\d+$/.test(String(s.depotId || '').trim())) {
-    s.error = 'DepotID 必须是数字'
+    s.error = t('DepotID 必须是数字')
     return { ok: false }
   }
   if (!String(s.contentRoot || '').trim()) {
-    s.error = '内容目录不能为空'
+    s.error = t('内容目录不能为空')
     return { ok: false }
   }
   s.busy = true
@@ -1709,7 +1730,7 @@ export async function submitDepotSlide() {
     state.depotSlide = null
     await reloadDetail()
     await rescan()
-    toast(`已新建 Depot ${res.file}`)
+    toast(t('已新建 Depot {file}', { file: res.file }))
     return res
   } finally {
     if (state.depotSlide) state.depotSlide.busy = false
@@ -1794,7 +1815,7 @@ export async function submitOrphanDialog() {
     await rescan()
     await selectApp(res.dirName)
     const n = res.moved?.length || 0
-    toast(`已把 ${n} 个 vdf 收进 scripts\\${res.dirName}`)
+    toast(t('已把 {n} 个 vdf 收进 scripts\\{dir}', { n, dir: res.dirName }))
   } finally {
     if (state.orphanDialog) state.orphanDialog.busy = false
   }
@@ -1816,7 +1837,7 @@ export async function saveApp(patch, { silent = false } = {}) {
   if (!state.selectedDir) return { ok: false }
   const res = await api.app.update(state.selectedDir, patch)
   if (!res.ok) {
-    toast(res.error || '保存失败', 'bad')
+    toast(res.error || t('保存失败'), 'bad')
     return res
   }
   // 只有一个 depot 时，内容目录一起改，省得改两遍
@@ -1826,7 +1847,7 @@ export async function saveApp(patch, { silent = false } = {}) {
     })
   }
   await reloadDetail()
-  if (!silent) toast('已保存')
+  if (!silent) toast(t('已保存'))
   return res
 }
 
@@ -1834,12 +1855,12 @@ export async function saveDepot(depotFile, patch) {
   if (!state.selectedDir) return { ok: false }
   const res = await api.app.updateDepot(state.selectedDir, depotFile, patch)
   if (!res.ok) {
-    toast(res.error || '保存失败', 'bad')
+    toast(res.error || t('保存失败'), 'bad')
     return res
   }
   await reloadDetail()
   state.drawer = state.drawer ? { ...state.drawer, depotFile: res.file || depotFile } : null
-  toast(res.renamed ? `已保存（文件重命名为 ${res.file}）` : '已保存')
+  toast(res.renamed ? t('已保存（文件重命名为 {file}）', { file: res.file }) : t('已保存'))
   return res
 }
 
@@ -1847,12 +1868,14 @@ export async function addDepotToApp(spec) {
   if (!state.selectedDir) return { ok: false }
   const res = await api.app.addDepot(state.selectedDir, spec)
   if (!res.ok) {
-    toast(res.error || '添加失败', 'bad')
+    toast(res.error || t('添加失败'), 'bad')
     return res
   }
   await reloadDetail()
   toast(
-    `已添加 Depot ${spec.depotId}` + (res.contentDirCreated ? `，并建好目录 ${res.contentRoot}` : '')
+    res.contentDirCreated
+      ? t('已添加 Depot {id}，并建好目录 {path}', { id: spec.depotId, path: res.contentRoot })
+      : t('已添加 Depot {id}', { id: spec.depotId })
   )
   return res
 }
@@ -1861,12 +1884,12 @@ export async function deleteDepot(depotFile) {
   if (!state.selectedDir) return { ok: false }
   const res = await api.app.removeDepot(state.selectedDir, depotFile)
   if (!res.ok) {
-    toast(res.error || '删除失败', 'bad')
+    toast(res.error || t('删除失败'), 'bad')
     return res
   }
   await reloadDetail()
   state.drawer = null
-  toast('已删除该 Depot')
+  toast(t('已删除该 Depot'))
   return res
 }
 
@@ -1927,9 +1950,11 @@ export async function confirmDelete() {
   const n = res.removed?.content?.length || 0
   const skipped = res.removed?.skipped?.length || 0
   toast(
-    `已删除 ${d.dirName}` +
-      (n ? `，连同 ${n} 个内容目录` : '') +
-      (skipped ? `（${skipped} 个目录不在 buildsRoot 内，已跳过）` : '')
+    t('已删除 {name}{dirs}{skip}', {
+      name: d.dirName,
+      dirs: n ? t('，连同 {n} 个内容目录', { n }) : '',
+      skip: skipped ? t('（{n} 个目录不在 buildsRoot 内，已跳过）', { n: skipped }) : ''
+    })
   )
 }
 
@@ -1959,10 +1984,11 @@ export async function runCheck() {
   state.running = true
   state.runKind = 'check'
   state.runTarget = captureRunTarget()
-  pushLog('system', `> check.ps1 ${state.selectedDir ? `-App ${state.selectedDir}` : '(全部)'}`)
+  const checkScope = state.selectedDir ? `-App ${state.selectedDir}` : t('(全部)')
+  pushLog('system', `> check.ps1 ${checkScope}`)
   const res = await api.run.check(state.selectedDir || undefined)
   if (!res.ok) {
-    pushLog('stderr', res.error || '启动失败')
+    pushLog('stderr', res.error || t('启动失败'))
     state.running = false
     state.runKind = null
     state.runTarget = null
@@ -1977,9 +2003,11 @@ export async function runBuild({ preview, password, local, guardCode }) {
   // 放它跑下去只会得到一个「看起来成功、其实传了不该传的 Depot」的结果。
   await refreshScriptUpdate()
   if (state.scriptUpdate?.needsUpdate) {
-    const files = [...(state.scriptUpdate.missing || []), ...(state.scriptUpdate.stale || [])].join('、')
+    const files = [...(state.scriptUpdate.missing || []), ...(state.scriptUpdate.stale || [])].join(listSeparator())
     toast(
-      `构建脚本不是最新（${files}），已中止${preview ? ' Preview 空跑' : '上传'}：点右上角「构建脚本需更新」同步后再试`,
+      preview
+        ? t('构建脚本不是最新（{files}），已中止 Preview 空跑：点右上角「构建脚本需更新」同步后再试', { files })
+        : t('构建脚本不是最新（{files}），已中止上传：点右上角「构建脚本需更新」同步后再试', { files }),
       'bad'
     )
     return
@@ -2019,7 +2047,7 @@ export async function runBuild({ preview, password, local, guardCode }) {
     return
   }
 
-  pushLog('stderr', res.error || '启动失败')
+  pushLog('stderr', res.error || t('启动失败'))
 }
 
 /** 用户在界面里补了密码 */
@@ -2060,19 +2088,19 @@ export function cancelPasswordPrompt() {
 export async function openLogin() {
   const res = await api.run.login()
   if (!res.ok) alert(res.error)
-  else pushLog('system', '已打开登录窗口：在里面的 steamcmd 提示符下执行 login ' + (state.settings?.account || '<账号>'))
+  else pushLog('system', t('已打开登录窗口：在里面的 steamcmd 提示符下执行 login {account}', { account: state.settings?.account || t('<账号>') }))
 }
 
 export async function cancelRun() {
   if (!state.runId) return
-  pushLog('system', '正在中止…')
+  pushLog('system', t('正在中止…'))
   await api.run.cancel(state.runId)
 }
 
 export async function answerPrompt(text) {
   if (!state.runId || !state.prompt) return
   await api.run.input(state.runId, text)
-  pushLog('system', '已提交验证码')
+  pushLog('system', t('已提交验证码'))
   state.prompt = null
 }
 
@@ -2173,7 +2201,7 @@ export function wireEvents() {
     const targetDir = runTarget.dirName || ''
     const targetLogs = bucketFor(targetDir).logs
     state.lastExit = { code, at: Date.now(), kind }
-    pushLogTo(targetDir, code === 0 ? 'system' : 'stderr', `— 进程结束，退出码 ${code} —`)
+    pushLogTo(targetDir, code === 0 ? 'system' : 'stderr', t('— 进程结束，退出码 {code} —', { code }))
     state.runKind = null
     state.runLocal = false
 
@@ -2200,17 +2228,17 @@ export function wireEvents() {
         loadLocalStatus()
           .then(() => {
             const n = state.local.status?.contentFiles || 0
-            setStep('build', n > 0 ? 'done' : 'fail', n > 0 ? `${n} 个文件已在服务器里` : '构建成功但服务器里还是空的')
+            setStep('build', n > 0 ? 'done' : 'fail', n > 0 ? `${n} 个文件已在服务器里` : '构建成功但服务器里还是空的') // i18n-ignore
             f.done = n > 0
-            toast(n > 0 ? '内容已经进本地服务器了 —— 重启 Steam 就能下到' : '构建成功，但 htdocs 里还是空的')
+            toast(n > 0 ? t('内容已经进本地服务器了 —— 重启 Steam 就能下到') : t('构建成功，但 htdocs 里还是空的'))
           })
           .catch(() => {
-            setStep('build', 'done', '构建成功')
+            setStep('build', 'done', '构建成功') // i18n-ignore
             f.done = true
           })
       } else {
-        setStep('build', 'fail', `退出码 ${code}`)
-        f.error = `构建失败，退出码 ${code}`
+        setStep('build', 'fail', `退出码 ${code}`) // i18n-ignore
+        f.error = t('构建失败，退出码 {code}', { code })
       }
     }
 
@@ -2230,25 +2258,25 @@ export function wireEvents() {
     // 系统通知：不用盯着窗口看
     const title =
       code !== 0
-        ? '出错了'
+        ? t('出错了')
         : kind === 'check'
-          ? '检查配置通过'
+          ? t('检查配置通过')
           : wasLocal
-            ? '内容已送进本地服务器'
+            ? t('内容已送进本地服务器')
             : wasPreview
-              ? 'Preview 完成'
-              : '上传完成'
-    const who = appName || '全部 App'
+              ? t('Preview 完成')
+              : t('上传完成')
+    const who = appName || t('全部 App')
     const body =
       code !== 0
-        ? `${who} · 退出码 ${code}`
+        ? t('{who} · 退出码 {code}', { who, code })
         : kind === 'check'
-          ? `${who} · 结构与排除规则都没问题`
+          ? t('{who} · 结构与排除规则都没问题', { who })
           : wasLocal
-            ? `${who} · 重启 Steam 后就能从本机下到`
+            ? t('{who} · 重启 Steam 后就能从本机下到', { who })
             : wasPreview
-              ? `${who} · 空跑成功，没有上传任何东西`
-              : `${who} · 去 Steamworks 把这次构建设为 live`
+              ? t('{who} · 空跑成功，没有上传任何东西', { who })
+              : t('{who} · 去 Steamworks 把这次构建设为 live', { who })
     api.notify(title, body).catch(() => {})
 
     reloadDetail()
@@ -2267,10 +2295,10 @@ export async function runCheckAll() {
   state.runKind = 'check'
   // 全部 App 一起查：提示里不写具体 App 名，写成「全部 App」
   state.runTarget = { ...captureRunTarget(), appName: '' }
-  pushLog('system', '> check.ps1（所有 App）')
+  pushLog('system', t('> check.ps1（所有 App）'))
   const res = await api.run.check(undefined)
   if (!res.ok) {
-    pushLog('stderr', res.error || '启动失败')
+    pushLog('stderr', res.error || t('启动失败'))
     state.running = false
     state.runKind = null
     state.runTarget = null
@@ -2312,7 +2340,7 @@ export async function dropLookupBackend(force = false) {
   const appId = String(state.detail?.appId || '').trim()
   const box = state.drop.backend
   if (!dir || !/^\d+$/.test(appId)) {
-    box.error = '这个 App 还没有 AppID，读不了后台'
+    box.error = t('这个 App 还没有 AppID，读不了后台')
     box.done = true
     return
   }
@@ -2329,7 +2357,7 @@ export async function dropLookupBackend(force = false) {
     // 切走了就别把 A 的后台结果写进 B 的窗口
     if (state.selectedDir !== dir) return
     if (!res || res.ok === false) {
-      box.error = res?.error || '读不出来'
+      box.error = res?.error || t('读不出来')
       if (res?.needsKey || res?.needsPassword) box.needsCreds = true
       return
     }
@@ -2348,7 +2376,7 @@ export async function dropLookupBackend(force = false) {
 /** 把后台某个 Depot 补进本地脚本，返回它的 depotFile 以便直接选中 */
 export async function dropSyncDepot(depotId, platform) {
   const dir = state.selectedDir
-  if (!dir || !depotId) return { ok: false, error: '没什么可同步的' }
+  if (!dir || !depotId) return { ok: false, error: t('没什么可同步的') }
   state.drop.busy = true
   try {
     const base = String(state.detail?.contentRoot || '').replace(/[\\/]+$/, '')
@@ -2359,7 +2387,7 @@ export async function dropSyncDepot(depotId, platform) {
       allowDuplicatePlatform: true
     })
     if (!res || res.ok === false) {
-      state.drop.error = res?.error || '补不进来'
+      state.drop.error = res?.error || t('补不进来')
       return { ok: false, error: state.drop.error }
     }
     await rescan()
@@ -2367,7 +2395,7 @@ export async function dropSyncDepot(depotId, platform) {
     // 后台清单里已经有的那条现在落到本地了，从待选里摘掉
     state.drop.backend.depots = state.drop.backend.depots.filter((x) => String(x.depotId) !== String(depotId))
     const made = (state.detail?.depots || []).find((x) => String(x.id) === String(depotId))
-    toast(`已把 Depot ${depotId} 补进本地`)
+    toast(t('已把 Depot {id} 补进本地', { id: depotId }))
     return { ok: true, file: made?.file || '' }
   } catch (e) {
     state.drop.error = e.message
@@ -2410,7 +2438,7 @@ export async function dropAnalyze(target) {
   try {
     const res = await api.drop.analyze(p)
     if (!res || res.ok === false) {
-      state.drop.error = res?.error || '读不了这个路径'
+      state.drop.error = res?.error || t('读不了这个路径')
       state.drop.data = { ok: false, target: p, name: p.split(/[\\/]/).pop() }
     } else {
       state.drop.data = res
@@ -2426,7 +2454,7 @@ export async function dropAnalyze(target) {
 
 /** 第二步：导入选好的 Depot（没有就给新建一个） */
 export async function dropApply(spec) {
-  if (!state.selectedDir) return toast('先选一个 App', 'bad')
+  if (!state.selectedDir) return toast(t('先选一个 App'), 'bad')
   state.drop.busy = true
   try {
     const res = await api.drop.apply({
@@ -2438,13 +2466,13 @@ export async function dropApply(spec) {
       target: state.drop.data?.target
     })
     if (!res || res.ok === false) {
-      state.drop.error = res?.error || '放不进去'
+      state.drop.error = res?.error || t('放不进去')
       return res
     }
     closeDrop()
     await rescan()
     await reloadDetail()
-    toast(`已复制进 ${res.contentRoot}`, 'ok')
+    toast(t('已复制进 {path}', { path: res.contentRoot }), 'ok')
     return res
   } catch (e) {
     state.drop.error = e.message
@@ -2461,7 +2489,7 @@ export async function dropApply(spec) {
 /** 打开清空成就弹窗：先把当前 App 的名字 / AppID 固定下来，弹窗只负责确认。 */
 export function openClearAchievements() {
   const d = state.detail
-  if (!d || d.error || !d.appId) return toast('先选一个有 AppID 的 App', 'bad')
+  if (!d || d.error || !d.appId) return toast(t('先选一个有 AppID 的 App'), 'bad')
   state.clearAchievements = {
     open: true,
     busy: false,
@@ -2492,12 +2520,12 @@ export async function clearAchievementsNow() {
   try {
     const res = await api.steam.clearAchievements(state.selectedDir)
     if (!res || res.ok === false) {
-      c.error = res?.error || '清空失败'
+      c.error = res?.error || t('清空失败')
       return res
     }
     c.done = true
     c.message = res.line || ''
-    toast(`已清空 ${c.appName} 的 Steam 成就`, 'ok')
+    toast(t('已清空 {app} 的 Steam 成就', { app: c.appName }), 'ok')
     return res
   } catch (e) {
     c.error = e.message
@@ -2533,7 +2561,7 @@ export async function runPreflight(dirName, depotId) {
   }
   if (stale()) return null
   if (!res || res.ok === false) {
-    state.preflight = { busy: false, error: res?.error || '检查文件失败', data: null, depotId: depot }
+    state.preflight = { busy: false, error: res?.error || t('检查文件失败'), data: null, depotId: depot }
     return null
   }
   state.preflight = { busy: false, error: null, data: res, depotId: depot }
@@ -2544,10 +2572,10 @@ export async function runPreflight(dirName, depotId) {
   const w = res.warns || 0
   toast(
     n
-      ? `Depot ${depot}：发现 ${n} 个会挡住上传的问题`
+      ? t('Depot {id}：发现 {n} 个会挡住上传的问题', { id: depot, n })
       : w
-        ? `Depot ${depot}：通过，有 ${w} 个警告可以看一眼`
-        : `Depot ${depot}：检查通过，没有发现问题`,
+        ? t('Depot {id}：通过，有 {n} 个警告可以看一眼', { id: depot, n: w })
+        : t('Depot {id}：检查通过，没有发现问题', { id: depot }),
     n ? 'warn' : 'ok'
   )
   return res
@@ -2571,11 +2599,11 @@ export async function setAppLocal(on) {
   if (!state.selectedDir) return
   const r = await api.app.update(state.selectedDir, { local: !!on })
   if (r && r.ok === false) {
-    toast(r.error || '改不了', 'bad')
+    toast(r.error || t('改不了'), 'bad')
     return
   }
   await reloadDetail()
-  toast(on ? '这个 App 的构建会传进本地内容服务器' : '已改回正常上传 Steam')
+  toast(on ? t('这个 App 的构建会传进本地内容服务器') : t('已改回正常上传 Steam'))
 }
 
 /* ------------------------------------------------------------------ *
@@ -2586,12 +2614,12 @@ export async function setDepotUserConfig(depotFile, list) {
   if (!state.selectedDir) return null
   const r = await api.app.updateDepot(state.selectedDir, depotFile, { userConfig: list })
   if (r && r.ok === false) {
-    toast(r.error || '保存失败', 'bad')
+    toast(r.error || t('保存失败'), 'bad')
     return r
   }
   await reloadDetail()
   await rescan()
-  toast('已更新玩家存档标记')
+  toast(t('已更新玩家存档标记'))
   return r
 }
 
@@ -2636,11 +2664,11 @@ export async function startLocalServer() {
   state.local.busy = false
   if (!r.ok) {
     state.local.error = r.error
-    toast(r.error || '启动失败', 'bad')
+    toast(r.error || t('启动失败'), 'bad')
     return r
   }
   await loadLocalStatus()
-  toast(`本地内容服务器已启动：${state.local.url}`)
+  toast(t('本地内容服务器已启动：{url}', { url: state.local.url }))
   return r
 }
 
@@ -2649,12 +2677,12 @@ export async function stopLocalServer() {
   await api.local.stop().catch(() => null)
   state.local.busy = false
   await loadLocalStatus()
-  toast('本地内容服务器已停')
+  toast(t('本地内容服务器已停'))
 }
 
 export async function openLocalServer() {
   const r = await api.local.open().catch((e) => ({ ok: false, error: e.message }))
-  if (!r.ok) toast(r.error || '打不开', 'bad')
+  if (!r.ok) toast(r.error || t('打不开'), 'bad')
   return r
 }
 
@@ -2663,11 +2691,11 @@ export async function enableLocalDevCfg() {
     .enableDevcfg(state.local.port || 80)
     .catch((e) => ({ ok: false, error: e.message }))
   if (!r.ok) {
-    toast(r.error || '写不了 steam_dev.cfg', 'bad')
+    toast(r.error || t('写不了 steam_dev.cfg'), 'bad')
     return r
   }
   await loadLocalDevCfg()
-  toast(`已写入 ${r.file}${r.backedUp ? '（原文件备份成 .bak）' : ''}`)
+  toast(t('已写入 {file}{backup}', { file: r.file, backup: r.backedUp ? t('（原文件备份成 .bak）') : '' }))
   return r
 }
 
@@ -2740,14 +2768,14 @@ export async function runLocalSetup() {
     r = await api.local.start(8099).catch((e) => ({ ok: false, error: e.message }))
     if (r.ok) state.local.port = 8099
   }
-  if (!r.ok) return fail('server', r.error || '内容服务器起不来')
+  if (!r.ok) return fail('server', r.error || t('内容服务器起不来'))
   await loadLocalStatus()
   setStep('server', 'done', `127.0.0.1:${state.local.port}`)
 
   /* 2. 让这个 App 的构建走本地 */
   setStep('flag', 'doing')
   const u = await api.app.update(dir, { local: true }).catch((e) => ({ ok: false, error: e.message }))
-  if (u && u.ok === false) return fail('flag', u.error || '写不进 vdf')
+  if (u && u.ok === false) return fail('flag', u.error || t('写不进 vdf'))
   await reloadDetail()
   setStep('flag', 'done')
 
@@ -2756,21 +2784,21 @@ export async function runLocalSetup() {
   await loadLocalDevCfg()
   const cfg = state.local.devcfg
   if (!cfg?.ok) {
-    setStep('devcfg', 'fail', cfg?.error || '找不到 Steam 目录')
+    setStep('devcfg', 'fail', cfg?.error || '找不到 Steam 目录') // i18n-ignore
   } else if (cfg.has) {
-    setStep('devcfg', 'done', '之前就配好了')
+    setStep('devcfg', 'done', '之前就配好了') // i18n-ignore
   } else {
     const w = await api.local.enableDevcfg(state.local.port).catch((e) => ({ ok: false, error: e.message }))
     if (w.ok) {
       await loadLocalDevCfg()
-      setStep('devcfg', 'done', w.backedUp ? '已写入（原文件备份成 .bak）' : '已写入')
+      setStep('devcfg', 'done', w.backedUp ? '已写入（原文件备份成 .bak）' : '已写入') // i18n-ignore
     } else {
-      setStep('devcfg', 'fail', w.error || '写不了')
+      setStep('devcfg', 'fail', w.error || '写不了') // i18n-ignore
     }
   }
 
   /* 4. 跑构建 —— 这一步是异步的，退出码在 onExit 里回收 */
-  setStep('build', 'doing', '构建进行中，看下面的输出')
+  setStep('build', 'doing', '构建进行中，看下面的输出') // i18n-ignore
   f.building = true
   await runBuild({ preview: false, local: true })
 
@@ -2778,11 +2806,11 @@ export async function runLocalSetup() {
     // 没起来（多半是缺密码）—— 让密码提示接管，流程先停在这
     f.building = false
     if (state.askPassword) {
-      setStep('build', 'idle', '等着你填密码')
+      setStep('build', 'idle', '等着你填密码') // i18n-ignore
       f.running = false
       return { ok: false, needsPassword: true }
     }
-    return fail('build', '构建没能启动')
+    return fail('build', t('构建没能启动'))
   }
 
   // 构建跑起来了，running 保持 true，等 onExit 收尾

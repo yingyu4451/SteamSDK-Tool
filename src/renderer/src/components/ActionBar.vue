@@ -20,6 +20,7 @@ import {
   openClearAchievements
 } from '../store.js'
 import { fmtSize } from '../format.js'
+import { t } from '../i18n/index.js'
 import { CheckCircle2, Eye, FileCog, LoaderCircle, Lock, PackageSearch, RefreshCw, ShieldCheck, SquareArrowOutUpRight, Trophy, Upload } from '@lucide/vue'
 import EmptyState from './EmptyState.vue'
 
@@ -40,7 +41,7 @@ const disabled = computed(() => state.running || !state.detail || !!state.detail
 
 const vd = computed(() => state.verify.data || null)
 const viaLabel = computed(() =>
-  state.verify.via === 'steamcmd' ? 'steamcmd + 已保存的 Steam 账号' : 'Steamworks Web API'
+  state.verify.via === 'steamcmd' ? t('steamcmd + 已保存的 Steam 账号') : 'Steamworks Web API'
 )
 
 /** 后台那个 App 下的 Depot（已归一化：depotId / platformLabel / branch / size） */
@@ -154,31 +155,31 @@ watch(
     <button
       class="btn no-drag"
       :disabled="disabled"
-      title="检查配置：跑 check.ps1，核对 vdf 里的 AppID / DepotID / 内容目录 / 排除规则，以及 depot 脚本之间对不对得上。不看实际文件。"
+      :title="t('检查配置：跑 check.ps1，核对 vdf 里的 AppID / DepotID / 内容目录 / 排除规则，以及 depot 脚本之间对不对得上。不看实际文件。')"
       @click="doCheck"
     >
       <FileCog :size="16" :stroke-width="1.9" />
-      检查配置
+      {{ t('检查配置') }}
     </button>
 
     <button
       class="btn no-drag"
       :disabled="disabled || state.preflight.busy || !state.detail?.depots?.length"
       data-pop="pf"
-      title="检查文件：只检查当前选中的这个 Depot，扫一遍它真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app 包。每个 Depot 单独检查、单独记状态。"
+      :title="t('检查文件：只检查当前选中的这个 Depot，扫一遍它真正会被上传的文件，找非法字符、超长路径、大小写冲突、符号链接、macOS 的 .app 包。每个 Depot 单独检查、单独记状态。')"
       :aria-expanded="state.preflight.busy || !!state.preflight.error || !!pf"
       aria-controls="pop-preflight"
       @click="(e) => { clearVerify(); anchorTo('pf', e.currentTarget); runPreflight(undefined, state.activeDepot) }"
     >
       <ShieldCheck :size="16" :stroke-width="1.8" />
-      {{ state.preflight.busy ? '检查中…' : '检查文件' }}
+      {{ state.preflight.busy ? t('检查中…') : t('检查文件') }}
     </button>
 
     <div class="w-px h-6 bg-line mx-1" />
 
     <button class="btn no-drag" :disabled="disabled" @click="doPreview">
       <Eye :size="16" :stroke-width="1.8" />
-      Preview 空跑
+      {{ t('Preview 空跑') }}
     </button>
 
     <button
@@ -189,13 +190,13 @@ watch(
       @click="doLive"
     >
       <Upload :size="16" :stroke-width="2.2" />
-      {{ confirming ? '再点一次确认上传' : '正式上传' }}
+      {{ confirming ? t('再点一次确认上传') : t('正式上传') }}
     </button>
 
     <Transition enter-active-class="transition duration-150" enter-from-class="opacity-0 scale-95">
       <button v-if="state.running" class="btn btn-danger no-drag" @click="cancelRun">
         <span class="w-2.5 h-2.5 rounded-sm bg-current" />
-        中止
+        {{ t('中止') }}
       </button>
     </Transition>
 
@@ -210,17 +211,17 @@ watch(
       @click="(e) => { clearPreflight(); anchorTo('verify', e.currentTarget); verifyAgainstSteam() }"
     >
       <RefreshCw :size="15" :stroke-width="1.9" :class="state.verify.busy ? 'animate-spin' : ''" />
-      {{ state.verify.busy ? '读取中…' : '同步 Depot' }}
+      {{ state.verify.busy ? t('读取中…') : t('同步 Depot') }}
     </button>
 
     <button
       class="btn no-drag"
       :disabled="!appId"
-      title="在 Steamworks 后台打开这个 App 的生成版本页面"
+      :title="t('在 Steamworks 后台打开这个 App 的生成版本页面')"
       @click="openExternal(partner('builds'))"
     >
       <SquareArrowOutUpRight :size="15" :stroke-width="1.9" />
-      查看生成版本
+      {{ t('查看生成版本') }}
     </button>
 
     <div class="flex-1" />
@@ -228,11 +229,11 @@ watch(
     <button
       class="btn no-drag"
       :disabled="!appId || state.running || !state.detail || !!state.detail.error || state.clearAchievements?.busy"
-      title="清空本机 Steam 账号在这个 App 下的全部成就（Steam 控制台执行，不联网、不需要密钥）"
+      :title="t('清空本机 Steam 账号在这个 App 下的全部成就（Steam 控制台执行，不联网、不需要密钥）')"
       @click="openClearAchievements()"
     >
       <Trophy :size="15" :stroke-width="1.9" />
-      清空成就
+      {{ t('清空成就') }}
     </button>
 
     <Transition
@@ -256,18 +257,18 @@ watch(
             v-model="pwDraft"
             type="password"
             autofocus
-            placeholder="Steam 账号密码"
+            :placeholder="t('Steam 账号密码')"
             class="flex-1 min-w-50 h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-amber/50"
             @keydown.enter="submitPw"
           />
           <label class="flex items-center gap-1.5 text-label text-muted cursor-pointer select-none">
             <input type="checkbox" v-model="pwRemember" class="accent-accent" />
-            加密保存
+            {{ t('加密保存') }}
           </label>
           <button class="btn btn-primary no-drag" :disabled="!pwDraft" @click="submitPw">
-            用这个密码{{ state.askPassword.preview ? '空跑' : '上传' }}
+            {{ state.askPassword.preview ? t('用这个密码空跑') : t('用这个密码上传') }}
           </button>
-          <button class="btn no-drag" @click="cancelPasswordPrompt">取消</button>
+          <button class="btn no-drag" @click="cancelPasswordPrompt">{{ t('取消') }}</button>
         </div>
       </div>
     </Transition>
@@ -283,7 +284,7 @@ watch(
         v-if="state.verify.busy || state.verify.error || state.verify.data"
         id="pop-verify"
         role="region"
-        aria-label="同步 Depot"
+        :aria-label="t('同步 Depot')"
         class="bar-pop bar-pop-wide rounded-card border px-3 py-2.5"
         :style="anchors.verify"
         :class="
@@ -294,30 +295,30 @@ watch(
       >
         <template v-if="state.verify.error">
           <div class="flex items-center gap-2 text-label text-amber flex-wrap">
-            <span class="font-semibold">同步失败</span>
+            <span class="font-semibold">{{ t('同步失败') }}</span>
             <span class="text-muted min-w-0 flex-1">{{ state.verify.error }}</span>
-            <button class="ml-auto btn btn-sm px-2  no-drag shrink-0" @click="clearVerify">关闭</button>
+            <button class="ml-auto btn btn-sm px-2  no-drag shrink-0" @click="clearVerify">{{ t('关闭') }}</button>
           </div>
           <div v-if="state.verify.needsKey" class="mt-2 flex items-center gap-2 flex-wrap">
             <button class="btn btn-primary no-drag" @click="verifyAgainstSteam(null, 'steamcmd')">
-              改用 steamcmd
+              {{ t('改用 steamcmd') }}
             </button>
           </div>
           <div v-else-if="state.verify.needsPassword" class="mt-2 flex items-center gap-2 flex-wrap">
-            <button class="btn btn-primary no-drag" @click="goSettings">去设置里填账号密码</button>
+            <button class="btn btn-primary no-drag" @click="goSettings">{{ t('去设置里填账号密码') }}</button>
           </div>
         </template>
 
         <template v-else-if="state.verify.busy">
           <div class="flex items-center gap-2.5 text-label text-muted">
             <LoaderCircle :size="16" class="text-accent drop-spin shrink-0" />
-            <span>正在读取后台 Depot…（走 steamcmd 时要 10–30 秒）</span>
+            <span>{{ t('正在读取后台 Depot…（走 steamcmd 时要 10–30 秒）') }}</span>
           </div>
         </template>
 
         <template v-else-if="vd">
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-semibold text-label">同步 Depot</span>
+            <span class="font-semibold text-label">{{ t('同步 Depot') }}</span>
             <span class="px-2 py-0.5 rounded-full text-micro border text-muted border-line">
               {{ viaLabel }}
             </span>
@@ -331,16 +332,16 @@ watch(
             >
               {{ vd.appName ? `AppID ${vd.appId} · ${vd.appName}` : `AppID ${vd.appId}` }}
             </span>
-            <span class="text-micro text-faint">后台 {{ steamDepots.length }} 个 Depot</span>
-            <button class="ml-auto btn btn-sm px-2  no-drag" @click="clearVerify">收起</button>
+            <span class="text-micro text-faint">{{ t('后台 {n} 个 Depot', { n: steamDepots.length }) }}</span>
+            <button class="ml-auto btn btn-sm px-2  no-drag" @click="clearVerify">{{ t('收起') }}</button>
           </div>
 
           <!-- 后台 Depot，勾选要加进来的 -->
           <div v-if="steamDepots.length" class="mt-2.5 pt-2.5 border-t border-line-soft">
             <div class="flex items-center gap-2 mb-1.5">
-              <span class="text-micro text-faint">勾选要加进本地的</span>
-              <button class="btn btn-sm px-2  no-drag" @click="syncPickAll(true)">全选</button>
-              <button class="btn btn-sm px-2  no-drag" @click="syncPickAll(false)">全不选</button>
+              <span class="text-micro text-faint">{{ t('勾选要加进本地的') }}</span>
+              <button class="btn btn-sm px-2  no-drag" @click="syncPickAll(true)">{{ t('全选') }}</button>
+              <button class="btn btn-sm px-2  no-drag" @click="syncPickAll(false)">{{ t('全不选') }}</button>
             </div>
 
             <div
@@ -356,16 +357,16 @@ watch(
                 @change="toggleSyncPick(d.depotId)"
               />
               <span class="font-mono num text-label shrink-0">{{ d.depotId }}</span>
-              <span class="text-label text-muted shrink-0">{{ d.platformLabel || '平台未知' }}</span>
+              <span class="text-label text-muted shrink-0">{{ d.platformLabel || t('平台未知') }}</span>
               <span v-if="d.branch" class="text-micro text-faint shrink-0">{{ d.branch }}</span>
               <span class="text-micro text-faint num shrink-0">{{ fmtSize(d.size) }}</span>
-              <span v-if="localIds.has(String(d.depotId))" class="text-micro text-accent shrink-0">本地已有</span>
+              <span v-if="localIds.has(String(d.depotId))" class="text-micro text-accent shrink-0">{{ t('本地已有') }}</span>
               <button
                 v-else-if="!d.platform"
                 class="ml-auto btn btn-sm px-2  no-drag"
                 @click="openDepotSlide()"
               >
-                手动加
+                {{ t('手动加') }}
               </button>
             </div>
 
@@ -375,7 +376,7 @@ watch(
                 :disabled="!pickCount || state.syncAdding"
                 @click="syncAddSelected"
               >
-                {{ state.syncAdding ? '添加中…' : `添加选中的 ${pickCount} 个` }}
+                {{ state.syncAdding ? t('添加中…') : t('添加选中的 {n} 个', { n: pickCount }) }}
               </button>
             </div>
           </div>
@@ -383,14 +384,14 @@ watch(
             <EmptyState
               compact
               :icon="PackageSearch"
-              title="后台还没有 Depot"
-              hint="这个 App 在 Steamworks 后台一个 Depot 都没有，先在后台建一个再回来同步。"
+              :title="t('后台还没有 Depot')"
+              :hint="t('这个 App 在 Steamworks 后台一个 Depot 都没有，先在后台建一个再回来同步。')"
             />
           </div>
 
           <!-- 分支 -->
           <div v-if="branchList.length" class="mt-2.5 pt-2.5 border-t border-line-soft">
-            <div class="text-micro text-faint mb-1">后台分支</div>
+            <div class="text-micro text-faint mb-1">{{ t('后台分支') }}</div>
             <div class="flex gap-1.5 flex-wrap">
               <span
                 v-for="b in branchList"
@@ -417,7 +418,7 @@ watch(
         v-if="state.preflight.busy || state.preflight.error || pf"
         id="pop-preflight"
         role="region"
-        aria-label="检查文件结果"
+        :aria-label="t('检查文件结果')"
         class="bar-pop bar-pop-wide rounded-card border px-3 py-2.5"
         :style="anchors.pf"
         :class="
@@ -427,24 +428,24 @@ watch(
         "
       >
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="font-semibold text-label">检查文件</span>
+          <span class="font-semibold text-label">{{ t('检查文件') }}</span>
           <span v-if="state.activeDepot" class="pill pill-idle text-micro">Depot {{ state.activeDepot }}</span>
           <span v-if="pf" class="text-micro" :class="pfTone">
-            {{ pf.errors }} 个会拦住上传 · {{ pf.warns }} 个警告 · {{ pf.infos }} 条提示
+            {{ t('{n} 个会拦住上传', { n: pf.errors }) }} · {{ t('{n} 个警告', { n: pf.warns }) }} · {{ t('{n} 条提示', { n: pf.infos }) }}
           </span>
-          <span v-else-if="state.preflight.busy" class="text-micro text-faint">正在扫这个 Depot 的文件…</span>
-          <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="clearPreflight">收起</button>
+          <span v-else-if="state.preflight.busy" class="text-micro text-faint">{{ t('正在扫这个 Depot 的文件…') }}</span>
+          <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="clearPreflight">{{ t('收起') }}</button>
         </div>
 
         <div v-if="state.preflight.error" class="mt-2 flex flex-col gap-1">
           <div class="text-label text-amber">{{ state.preflight.error }}</div>
           <div class="text-micro text-faint leading-relaxed">
-            先跑「检查配置」确认 vdf 和内容目录没问题；脚本的完整报错在底部「构建输出」里。
+            {{ t('先跑「检查配置」确认 vdf 和内容目录没问题；脚本的完整报错在底部「构建输出」里。') }}
           </div>
         </div>
         <div v-else-if="pf && !pf.problems.length" class="mt-2 flex items-center gap-2 text-label text-accent">
           <CheckCircle2 :size="16" :stroke-width="2" class="shrink-0" />
-          没有发现问题。
+          {{ t('没有发现问题。') }}
         </div>
         <div v-else-if="pf" class="mt-2 flex flex-col gap-2">
           <div v-for="(p, i) in pf.problems" :key="i" class="flex items-start gap-2 min-w-0">
@@ -452,7 +453,7 @@ watch(
               class="pill shrink-0 mt-px"
               :class="p.level === 'error' ? 'pill-bad' : p.level === 'warn' ? 'pill-warn' : 'pill-idle'"
             >
-              {{ p.level === 'error' ? '拦住' : p.level === 'warn' ? '警告' : '提示' }}
+              {{ p.level === 'error' ? t('拦住') : p.level === 'warn' ? t('警告') : t('提示') }}
             </span>
             <div class="min-w-0">
               <div class="text-label text-ink">{{ p.title }}</div>

@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { t } from './i18n.js'
 
 /**
  * 随包带的两个 PowerShell 脚本：build.ps1 / check.ps1。
@@ -126,15 +127,15 @@ export function installScripts(contentBuilderDir, { force = false } = {}) {
   const result = { ok: false, error: '', written: [], upgraded: [], skipped: [], failed: [] }
 
   if (!targetDir) {
-    result.error = '没有 ContentBuilder 目录 —— 先在设置里选对 SDK 路径'
+    result.error = t('没有 ContentBuilder 目录 —— 先在设置里选对 SDK 路径')
     return result
   }
   if (!fs.existsSync(targetDir)) {
-    result.error = `ContentBuilder 目录不存在：${targetDir}`
+    result.error = t('ContentBuilder 目录不存在：{path}', { path: targetDir })
     return result
   }
   if (!bundledDir || !fs.existsSync(bundledDir)) {
-    result.error = '这个安装包里没找到自带的构建脚本（resources\\scripts），装包不完整'
+    result.error = t('这个安装包里没找到自带的构建脚本（resources\\scripts），装包不完整')
     return result
   }
 
@@ -145,7 +146,7 @@ export function installScripts(contentBuilderDir, { force = false } = {}) {
     const sourceSum = digest(source)
     if (!sourceSum) {
       result.failed.push(name)
-      lastError = new Error(`自带脚本缺失：${source}`)
+      lastError = new Error(t('自带脚本缺失：{path}', { path: source }))
       continue
     }
     const targetSum = digest(target)
@@ -188,9 +189,13 @@ export function installScripts(contentBuilderDir, { force = false } = {}) {
   result.contentBuilderDir = targetDir
   result.ok = result.failed.length === 0 && after.missing.length === 0
   if (!result.ok) {
-    const names = (result.failed.length ? result.failed : after.missing).join('、')
+    const names = (result.failed.length ? result.failed : after.missing).join(t('、'))
     const reason = lastError ? lastError.code || lastError.message : ''
-    result.error = `写不进 ${targetDir}（${names}）：${reason || '未知错误'} —— 这个目录可能被占用或没有写权限`
+    result.error = t('写不进 {dir}（{files}）：{reason} —— 这个目录可能被占用或没有写权限', {
+      dir: targetDir,
+      files: names,
+      reason: reason || t('未知错误')
+    })
   }
   return result
 }
@@ -202,7 +207,7 @@ export function installScripts(contentBuilderDir, { force = false } = {}) {
 export function ensureScripts(contentBuilderDir) {
   const before = inspectScripts(contentBuilderDir)
   if (!before.bundledReady) {
-    return { ...before, written: [], upgraded: [], error: '安装包里没找到自带的构建脚本' }
+    return { ...before, written: [], upgraded: [], error: t('安装包里没找到自带的构建脚本') }
   }
 
   const result = installScripts(contentBuilderDir, { force: false })

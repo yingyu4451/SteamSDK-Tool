@@ -3,6 +3,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Terminal, X } from '@lucide/vue'
 import { toast } from '../store.js'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t } from '../i18n/index.js'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -51,8 +52,9 @@ async function start() {
   const r = await api.login.consoleOpen(props.account || '')
   if (!r?.ok) {
     status.value = 'exited'
-    text.value = `[无法启动内置控制台] ${r?.error || '未知错误'}\n\n可以退回设置页用「打开登录窗口」的外置窗口登录。\n`
-    toast(r?.error || '内置控制台启动失败', 'bad')
+    text.value =
+      t('[无法启动内置控制台]') + ' ' + (r?.error || t('未知错误')) + '\n\n' + t('可以退回设置页用「打开登录窗口」的外置窗口登录。') + '\n'
+    toast(r?.error || t('内置控制台启动失败'), 'bad')
     return
   }
   sessionId.value = r.id
@@ -68,7 +70,7 @@ function stop() {
 
 async function send() {
   if (!sessionId.value) {
-    toast('控制台已经结束了', 'bad')
+    toast(t('控制台已经结束了'), 'bad')
     return
   }
   const line = input.value
@@ -101,12 +103,12 @@ onMounted(() => {
   offData = api.login.onConsoleData(({ text: chunk }) => appendChunk(chunk))
   offMobile = api.login.onConsoleMobile(() => {
     status.value = 'mobile'
-    toast('Steam 正在等你手机上点确认', 'warn')
+    toast(t('Steam 正在等你手机上点确认'), 'warn')
   })
   offExit = api.login.onConsoleExit(({ code }) => {
     status.value = 'exited'
     sessionId.value = null
-    appendChunk(`\n[steamcmd 已退出，退出码 ${code}]\n`)
+    appendChunk('\n' + t('[steamcmd 已退出，退出码 {code}]', { code }) + '\n')
   })
 })
 
@@ -118,10 +120,10 @@ onBeforeUnmount(() => {
 })
 
 const STATUS_TEXT = {
-  idle: '未连接',
-  running: '等待输入',
-  mobile: '等待手机确认',
-  exited: '已结束'
+  idle: '未连接', // i18n-ignore 值是中文 key，模板里 t() 现翻
+  running: '等待输入', // i18n-ignore
+  mobile: '等待手机确认', // i18n-ignore
+  exited: '已结束' // i18n-ignore
 }
 </script>
 
@@ -140,9 +142,9 @@ const STATUS_TEXT = {
         <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3 shrink-0">
           <Terminal :size="18" class="text-accent shrink-0 mt-0.5" />
           <div class="min-w-0 flex-1">
-            <h2 id="login-console-title" class="text-title font-semibold m-0">Steam 登录控制台</h2>
+            <h2 id="login-console-title" class="text-title font-semibold m-0">{{ t('Steam 登录控制台') }}</h2>
             <p class="mt-1 mb-0 text-label text-faint leading-relaxed">
-              跑的就是 SDK 里的 steamcmd。已保存账号时会自动发 login 命令，密码 / 验证码在下面输入框回车发送。
+              {{ t('跑的就是 SDK 里的 steamcmd。已保存账号时会自动发 login 命令，密码 / 验证码在下面输入框回车发送。') }}
             </p>
           </div>
           <span
@@ -157,9 +159,9 @@ const STATUS_TEXT = {
                     : 'pill-idle'
             "
           >
-            {{ STATUS_TEXT[status] }}
+            {{ t(STATUS_TEXT[status]) }}
           </span>
-          <button class="link-btn shrink-0" title="关闭控制台" @click="close">
+          <button class="link-btn shrink-0" :title="t('关闭控制台')" @click="close">
             <X :size="16" />
           </button>
         </header>
@@ -168,30 +170,30 @@ const STATUS_TEXT = {
           v-if="status === 'mobile'"
           class="mx-5 mt-3 px-3 py-2 rounded-card border border-amber/35 bg-amber/8 text-label text-ink shrink-0"
         >
-          <strong>Steam 正在等你手机上点确认</strong> —— 拿出手机打开 Steam App，点右下角盾牌图标里的「确认登录」。
-          不用在下面输任何东西，确认完它自己会继续。
+          <strong>{{ t('Steam 正在等你手机上点确认') }}</strong> {{ t('—— 拿出手机打开 Steam App，点右下角盾牌图标里的「确认登录」。') }}
+          {{ t('不用在下面输任何东西，确认完它自己会继续。') }}
         </div>
 
         <pre
           ref="outputEl"
           class="flex-1 m-3 mx-5 p-3 rounded-card border border-line bg-[#05080c] text-[12px] leading-[1.55] font-mono text-[#c6d4df] overflow-y-auto scroll-thin whitespace-pre-wrap break-all"
           aria-live="polite"
-        >{{ text || '正在启动 steamcmd…' }}</pre>
+        >{{ text || t('正在启动 steamcmd…') }}</pre>
 
         <footer class="px-5 pb-4 pt-3 border-t border-line flex items-center gap-2 shrink-0">
           <input
             ref="inputEl"
             v-model="input"
             class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45 placeholder:text-faint"
-            placeholder="输入密码 / 验证码 / steamcmd 命令，回车发送"
+            :placeholder="t('输入密码 / 验证码 / steamcmd 命令，回车发送')"
             :disabled="!sessionId"
             @keydown.enter.prevent="send"
           />
-          <button class="btn" :disabled="!sessionId" @click="send">发送</button>
-          <button class="btn" :disabled="!sessionId" title="发送 Ctrl+C 中断当前命令" @click="sendCtrlC">
+          <button class="btn" :disabled="!sessionId" @click="send">{{ t('发送') }}</button>
+          <button class="btn" :disabled="!sessionId" :title="t('发送 Ctrl+C 中断当前命令')" @click="sendCtrlC">
             Ctrl+C
           </button>
-          <button class="btn" @click="close">关闭</button>
+          <button class="btn" @click="close">{{ t('关闭') }}</button>
         </footer>
       </div>
     </div>

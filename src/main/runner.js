@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
+import { t } from './i18n.js'
 
 /* ------------------------------------------------------------------ *
  *  PowerShell 可执行文件解析：优先 pwsh(7+)，退回 Windows PowerShell
@@ -42,7 +43,7 @@ export function isRunning(id) {
 
 export function sendInput(id, text) {
   const r = runs.get(id)
-  if (!r || !r.child.stdin.writable) return { ok: false, error: '该任务没有可写入的 stdin' }
+  if (!r || !r.child.stdin.writable) return { ok: false, error: t('该任务没有可写入的 stdin') }
   r.child.stdin.write(String(text).replace(/\r?\n$/, '') + '\n')
   r.askedGuard = true
   return { ok: true }
@@ -50,7 +51,7 @@ export function sendInput(id, text) {
 
 export function killRun(id) {
   const r = runs.get(id)
-  if (!r) return { ok: false, error: '任务不存在或已结束' }
+  if (!r) return { ok: false, error: t('任务不存在或已结束') }
   // pwsh 会再拉起 steamcmd，必须整棵进程树一起杀
   const pid = r.child.pid
   try {
@@ -93,7 +94,7 @@ export function runScript({
   onExit
 }) {
   if (!fs.existsSync(script)) {
-    onExit?.({ code: -1, runId: null, error: `脚本不存在：${script}` })
+    onExit?.({ code: -1, runId: null, error: t('脚本不存在：{path}', { path: script }) })
     return null
   }
 
@@ -153,16 +154,16 @@ export function runScript({
       record.askedMobile = true
       onPrompt?.({
         kind: 'mobile-confirm',
-        hint: 'Steam 要你在手机上确认 —— 打开 Steam App，点「确认登录」。这边会自己继续'
+        hint: t('Steam 要你在手机上确认 —— 打开 Steam App，点「确认登录」。这边会自己继续')
       })
     }
 
     // Steam Guard / 两步验证：stdout 被块缓冲时看不到提示，属于尽力而为
-    if (!record.askedGuard && /two-?factor|guard code|verification code|验证码/i.test(text)) {
+    if (!record.askedGuard && /two-?factor|guard code|verification code|验证码/i.test(text)) { // i18n-ignore
       record.askedGuard = true
       onPrompt?.({
         kind: 'steamguard',
-        hint: 'Steam 要求两步验证码，请输入后回车'
+        hint: t('Steam 要求两步验证码，请输入后回车')
       })
     }
   }
@@ -171,7 +172,7 @@ export function runScript({
   child.stderr.on('data', (d) => emit('stderr', d))
 
   child.on('error', (err) => {
-    onData?.({ stream: 'stderr', line: `无法启动 ${exe}：${err.message}`, raw: '' })
+    onData?.({ stream: 'stderr', line: t('无法启动 {exe}：{message}', { exe, message: err.message }), raw: '' })
   })
 
   child.on('close', (code) => {

@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { History, ChevronDown } from '@lucide/vue'
 import { CHANGELOG } from '../changelog.js'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t } from '../i18n/index.js'
 
 const props = defineProps({ open: { type: Boolean, default: false } })
 const emit = defineEmits(['close'])
@@ -53,9 +54,9 @@ onMounted(async () => {
         <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
           <History :size="18" class="text-accent shrink-0 mt-0.5" />
           <div class="min-w-0">
-            <h2 id="changelog-title" class="text-title font-semibold m-0">更新日志</h2>
+            <h2 id="changelog-title" class="text-title font-semibold m-0">{{ t('更新日志') }}</h2>
             <p class="mt-1 mb-0 text-label text-faint leading-relaxed">
-              从 v0.1.18 到现在的改动。点版本行展开 / 收起。
+              {{ t('从 v0.1.18 到现在的改动。点版本行展开 / 收起。') }}
             </p>
           </div>
         </header>
@@ -77,7 +78,7 @@ onMounted(async () => {
                 :class="openSet.has(i) ? 'rotate-0' : '-rotate-90'"
               />
               <span class="text-body font-semibold text-ink">v{{ v.version }}</span>
-              <span v-if="i === 0" class="pill pill-ok text-micro">最新</span>
+              <span v-if="i === 0" class="pill pill-ok text-micro">{{ t('最新') }}</span>
               <span class="ml-auto text-micro text-faint">{{ v.date }}</span>
             </button>
 
@@ -87,7 +88,7 @@ onMounted(async () => {
                   class="mt-0 mb-0 pl-9 pr-4 pb-3 flex flex-col gap-1.5 text-label text-muted leading-relaxed"
                 >
                   <li v-for="(it, j) in v.items" :key="j" class="list-disc marker:text-line">
-                    {{ it }}
+                    {{ t(it) }}
                   </li>
                 </ul>
               </div>
@@ -96,8 +97,8 @@ onMounted(async () => {
         </div>
 
         <footer class="px-5 py-3 border-t border-line flex items-center">
-          <div class="flex-1 text-micro text-faint">完整提交记录见 GitHub 仓库</div>
-          <button class="btn" @click="close">关闭</button>
+          <div class="flex-1 text-micro text-faint">{{ t('完整提交记录见 GitHub 仓库') }}</div>
+          <button class="btn" @click="close">{{ t('关闭') }}</button>
         </footer>
       </div>
     </div>

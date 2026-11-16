@@ -6,6 +6,7 @@ import { PLATFORM_LABEL } from '../store.js'
 import { fmtSize } from '../format.js'
 import { X } from '@lucide/vue'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t, num } from '../i18n/index.js'
 
 const el = ref(null)
 
@@ -20,11 +21,15 @@ let tick = null
 /** 加载动画上那行字：阶段 + 已数到多少 + 已经等了多久 */
 const phaseText = computed(() => {
   const pr = state.drop.progress
-  const tail = elapsed.value >= 3 ? ` · 已等 ${elapsed.value} 秒` : ''
-  if (!pr) return `正在读${d.value?.name ? ' ' + d.value.name : ''}…${tail}`
-  const n = pr.files ? ` · ${pr.files.toLocaleString()} 个文件` : ''
+  const tail = elapsed.value >= 3 ? ' · ' + t('已等 {n} 秒', { n: elapsed.value }) : ''
+  if (!pr) {
+    const name = d.value?.name
+    return (name ? t('正在读 {name}…', { name }) : t('正在读…')) + tail
+  }
+  const n = pr.files ? ' · ' + t('{n} 个文件', { n: num(pr.files) }) : ''
   const sz = pr.bytes ? ` · ${fmtSize(pr.bytes)}` : ''
-  return `${pr.text || '正在读…'}${n}${sz}${tail}`
+  const text = pr.text || t('正在读…')
+  return `${text}${n}${sz}${tail}`
 })
 
 onMounted(() => {
@@ -95,16 +100,29 @@ const canApply = computed(() => {
 
 const willDo = computed(() => {
   if (!d.value?.ok) return ''
-  const what = d.value.kind === 'archive' ? '解压后的内容' : '这个文件夹'
-  const dest = destRoot.value || '（项目文件夹还没设置）'
+  const what = d.value.kind === 'archive' ? t('解压后的内容') : t('这个文件夹')
+  const dest = destRoot.value || t('（项目文件夹还没设置）')
   if (effPick.value) {
-    return `把${what}复制进 ${dest}，并把后台 Depot ${effPick.value.depotId} 的内容目录指到这里`
+    return t('把{what}复制进 {dest}，并把后台 Depot {id} 的内容目录指到这里', {
+      what,
+      dest,
+      id: effPick.value.depotId
+    })
   }
   if (!target.value) {
-    return `把${what}复制进 ${dest}，并作为新 Depot ${newDepotId.value.trim()} 的内容目录`
+    return t('把{what}复制进 {dest}，并作为新 Depot {id} 的内容目录', {
+      what,
+      dest,
+      id: newDepotId.value.trim()
+    })
   }
   const dep = pickedDepot.value
-  return `把${what}复制进 ${dest}，并把 ${PLATFORM_LABEL[dep?.platformId] || ''} Depot ${dep?.id || ''} 的内容目录指到这里`
+  return t('把{what}复制进 {dest}，并把 {platform} Depot {id} 的内容目录指到这里', {
+    what,
+    dest,
+    platform: PLATFORM_LABEL[dep?.platformId] || '',
+    id: dep?.id || ''
+  })
 })
 
 /** 会新写出来的脚本文件名 */
@@ -221,7 +239,7 @@ async function doApply() {
     <div ref="el" role="dialog" aria-modal="true" aria-labelledby="drop-dialog-title" class="relative card s-modal w-full max-w-170 max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
         <div class="min-w-0">
-          <h2 id="drop-dialog-title" class="text-title font-semibold m-0">文件导入</h2>
+          <h2 id="drop-dialog-title" class="text-title font-semibold m-0">{{ t('文件导入') }}</h2>
           <p class="mt-1 mb-0 text-label text-faint font-mono break-all" :title="d.target">
             {{ d.target }}
           </p>
@@ -242,11 +260,11 @@ async function doApply() {
             <span class="drop-spinner" />
             <div class="text-body text-ink num">{{ phaseText }}</div>
             <div class="text-label text-faint text-center leading-relaxed max-w-90">
-              压缩包会先在这里解开再数一遍。包大的话要等几分钟 —— 别关窗口，也别再拖一次。
+              {{ t('压缩包会先在这里解开再数一遍。包大的话要等几分钟 —— 别关窗口，也别再拖一次。') }}
             </div>
             <div v-if="bk.busy" class="flex items-center gap-2 text-label text-muted">
               <span class="drop-spinner drop-spinner-sm" />
-              <span>同时在读取后台 Depot…</span>
+              <span>{{ t('同时在读取后台 Depot…') }}</span>
             </div>
           </div>
         </Transition>
@@ -264,28 +282,28 @@ async function doApply() {
           <div class="card-flat p-3.5">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="pill" :class="d.platform ? 'pill-ok' : 'pill-warn'">
-                {{ d.platform ? PLATFORM_LABEL[d.platform] : '平台没认出来' }}
+                {{ d.platform ? PLATFORM_LABEL[d.platform] : t('平台没认出来') }}
               </span>
               <span class="text-label num text-muted">
-                {{ d.files.toLocaleString() }} 个文件 · {{ fmtSize(d.bytes) }}
+                {{ t('{n} 个文件', { n: num(d.files) }) }} · {{ fmtSize(d.bytes) }}
               </span>
-              <span v-if="d.kind === 'archive'" class="pill pill-idle">压缩包</span>
-              <span v-if="d.appIdGuess" class="pill pill-idle">名字里的 AppID {{ d.appIdGuess }}</span>
+              <span v-if="d.kind === 'archive'" class="pill pill-idle">{{ t('压缩包') }}</span>
+              <span v-if="d.appIdGuess" class="pill pill-idle">{{ t('名字里的 AppID {id}', { id: d.appIdGuess }) }}</span>
             </div>
 
             <div v-if="d.why?.length" class="mt-2 text-label text-faint">
-              判断依据：{{ d.why.join(' · ') }}
+              {{ t('判断依据：{why}', { why: d.why.join(' · ') }) }}
             </div>
             <div v-if="d.markers?.length" class="mt-1 text-label text-faint">
-              特征：{{ d.markers.join(' · ') }}
+              {{ t('特征：{list}', { list: d.markers.join(' · ') }) }}
             </div>
             <div v-if="d.truncated" class="mt-1 text-label text-amber">
-              文件太多，只统计了前 3 万个。
+              {{ t('文件太多，只统计了前 3 万个。') }}
             </div>
 
             <!-- .app bundle -->
             <div v-if="d.hasAppBundle" class="mt-2 text-label text-amber">
-              macOS 的 .app bundle 传上去容易坏签名 —— 跑「检查文件」能看到详情，Valve 的 tools\ContentPrep 是专门处理这个的。
+              {{ t('macOS 的 .app bundle 传上去容易坏签名 —— 跑「检查文件」能看到详情，Valve 的 tools\\ContentPrep 是专门处理这个的。') }}
             </div>
           </div>
 
@@ -296,12 +314,12 @@ async function doApply() {
             class="flex items-center gap-2.5 rounded-card border border-line bg-surface-2/60 px-3.5 py-2.5"
           >
             <span class="drop-spinner drop-spinner-sm" />
-            <span class="text-label text-muted">文件已经读完，后台 Depot 还在读取…列表稍后会自动补全。</span>
+            <span class="text-label text-muted">{{ t('文件已经读完，后台 Depot 还在读取…列表稍后会自动补全。') }}</span>
           </div>
 
           <!-- 放哪个 Depot -->
           <div class="flex flex-col gap-2">
-            <span class="text-label text-muted">导入哪个 Depot</span>
+            <span class="text-label text-muted">{{ t('导入哪个 Depot') }}</span>
 
             <div class="flex flex-col gap-1.5">
               <label
@@ -321,10 +339,10 @@ async function doApply() {
                   v-if="dep.platformId === suggested"
                   class="pill pill-ok"
                 >
-                  平台一致
+                  {{ t('平台一致') }}
                 </span>
                 <span class="ml-auto font-mono text-micro text-faint break-all max-w-60 text-right" :title="dep.contentRoot">
-                  {{ dep.contentRoot || '（没有内容目录）' }}
+                  {{ dep.contentRoot || t('（没有内容目录）') }}
                 </span>
               </label>
 
@@ -347,8 +365,8 @@ async function doApply() {
                 />
                 <span class="text-body text-ink">{{ row.platformLabel || PLATFORM_LABEL[row.platform] }}</span>
                 <span class="font-mono num text-label text-faint">{{ row.depotId }}</span>
-                <span class="pill pill-idle">未在本地配置</span>
-                <span v-if="row.platform === suggested" class="pill pill-ok">平台一致</span>
+                <span class="pill pill-idle">{{ t('未在本地配置') }}</span>
+                <span v-if="row.platform === suggested" class="pill pill-ok">{{ t('平台一致') }}</span>
                 <span class="ml-auto text-micro text-faint num shrink-0">{{ fmtSize(row.size) }}</span>
               </label>
 
@@ -359,18 +377,18 @@ async function doApply() {
                 "
               >
                 <input type="radio" :checked="!target && !effPick" class="accent-accent" @change="newPick = true; target = ''; backendPick = null" />
-                <span class="text-body text-ink">新建一个 Depot</span>
-                <span v-if="!depots.length" class="text-label text-faint">（这个 App 还没有 Depot）</span>
+                <span class="text-body text-ink">{{ t('新建一个 Depot') }}</span>
+                <span v-if="!depots.length" class="text-label text-faint">{{ t('（这个 App 还没有 Depot）') }}</span>
               </label>
             </div>
 
             <!-- 后台读取状态（读取中在文件分析结果上方已有明显提示，这里只报结果） -->
             <div v-if="bk.error && !bk.depots.length" class="text-micro text-faint">
-              没读到后台：{{ bk.error }}
-              <button class="link-btn" @click="dropLookupBackend(true)">重试</button>
+              {{ t('没读到后台：{error}', { error: bk.error }) }}
+              <button class="link-btn" @click="dropLookupBackend(true)">{{ t('重试') }}</button>
             </div>
             <div v-else-if="bk.done && !bk.depots.length" class="text-micro text-faint">
-              后台的 Depot 本地都配齐了{{ bk.appName ? `（${bk.appName}）` : '' }}。
+              {{ t('后台的 Depot 本地都配齐了{app}。', { app: bk.appName ? t('（{name}）', { name: bk.appName }) : '' }) }}
             </div>
 
             <!-- 新建的字段 -->
@@ -384,7 +402,7 @@ async function doApply() {
                 />
               </label>
               <div class="flex flex-col gap-1.5">
-                <span class="text-label text-muted">平台</span>
+                <span class="text-label text-muted">{{ t('平台') }}</span>
                 <div class="flex gap-1.5 flex-wrap">
                   <button
                     v-for="p in platformChoices"
@@ -394,12 +412,12 @@ async function doApply() {
                     :aria-pressed="platform === p.id"
                     @click="pickPlatform(p.id)"
                   >
-                    {{ p.label }}<span v-if="p.used" class="text-faint"> ·已占用</span>
+                    {{ p.label }}<span v-if="p.used" class="text-faint"> {{ t('·已占用') }}</span>
                   </button>
                 </div>
               </div>
               <label class="flex flex-col gap-1.5">
-                <span class="text-label text-muted">Depot 名称</span>
+                <span class="text-label text-muted">{{ t('Depot 名称') }}</span>
                 <input
                   v-model="depotName"
                   :placeholder="`${state.selectedDir || ''} Content`"
@@ -410,7 +428,7 @@ async function doApply() {
 
             <!-- 导入只有一种方式：复制进项目文件夹下的平台目录 -->
             <div v-if="destRoot" class="flex items-baseline gap-1.5 pl-3 text-label text-muted">
-              <span>内容会复制到</span>
+              <span>{{ t('内容会复制到') }}</span>
               <span class="font-mono text-micro text-faint break-all" :title="destRoot">{{ destRoot }}</span>
             </div>
           </div>
@@ -419,7 +437,7 @@ async function doApply() {
           <div v-if="willDo || scriptLine" class="card-flat px-3.5 py-2.5 text-label text-muted">
             <div v-if="willDo">{{ willDo }}</div>
             <div v-if="scriptLine" class="font-mono text-micro text-faint" :class="willDo ? 'mt-1' : ''">
-              ＋ 脚本 {{ scriptLine }}
+              {{ t('＋ 脚本 {file}', { file: scriptLine }) }}
             </div>
           </div>
         </template>
@@ -427,13 +445,13 @@ async function doApply() {
 
       <footer class="px-5 py-4 border-t border-line flex items-center gap-2 shrink-0">
         <div class="flex-1" />
-        <button class="btn no-drag" @click="closeDrop">取消</button>
+        <button class="btn no-drag" @click="closeDrop">{{ t('取消') }}</button>
         <button
           class="btn btn-primary no-drag"
           :disabled="!canApply"
           @click="doApply"
         >
-          {{ state.drop.busy ? '处理中…' : effPick ? '同步并导入' : target ? '复制并导入' : '新建并导入' }}
+          {{ state.drop.busy ? t('处理中…') : effPick ? t('同步并导入') : target ? t('复制并导入') : t('新建并导入') }}
         </button>
       </footer>
     </div>

@@ -98,8 +98,14 @@ import {
   installScripts,
   inspectScripts
 } from './scripts.js'
+import { setLanguage, currentLanguage, systemLocale, t } from './i18n.js'
 
 let mainWindow = null
+
+/** 窗口标题（任务栏 / Alt+Tab 显示的那个），跟着界面语言走 */
+function windowTitle() {
+  return t('SteamSDK 上传工作台')
+}
 
 /**
  * `GetPartnerAppListForWebAPIKey` 是一次 20–40 KB 的网络请求，命中 10 分钟缓存。
@@ -131,14 +137,20 @@ async function viaSteamcmd(appId, settings) {
   const p = getPaths(settings)
   const username = String(settings.account || '').trim()
   if (!username) {
-    return { ok: false, error: '还没有配置 Steam 账号名（设置 → 账号）', needsPassword: true }
+    return {
+      ok: false,
+      error: t('还没有配置 Steam 账号名（设置 → 账号）'),
+      needsPassword: true
+    }
   }
   const password = await readPassword()
   if (!password) {
     return {
       ok: false,
       needsPassword: true,
-      error: `需要 Steam 账号 ${username} 的密码才能用 steamcmd 查后台 Depot（设置里没存密码）`
+      error: t('需要 Steam 账号 {account} 的密码才能用 steamcmd 查后台 Depot（设置里没存密码）', {
+        account: username
+      })
     }
   }
 
@@ -170,7 +182,7 @@ async function viaSteamcmd(appId, settings) {
       betas: steamBranchesFrom(r.depots)
     }
   } catch (e) {
-    return { ok: false, error: `steamcmd 查询失败：${e.message}` }
+    return { ok: false, error: t('steamcmd 查询失败：{message}', { message: e.message }) }
   }
 }
 
@@ -300,7 +312,7 @@ function createWindow() {
     minHeight: 720,
     show: false,
     backgroundColor: '#171a21',
-    title: 'SteamSDK 上传工作台',
+    title: windowTitle(),
     // 任务栏 / Alt+Tab 图标。打包后 exe 里也嵌了同一份，但显式给一份
     // 能让开发模式（跑的是 electron.exe）也显示自己的图标，而不是 Electron 的默认原子。
     icon: appIconPath(),
@@ -377,7 +389,7 @@ function assertInsideContentBuilder(file) {
   const cb = path.resolve(getPaths(loadSettings()).contentBuilder)
   const target = path.resolve(file)
   if (!target.startsWith(cb + path.sep)) {
-    throw new Error(`拒绝访问 ContentBuilder 之外的路径：${target}`)
+    throw new Error(t('拒绝访问 ContentBuilder 之外的路径：{path}', { path: target }))
   }
   return target
 }
@@ -398,10 +410,10 @@ async function currentPassword(override) {
  */
 function autoInstallScripts(settings = loadSettings()) {
   const sdkRoot = String(settings?.sdkRoot || '').trim()
-  if (!sdkRoot) return { ok: false, error: '还没设置 SDK 路径' }
+  if (!sdkRoot) return { ok: false, error: t('还没设置 SDK 路径') }
   const paths = getPaths(settings)
   if (!fs.existsSync(paths.contentBuilder)) {
-    return { ok: false, error: 'SDK 路径里没有 tools\\ContentBuilder' }
+    return { ok: false, error: t('SDK 路径里没有 tools\\ContentBuilder') }
   }
   try {
     return ensureScripts(paths.contentBuilder)
@@ -422,9 +434,15 @@ function ensureRunScript(settings, paths, which) {
   autoInstallScripts(settings)
   if (fs.existsSync(file)) return null
   if (!fs.existsSync(paths.contentBuilder)) {
-    return `找不到 ${label} —— SDK 路径没指向带 tools\\ContentBuilder 的目录：${settings.sdkRoot}`
+    return t('找不到 {label} —— SDK 路径没指向带 tools\\ContentBuilder 的目录：{path}', {
+      label,
+      path: settings.sdkRoot
+    })
   }
-  return `缺少 ${label}，工具自带的也没能写进去（${paths.contentBuilder}）。到设置里点「安装/修复脚本」重试。`
+  return t('缺少 {label}，工具自带的也没能写进去（{dir}）。到设置里点「安装/修复脚本」重试。', {
+    label,
+    dir: paths.contentBuilder
+  })
 }
 
 /* ------------------------------------------------------------------ *
@@ -436,7 +454,9 @@ function registerIpc() {
   ipcMain.handle('settings:get', async () => ({
     settings: loadSettings(),
     encryptionAvailable: await encryptionAvailable(),
-    hasPassword: hasPassword()
+    hasPassword: hasPassword(),
+    // 渲染层要自己判断 auto 解析成什么语言，主进程只提供系统语言
+    systemLocale: systemLocale()
   }))
 
   ipcMain.handle('settings:save', (_e, patch) => {
@@ -445,6 +465,12 @@ function registerIpc() {
     // 工具自带文件，不补的话换完路径设置页立刻两行红字。
     if (saved?.ok && patch && Object.prototype.hasOwnProperty.call(patch, 'sdkRoot')) {
       autoInstallScripts(saved.settings || loadSettings())
+    }
+    // 语言是即时生效的：主进程的 t() 立刻换语言，窗口标题跟着改；
+    // 渲染层自己也知道新语言，不用等主进程回话。
+    if (saved?.ok && patch && Object.prototype.hasOwnProperty.call(patch, 'language')) {
+      setLanguage(saved.settings?.language)
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setTitle(windowTitle())
     }
     return saved
   })
@@ -467,7 +493,7 @@ function registerIpc() {
   })
   ipcMain.handle('api:testKey', async () => {
     const k = await readApiKey()
-    if (!k) return { ok: false, error: '还没有配置 Web API 密钥' }
+    if (!k) return { ok: false, error: t('还没有配置 Web API 密钥') }
     try {
       const r = await testKey(k)
       // 顺手暖上缓存：向导打开时就不用再等一次网络
@@ -489,7 +515,7 @@ function registerIpc() {
    */
   ipcMain.handle('api:appDepots', async (_e, { appId, via } = {}) => {
     const id = String(appId ?? '').trim()
-    if (!/^\d+$/.test(id)) return { ok: false, error: 'AppID 必须是数字' }
+    if (!/^\d+$/.test(id)) return { ok: false, error: t('AppID 必须是数字') }
 
     const s = loadSettings()
     const key = await readApiKey()
@@ -533,9 +559,9 @@ function registerIpc() {
         ...r,
         error:
           `${r.error}\n\n` +
-          '想在向导里直接读后台 Depot，二选一：\n' +
-          '  • 在「设置」里保存 Steam 账号密码（用上传构建的那个账号），或者\n' +
-          '  • 找管理员要一个 Steamworks Web API 密钥，填在「设置」里。'
+          t(
+            '想在向导里直接读后台 Depot，二选一：\n  • 在「设置」里保存 Steam 账号密码（用上传构建的那个账号），或者\n  • 找管理员要一个 Steamworks Web API 密钥，填在「设置」里。'
+          )
       }
     }
     return r
@@ -553,7 +579,7 @@ function registerIpc() {
     const s = loadSettings()
     const app = readApp(dirName, s)
     if (app.error) return { ok: false, error: app.error }
-    if (!app.appId) return { ok: false, error: '这个 App 没有 AppID，没法查后台' }
+    if (!app.appId) return { ok: false, error: t('这个 App 没有 AppID，没法查后台') }
 
     const key = await readApiKey()
     const useWeb = via === 'steamcmd' ? false : !!key
@@ -614,7 +640,7 @@ function registerIpc() {
    */
   ipcMain.handle('api:builds', async (_e, { appId: rawId, via } = {}) => {
     const id = String(rawId ?? '').trim()
-    if (!/^\d+$/.test(id)) return { ok: false, error: 'AppID 必须是数字' }
+    if (!/^\d+$/.test(id)) return { ok: false, error: t('AppID 必须是数字') }
 
     const s = loadSettings()
     const key = await readApiKey()
@@ -672,7 +698,7 @@ function registerIpc() {
 
   ipcMain.handle('sdk:pickFolder', async (_e, current) => {
     const res = await dialog.showOpenDialog(mainWindow, {
-      title: '选择 SteamSDK 根目录',
+      title: t('选择 SteamSDK 根目录'),
       defaultPath: current || loadSettings().sdkRoot,
       properties: ['openDirectory']
     })
@@ -714,7 +740,7 @@ function registerIpc() {
     const wc = e.sender
     const settings = loadSettings()
     const p = getPaths(settings)
-    if (!fs.existsSync(p.steamcmd)) return { ok: false, error: `找不到 ${p.steamcmd}` }
+    if (!fs.existsSync(p.steamcmd)) return { ok: false, error: t('找不到 {path}', { path: p.steamcmd }) }
     const r = ptyconsole.open({
       steamcmd: p.steamcmd,
       cwd: p.builderDir,
@@ -823,7 +849,7 @@ function registerIpc() {
       depotArchByOs: DEPOT_ARCH_BY_OS,
       depotLanguages: DEPOT_LANGUAGES,
       suggestedDepotId: suggestDepotId(appId),
-      suggestedContentRoot: defaultContentRoot(name || '<App名>', platform, s),
+      suggestedContentRoot: defaultContentRoot(name || '<App名>', platform, s), // i18n-ignore 建议路径的占位符
       buildsRoot: s.buildsRoot,
       defaultExclusions: defaultExclusionsFor(platform),
       allDefaultExclusions: DEFAULT_EXCLUSIONS
@@ -847,7 +873,7 @@ function registerIpc() {
    */
   ipcMain.handle('app:publicName', async (_e, { appId } = {}) => {
     const id = String(appId || '').trim()
-    if (!/^\d+$/.test(id)) return { ok: false, error: 'AppID 必须是数字' }
+    if (!/^\d+$/.test(id)) return { ok: false, error: t('AppID 必须是数字') }
     try {
       const url = `https://store.steampowered.com/api/appdetails?appids=${id}&filters=basic&l=schinese`
       const res = await fetch(url, { signal: AbortSignal.timeout(12000) })
@@ -857,7 +883,7 @@ function registerIpc() {
       if (!entry?.success) return { ok: true, found: false }
       return { ok: true, found: true, name: entry.data?.name || '' }
     } catch (e) {
-      return { ok: false, error: e.name === 'TimeoutError' ? '查询超时' : e.message }
+      return { ok: false, error: e.name === 'TimeoutError' ? t('查询超时') : e.message }
     }
   })
 
@@ -974,7 +1000,7 @@ function registerIpc() {
   ipcMain.handle('app:setDepotUpload', (_e, { dirName, depotId, enabled } = {}) => {
     const dir = String(dirName || '').trim()
     const id = String(depotId || '').trim()
-    if (!dir || !/^\d+$/.test(id)) return { ok: false, error: '参数不对' }
+    if (!dir || !/^\d+$/.test(id)) return { ok: false, error: t('参数不对') }
     const s = loadSettings()
     const map = { ...(s.uploadOff || {}) }
     const list = new Set((Array.isArray(map[dir]) ? map[dir] : []).map(String))
@@ -1128,11 +1154,14 @@ function registerIpc() {
 
   ipcMain.handle('local:open', async () => {
     const st = localStatus(loadSettings())
-    if (!st.running) return { ok: false, error: '服务器没在跑，先点「启动」。' }
+    if (!st.running) return { ok: false, error: t('服务器没在跑，先点「启动」。') }
     if (!(await probePort(st.port))) {
       return {
         ok: false,
-        error: `http://127.0.0.1:${st.port}/ 没有应答 —— 端口上可能挂着别的东西。先「停止」再「启动」一次。`
+        error: t(
+          'http://127.0.0.1:{port}/ 没有应答 —— 端口上可能挂着别的东西。先「停止」再「启动」一次。',
+          { port: st.port }
+        )
       }
     }
     const err = await shell.openExternal(st.url)
@@ -1142,7 +1171,7 @@ function registerIpc() {
   /* ---- 系统通知 ---- */
   ipcMain.handle('notify', (_e, { title, body } = {}) => {
     try {
-      if (!Notification.isSupported()) return { ok: false, error: '系统不支持通知' }
+      if (!Notification.isSupported()) return { ok: false, error: t('系统不支持通知') }
       const n = new Notification({ title: String(title || 'SteamSDK'), body: String(body || '') })
       n.on('click', () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1162,8 +1191,8 @@ function registerIpc() {
   ipcMain.handle('achievements:clear', async (_e, { dirName } = {}) => {
     const s = loadSettings()
     const app = dirName ? readApp(dirName, s) : null
-    if (!app || app.error) return { ok: false, error: app?.error || '没选中 App。' }
-    if (!app.appId) return { ok: false, error: '这个 App 的构建脚本里没有 AppID，清不了成就。' }
+    if (!app || app.error) return { ok: false, error: app?.error || t('没选中 App。') }
+    if (!app.appId) return { ok: false, error: t('这个 App 的构建脚本里没有 AppID，清不了成就。') }
 
     // 先把工具窗口放到前台：Windows 只允许前台进程把别的窗口切到前面，
     // 这里主动确认一次，成功率比单靠用户点击时高。
@@ -1208,11 +1237,11 @@ function registerIpc() {
       script: p.checkScript,
       args,
       cwd: p.contentBuilder,
-      label: dirName ? `检查 ${dirName}` : '检查全部',
+      label: dirName ? t('检查 {app}', { app: dirName }) : t('检查全部'),
       onData: (d) => send('run:data', { kind: 'check', ...d }),
       onExit: (d) => send('run:exit', { kind: 'check', ...d })
     })
-    return handle ? { ok: true, ...handle } : { ok: false, error: missing || 'check.ps1 启动失败' }
+    return handle ? { ok: true, ...handle } : { ok: false, error: missing || t('check.ps1 启动失败') }
   })
 
   ipcMain.handle('run:build', async (_e, { dirName, preview = true, password, local = false, guardCode } = {}) => {
@@ -1224,7 +1253,7 @@ function registerIpc() {
 
     // -User 是必填（脚本不再自带默认账号）：账号空着时先说清楚，别让 steamcmd 卡在登录提示上
     if (!String(s.account || '').trim()) {
-      return { ok: false, error: '还没填 Steam 账号名（设置 → 登录凭据）—— 上传要用它登录 steamcmd。' }
+      return { ok: false, error: t('还没填 Steam 账号名（设置 → 登录凭据）—— 上传要用它登录 steamcmd。') }
     }
 
     const pw = await currentPassword(password)
@@ -1235,7 +1264,7 @@ function registerIpc() {
       return {
         ok: false,
         needsPassword: true,
-        error: '需要 Steam 账号密码：steamcmd 没有缓存凭据。请在下方输入，或先点「登录一次」。'
+        error: t('需要 Steam 账号密码：steamcmd 没有缓存凭据。请在下方输入，或先点「登录一次」。')
       }
     }
 
@@ -1253,7 +1282,7 @@ function registerIpc() {
       script: p.buildScript,
       args,
       cwd: p.contentBuilder,
-      label: `${local ? '本地服务器' : preview ? 'Preview' : '正式上传'} ${dirName}`,
+      label: (local ? t('本地服务器') : preview ? 'Preview' : t('正式上传')) + ' ' + dirName,
       password: pw,
       env: {
         STEAMSDK_BUILD_PASSWORD: pw,
@@ -1270,7 +1299,7 @@ function registerIpc() {
     })
     return handle
       ? { ok: true, preview, local, ...handle }
-      : { ok: false, error: 'build.ps1 未找到，请在设置里检查 SDK 路径' }
+      : { ok: false, error: t('build.ps1 未找到，请在设置里检查 SDK 路径') }
   })
 
   /**
@@ -1279,9 +1308,9 @@ function registerIpc() {
    */
   ipcMain.handle('run:login', () => {
     const p = getPaths(loadSettings())
-    if (!fs.existsSync(p.steamcmd)) return { ok: false, error: `找不到 ${p.steamcmd}` }
+    if (!fs.existsSync(p.steamcmd)) return { ok: false, error: t('找不到 {path}', { path: p.steamcmd }) }
     try {
-      spawn(`start "SteamSDK 登录" "${p.steamcmd}"`, {
+      spawn(`start "SteamSDK 登录" "${p.steamcmd}"`, { // i18n-ignore 控制台窗口标题是 start 命令参数
         shell: true,
         detached: true,
         windowsHide: false,
@@ -1324,14 +1353,14 @@ function registerIpc() {
 
   /* ---- 系统 ---- */
   ipcMain.handle('shell:openPath', async (_e, target) => {
-    if (!target) return { ok: false, error: '路径为空' }
-    if (!fs.existsSync(target)) return { ok: false, error: `路径不存在：${target}` }
+    if (!target) return { ok: false, error: t('路径为空') }
+    if (!fs.existsSync(target)) return { ok: false, error: t('路径不存在：{path}', { path: target }) }
     const err = await shell.openPath(target)
     return err ? { ok: false, error: err } : { ok: true }
   })
 
   ipcMain.handle('shell:openExternal', async (_e, url) => {
-    if (!/^https?:\/\//i.test(String(url))) return { ok: false, error: '只允许打开 http/https' }
+    if (!/^https?:\/\//i.test(String(url))) return { ok: false, error: t('只允许打开 http/https') }
     await shell.openExternal(url)
     return { ok: true }
   })
@@ -1383,6 +1412,8 @@ if (!app.requestSingleInstanceLock()) {
       console.error('[drop] cleanup probe failed:', e)
     }
     autoInstallScripts()
+    // 先把界面语言定下来（auto 时看系统语言），否则建窗口时的标题还是默认中文
+    setLanguage(loadSettings().language)
     registerIpc()
     createWindow()
 

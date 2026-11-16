@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { parseVdf, getBlock, getString, getAllStrings } from './vdf.js'
+import { t } from './i18n.js'
 
 /**
  * 用 steamcmd 自己读某个 App 的 Depot 列表 —— 不需要 Steamworks partner 密钥。
@@ -144,7 +145,7 @@ function runSteamcmd({ steamcmd, args, password, cwd, timeoutMs = TIMEOUT_MS }) 
     try {
       child = spawn(steamcmd, args, { cwd, windowsHide: true })
     } catch (e) {
-      resolve({ ok: false, error: `无法启动 steamcmd：${e.message}` })
+      resolve({ ok: false, error: t('无法启动 steamcmd：{error}', { error: e.message }) })
       return
     }
 
@@ -168,7 +169,10 @@ function runSteamcmd({ steamcmd, args, password, cwd, timeoutMs = TIMEOUT_MS }) 
       }
       finish({
         ok: false,
-        error: `steamcmd 超时（${Math.round(timeoutMs / 1000)} 秒）。可能是登录卡住了 —— 密码不对、或者账号开了两步验证需要验证码。`,
+        error: t(
+          'steamcmd 超时（{seconds} 秒）。可能是登录卡住了 —— 密码不对、或者账号开了两步验证需要验证码。',
+          { seconds: Math.round(timeoutMs / 1000) }
+        ),
         stdout: out
       })
     }, timeoutMs)
@@ -191,7 +195,9 @@ function runSteamcmd({ steamcmd, args, password, cwd, timeoutMs = TIMEOUT_MS }) 
     })
     child.stderr.on('data', (d) => (err += d.toString('utf8')))
 
-    child.on('error', (e) => finish({ ok: false, error: `steamcmd 启动失败：${e.message}` }))
+    child.on('error', (e) =>
+      finish({ ok: false, error: t('steamcmd 启动失败：{error}', { error: e.message }) })
+    )
     child.on('close', (code) => finish({ ok: true, code, stdout: out, stderr: err }))
 
     // 登录提示可能在 stdout 第一次输出之前就出现，先喂一次更稳
@@ -210,10 +216,10 @@ function runSteamcmd({ steamcmd, args, password, cwd, timeoutMs = TIMEOUT_MS }) 
  */
 export async function fetchAppDepotsViaSteamcmd({ appId, steamcmd, username = '', password = '', cwd }) {
   if (!steamcmd || !fs.existsSync(steamcmd)) {
-    return { ok: false, error: `找不到 steamcmd：${steamcmd}` }
+    return { ok: false, error: t('找不到 steamcmd：{path}', { path: steamcmd }) }
   }
   const id = String(appId ?? '').trim()
-  if (!/^\d+$/.test(id)) return { ok: false, error: 'AppID 必须是数字' }
+  if (!/^\d+$/.test(id)) return { ok: false, error: t('AppID 必须是数字') }
 
   const loginArgs = username ? ['+login', username] : ['+login', 'anonymous']
   const args = [...loginArgs, '+app_info_print', id, '+quit']
@@ -228,18 +234,27 @@ export async function fetchAppDepotsViaSteamcmd({ appId, steamcmd, username = ''
 
   const text = r.stdout || ''
 
+  // i18n-ignore 下面这个正则在匹配 steamcmd 自己的英文输出（登录失败判定），
+  // 不是界面文案 —— 不能翻译、也不能改大小写。
   if (/ERROR \(Invalid Password\)|FAILED TO LOGIN|Invalid Login Auth Code|Two-factor/i.test(text)) {
     return {
       ok: false,
       needsCredentials: true,
-      error:
+      error: t(
         'steamcmd 登录失败。检查账号密码；如果账号开了 Steam Guard，这个功能用不了（steamcmd 拿不到验证码）—— 可以改从 Web API 密钥读。'
+      )
     }
   }
 
   const vdf = extractAppVdf(text, id)
   if (!vdf) {
-    return { ok: false, error: `steamcmd 没有返回 AppID ${id} 的任何内容。\n` + firstLines(text) }
+    return {
+      ok: false,
+      error: t('steamcmd 没有返回 AppID {id} 的任何内容。\n{output}', {
+        id,
+        output: firstLines(text)
+      })
+    }
   }
 
   const root = parseVdf(vdf)
@@ -254,12 +269,15 @@ export async function fetchAppDepotsViaSteamcmd({ appId, steamcmd, username = ''
     return {
       ok: false,
       emptyInfo: true,
-      error:
-        `steamcmd 读不到 AppID ${id} 的信息（返回了空块）。两种可能：\n` +
-        `  ① 这个 AppID 不存在或写错了；\n` +
-        `  ② 当前 steamcmd 账号没有这个 App 的权限 —— 用上传构建的那个账号登录才行` +
-        (username ? '' : '（现在用的是 anonymous，只能看已公开的 App）') +
-        '。'
+      error: username
+        ? t(
+            'steamcmd 读不到 AppID {id} 的信息（返回了空块）。两种可能：\n  ① 这个 AppID 不存在或写错了；\n  ② 当前 steamcmd 账号没有这个 App 的权限 —— 用上传构建的那个账号登录才行。',
+            { id }
+          )
+        : t(
+            'steamcmd 读不到 AppID {id} 的信息（返回了空块）。两种可能：\n  ① 这个 AppID 不存在或写错了；\n  ② 当前 steamcmd 账号没有这个 App 的权限 —— 用上传构建的那个账号登录才行（现在用的是 anonymous，只能看已公开的 App）。',
+            { id }
+          )
     }
   }
 

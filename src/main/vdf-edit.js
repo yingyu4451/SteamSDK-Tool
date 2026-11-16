@@ -6,6 +6,8 @@
  * 所以读取用 vdf.js 的解析器，写回一律走这里的定点行替换。
  */
 
+import { t } from './i18n.js'
+
 /* ------------------------------------------------------------------ *
  *  工具
  * ------------------------------------------------------------------ */
@@ -195,8 +197,8 @@ export const DEPOT_OS = [
 ]
 
 export const DEPOT_ARCH = [
-  { id: '64', label: '64 位' },
-  { id: '32', label: '32 位' },
+  { id: '64', label: '64 位' }, // i18n-ignore
+  { id: '32', label: '32 位' }, // i18n-ignore
   { id: 'arm64', label: 'ARM64' }
 ]
 
@@ -220,18 +222,18 @@ export function depotArchsFor(os) {
 
 /** 后台常用的语言项，够覆盖绝大多数情况 */
 export const DEPOT_LANGUAGES = [
-  { id: 'all', label: '所有语言' },
-  { id: 'schinese', label: '简体中文' },
-  { id: 'tchinese', label: '繁体中文' },
-  { id: 'english', label: '英语' },
-  { id: 'japanese', label: '日语' },
-  { id: 'koreana', label: '韩语' },
-  { id: 'russian', label: '俄语' },
-  { id: 'french', label: '法语' },
-  { id: 'german', label: '德语' },
-  { id: 'spanish', label: '西班牙语' },
-  { id: 'portuguese', label: '葡萄牙语' },
-  { id: 'italian', label: '意大利语' }
+  { id: 'all', label: '所有语言' }, // i18n-ignore
+  { id: 'schinese', label: '简体中文' }, // i18n-ignore
+  { id: 'tchinese', label: '繁体中文' }, // i18n-ignore
+  { id: 'english', label: '英语' }, // i18n-ignore
+  { id: 'japanese', label: '日语' }, // i18n-ignore
+  { id: 'koreana', label: '韩语' }, // i18n-ignore
+  { id: 'russian', label: '俄语' }, // i18n-ignore
+  { id: 'french', label: '法语' }, // i18n-ignore
+  { id: 'german', label: '德语' }, // i18n-ignore
+  { id: 'spanish', label: '西班牙语' }, // i18n-ignore
+  { id: 'portuguese', label: '葡萄牙语' }, // i18n-ignore
+  { id: 'italian', label: '意大利语' } // i18n-ignore
 ]
 
 /** (系统, 架构) -> 内部平台 id */
@@ -256,7 +258,9 @@ export function osArchFromPlatform(id) {
 }
 
 export function languageLabel(id) {
-  return DEPOT_LANGUAGES.find((l) => l.id === id)?.label || (id ? id : '所有语言')
+  // 语言表在模块加载时就定好了，label 保持中文，这里查到之后再按当前语言取
+  const hit = DEPOT_LANGUAGES.find((l) => l.id === id)
+  return hit ? t(hit.label) : id || t('所有语言')
 }
 
 /** 从 depot 文件名后缀猜平台 */
@@ -282,13 +286,14 @@ export function guessPlatform(fileName = '') {
  * 多 Depot 时代那句「所以这里不设 App 层默认值」也会和上面真写着的
  * ContentRoot 自相矛盾。改完 depot 列表必须重新刷一遍。
  */
-const NOTE_HEADER_RE = /^\/\/  这个 App 管 .*\r?\n(?:^\/\/  一次 run_app_build .*\r?\n)?/gm
+// i18n：这些说明会被写进 vdf 文件、也要按中文匹配删除，跟界面语言无关，本节含中文的行都标了 i18n-ignore
+const NOTE_HEADER_RE = /^\/\/  这个 App 管 .*\r?\n(?:^\/\/  一次 run_app_build .*\r?\n)?/gm // i18n-ignore
 
 // 体注换过写法，两代都要能删掉 —— 只删当代的话，旧的那行会永远留在文件里，
 // 而且每保存一次就多叠一行。
 const NOTE_BODY_RES = [
-  /^[ \t]*\/\/ 这个 App (?:有多个|只有一个) Depot[^\n]*\r?\n(?:[ \t]*\/\/[^\n]*\r?\n)?/gm,
-  /^[ \t]*\/\/ 这里的 ContentRoot[^\n]*\r?\n(?:[ \t]*\/\/ 每个 Depot 在各自的脚本里用[^\n]*\r?\n)?/gm
+  /^[ \t]*\/\/ 这个 App (?:有多个|只有一个) Depot[^\n]*\r?\n(?:[ \t]*\/\/[^\n]*\r?\n)?/gm, // i18n-ignore
+  /^[ \t]*\/\/ 这里的 ContentRoot[^\n]*\r?\n(?:[ \t]*\/\/ 每个 Depot 在各自的脚本里用[^\n]*\r?\n)?/gm // i18n-ignore
 ]
 
 /* ------------------------------------------------------------------ *
@@ -297,7 +302,7 @@ const NOTE_BODY_RES = [
  *  新构建里的版本覆盖玩家本地那份 —— 不标的话玩家一更新进度就回档。
  * ------------------------------------------------------------------ */
 
-const UC_COMMENT = /^[ \t]*\/\/ --- 玩家运行时会改的文件[^\n]*\r?\n/gm
+const UC_COMMENT = /^[ \t]*\/\/ --- 玩家运行时会改的文件[^\n]*\r?\n/gm // i18n-ignore
 // 注意 key 和 { 之间要允许换行 —— 我们自己生成的就是分两行的
 const FP_BLOCK = /[ \t]*"FileProperties"\s*\{[^}]*\}[ \t]*\r?\n?/gi
 
@@ -325,7 +330,7 @@ export function setUserConfig(text, list = []) {
 
   if (uc.length) {
     const block =
-      `\n\t// --- 玩家运行时会改的文件：更新时不覆盖玩家那份 ---\n` +
+      `\n\t// --- 玩家运行时会改的文件：更新时不覆盖玩家那份 ---\n` + // i18n-ignore
       uc
         .map(
           (p) =>
@@ -353,14 +358,14 @@ export function refreshAppNotes(text, { depotCount = 0, platforms = [] } = {}) {
 
   const header =
     depotCount <= 1
-      ? `//  这个 App 管 1 个 Depot${list}。一次 run_app_build 会构建并上传它。\n`
-      : `//  这个 App 管 ${depotCount} 个 Depot${list}：\n//  一次 run_app_build 会把它们全部构建并上传。\n`
+      ? `//  这个 App 管 1 个 Depot${list}。一次 run_app_build 会构建并上传它。\n` // i18n-ignore
+      : `//  这个 App 管 ${depotCount} 个 Depot${list}：\n//  一次 run_app_build 会把它们全部构建并上传。\n` // i18n-ignore
 
   const body =
     depotCount <= 1
-      ? "\t// 这里的 ContentRoot 是项目文件夹；这个 Depot 自己的 contentroot 优先。\n"
-      : '\t// 这里的 ContentRoot 是「项目文件夹」—— 各平台构建的父目录。\n' +
-        '\t// 每个 Depot 在各自的脚本里用 <项目文件夹>\\<平台> 覆盖它。\n'
+      ? "\t// 这里的 ContentRoot 是项目文件夹；这个 Depot 自己的 contentroot 优先。\n" // i18n-ignore
+      : '\t// 这里的 ContentRoot 是「项目文件夹」—— 各平台构建的父目录。\n' + // i18n-ignore
+        '\t// 每个 Depot 在各自的脚本里用 <项目文件夹>\\<平台> 覆盖它。\n' // i18n-ignore
 
   let out = text.replace(NOTE_HEADER_RE, '')
   for (const re of NOTE_BODY_RES) out = out.replace(re, '')
@@ -405,14 +410,16 @@ export function renderAppVdf({
   // 那等于把别的平台的构建一起传上去。
   const contentRootBlock = `\t"ContentRoot"\t${q(contentRoot)}\n`
 
+  // 下面模板里的说明注释会落盘成 vdf 内容、也要被 refreshAppNotes 按中文匹配，跟界面语言无关。
+  // 模板字符串里写不了行尾注释，所以用求值为空串的 ${/* i18n-ignore */ ''} 把标记带到同一行。
   const vdf = `// ============================================================================
 //  ${name || 'App ' + appId}  --  AppID ${appId}
 //
-//  由 SteamSDK 上传工作台生成。内容目录放在 SDK 外面，一份 SDK 可以管所有
-//  App / Depot / 版本，不需要复制 SDK，也不需要复制文件夹。
+//  由 SteamSDK 上传工作台生成。内容目录放在 SDK 外面，一份 SDK 可以管所有${/* i18n-ignore */ ''}
+//  App / Depot / 版本，不需要复制 SDK，也不需要复制文件夹。${/* i18n-ignore */ ''}
 //
-//  这个 App 管 ${depots.length} 个 Depot（${depots.map((d) => d.platform || d.id).join(' + ')}）：
-//  一次 run_app_build 会把它们全部构建并上传。
+//  这个 App 管 ${depots.length} 个 Depot（${depots.map((d) => d.platform || d.id).join(' + ')}）：${/* i18n-ignore */ ''}
+//  一次 run_app_build 会把它们全部构建并上传。${/* i18n-ignore */ ''}
 // ============================================================================
 
 "AppBuild"
@@ -420,23 +427,23 @@ export function renderAppVdf({
 \t"AppID"\t\t\t${q(appId)}
 \t"Desc"\t\t\t${q(desc)}
 ${verboseLine}
-\t// 空跑由界面上的「Preview 空跑」按钮决定（build.ps1 在临时副本里改成 1）。
-\t// 这一行永远是 0 —— 否则「正式上传」会静默地什么都不传。
+\t// 空跑由界面上的「Preview 空跑」按钮决定（build.ps1 在临时副本里改成 1）。${/* i18n-ignore */ ''}
+\t// 这一行永远是 0 —— 否则「正式上传」会静默地什么都不传。${/* i18n-ignore */ ''}
 \t"preview"\t\t"0"
 
 ${contentRootBlock}
-\t// 构建缓存和日志。别删，删了下次要整包重算。
+\t// 构建缓存和日志。别删，删了下次要整包重算。${/* i18n-ignore */ ''}
 \t"BuildOutput"\t${q(buildOutput)}
 
-\t// 发布到哪个 beta 分支；留空 = 不设分支（构建只生成，不自动上任何分支）。
+\t// 发布到哪个 beta 分支；留空 = 不设分支（构建只生成，不自动上任何分支）。${/* i18n-ignore */ ''}
 ${setLiveLine}
 
-\t// 取消下面这行的注释 = 传进本地内容服务器，不上传 Steam。
+\t// 取消下面这行的注释 = 传进本地内容服务器，不上传 Steam。${/* i18n-ignore */ ''}
 ${localLine}
 
 \t"Depots"
 \t{
-\t\t// depot 的文件映射规则在各自的脚本里（同目录）
+\t\t// depot 的文件映射规则在各自的脚本里（同目录）${/* i18n-ignore */ ''}
 ${depotLines}
 \t}
 }
@@ -466,7 +473,7 @@ export function renderDepotVdf({
   // 效果是更新时不会用新构建里的版本覆盖玩家本地那份 —— 存档、进度、设置
   // 这些跟着 depot 一起传上去的文件就该这么标，否则玩家一更新进度就回档。
   const ucBlock = uc.length
-    ? `\n\t// --- 玩家运行时会改的文件：更新时不覆盖玩家那份 ---\n` +
+    ? `\n\t// --- 玩家运行时会改的文件：更新时不覆盖玩家那份 ---\n` + // i18n-ignore
       uc
         .map(
           (p) =>
@@ -478,15 +485,15 @@ export function renderDepotVdf({
   return `// ============================================================================
 //  Depot ${depotId}  --  ${plat.label}
 //
-//  FileExclusion 决定哪些东西永远不会被传上去。默认这份是按「Unity 构建输出」
-//  预填的：日志、符号文件、QA 脚本、Burst 调试信息都不应该出现在玩家手里。
+//  FileExclusion 决定哪些东西永远不会被传上去。默认这份是按「Unity 构建输出」${/* i18n-ignore */ ''}
+//  预填的：日志、符号文件、QA 脚本、Burst 调试信息都不应该出现在玩家手里。${/* i18n-ignore */ ''}
 // ============================================================================
 
 "DepotBuildConfig"
 {
 \t"DepotID"\t\t${q(depotId)}
 
-\t// 覆盖 AppBuild 里的 ContentRoot
+\t// 覆盖 AppBuild 里的 ContentRoot${/* i18n-ignore */ ''}
 \t"contentroot"\t${q(contentRoot)}
 
 \t"FileMapping"
@@ -496,7 +503,7 @@ export function renderDepotVdf({
 \t\t"recursive"\t\t"1"
 \t}
 ${ucBlock}
-\t// --- 调试 / 诊断产物，永远不上传 ---
+\t// --- 调试 / 诊断产物，永远不上传 ---${/* i18n-ignore */ ''}
 ${exLines}
 
 }

@@ -23,6 +23,7 @@ import {
 } from './vdf-edit.js'
 import { readDepotMeta, setDepotMeta, readIgnoredProblems } from './store.js'
 import { inspectScripts } from './scripts.js'
+import { t } from './i18n.js'
 
 /* ------------------------------------------------------------------ *
  *  路径
@@ -302,7 +303,7 @@ function depotPlatformFromName(name) {
   if (n.includes('macos') || n.includes('osx')) return 'macOS'
   if (n.includes('linuxarm64')) return 'Linux ARM64'
   if (n.includes('linux')) return 'Linux'
-  return '未知'
+  return t('未知')
 }
 
 /** 读取单个 App 的全部信息（app vdf + 它引用的每个 depot vdf） */
@@ -317,13 +318,13 @@ export function readApp(appDirName, settings) {
       .filter((f) => /^app_.*\.vdf$/i.test(f) && !f.startsWith('_preview_'))
       .sort()[0]
   } catch {
-    return { error: `找不到目录 ${dir}` }
+    return { error: t('找不到目录 {dir}', { dir }) }
   }
-  if (!appFile) return { error: `目录 ${dir} 里没有 app_*.vdf` }
+  if (!appFile) return { error: t('目录 {dir} 里没有 app_*.vdf', { dir }) }
 
   const appPath = path.join(dir, appFile)
   const appText = readText(appPath)
-  if (appText == null) return { error: `读取失败 ${appPath}` }
+  if (appText == null) return { error: t('读取失败 {path}', { path: appPath }) }
 
   const root = parseVdf(appText)
   const appId = getString(root, 'AppID')
@@ -413,22 +414,30 @@ export function readApp(appDirName, settings) {
  * 以前是在这里把忽略过的过滤掉，界面上就看不见了 —— 那样用户没法确认
  * 自己忽略过什么，也没法撤销。现在改成：清单常驻，忽略只是换个显示状态。
  *
- * 原文完全一样才算同一条 —— 所以路径变了会自动重新报出来，
- * 这正是想要的：忽略的是那次的具体情况，不是这一类问题。
+ * 每条问题都是 `{ key, params }`：key 是中文模板，params 是里面的路径/数字。
+ * 界面按当前语言渲染（英文查字典），而「忽略」记的是**中文渲染结果** ——
+ * 和以前按原文记完全一致，老用户的 settings.json 不用迁移。
  */
 function splitProblems(all, dirName) {
   return { problems: all, problemsIgnored: readIgnoredProblems(dirName) }
 }
 
+/** 一条问题：key 里的 {name} 对应 params[name] */
+function problem(key, params) {
+  return params ? { key, params } : { key }
+}
+
 function collectProblems({ appId, contentRoot, depots, appText }) {
   const problems = []
-  if (!appId) problems.push('app vdf 里没有 AppID')
+  if (!appId) problems.push(problem('app vdf 里没有 AppID'))
   // App 层的 ContentRoot 是**项目文件夹**（各平台构建的父目录）。
   // 一个 App 管多平台时每个 depot 都有自己的 contentroot，这里只要有一个位置就行，
   // 只有「App 没写、某个 depot 也没写」才是真问题。
   const needAppRoot = depots.some((d) => !d.missing && !d.contentRoot)
-  if (!contentRoot && needAppRoot) problems.push('app vdf 和 depot 脚本里都没有 ContentRoot')
-  if (contentRoot && !fs.existsSync(contentRoot)) problems.push(`项目文件夹不存在：${contentRoot}`)
+  if (!contentRoot && needAppRoot) problems.push(problem('app vdf 和 depot 脚本里都没有 ContentRoot'))
+  if (contentRoot && !fs.existsSync(contentRoot)) {
+    problems.push(problem('项目文件夹不存在：{path}', { path: contentRoot }))
+  }
 
   // 两个 Depot 的内容目录重叠 = 同一批文件被传进两个 Depot。
   // 更常见也更危险的是「一个是另一个的父目录」—— 父目录那个 depot 会把子平台的构建
@@ -442,13 +451,26 @@ function collectProblems({ appId, contentRoot, depots, appText }) {
       const a = roots[i]
       const b = roots[j]
       if (a.r === b.r) {
-        problems.push(`Depot ${a.d.id} 和 ${b.d.id} 的内容目录是同一个：${a.d.contentRoot}`)
+        problems.push(
+          problem('Depot {a} 和 {b} 的内容目录是同一个：{root}', {
+            a: a.d.id,
+            b: b.d.id,
+            root: a.d.contentRoot
+          })
+        )
       } else if (a.r.startsWith(b.r + path.sep) || b.r.startsWith(a.r + path.sep)) {
         const outer = a.r.startsWith(b.r + path.sep) ? b : a
         const inner = outer === a ? b : a
         problems.push(
-          `Depot ${outer.d.id} 的内容目录 ${outer.d.contentRoot} 套着 Depot ${inner.d.id} 的 ` +
-            `${inner.d.contentRoot} —— 构建时会把对方的文件一起传上去`
+          problem(
+            'Depot {outer} 的内容目录 {outerRoot} 套着 Depot {inner} 的 {innerRoot} —— 构建时会把对方的文件一起传上去',
+            {
+              outer: outer.d.id,
+              outerRoot: outer.d.contentRoot,
+              inner: inner.d.id,
+              innerRoot: inner.d.contentRoot
+            }
+          )
         )
       }
     }
@@ -461,7 +483,11 @@ function collectProblems({ appId, contentRoot, depots, appText }) {
     for (const { d, r } of roots) {
       if (r !== base && !r.startsWith(base + path.sep)) {
         problems.push(
-          `Depot ${d.id} 上传的是 ${d.contentRoot}，不在项目文件夹 ${contentRoot} 里`
+          problem('Depot {id} 上传的是 {root}，不在项目文件夹 {base} 里', {
+            id: d.id,
+            root: d.contentRoot,
+            base: contentRoot
+          })
         )
       }
     }
@@ -469,19 +495,28 @@ function collectProblems({ appId, contentRoot, depots, appText }) {
 
   const open = (appText.match(/\{/g) || []).length
   const close = (appText.match(/\}/g) || []).length
-  if (open !== close) problems.push(`app vdf 花括号不配对：${open} 个 { / ${close} 个 }`)
+  if (open !== close) {
+    problems.push(problem('app vdf 花括号不配对：{open} 个 { / {close} 个 }', { open, close }))
+  }
 
-  if (depots.length === 0) problems.push('没有列出任何 Depot')
+  if (depots.length === 0) problems.push(problem('没有列出任何 Depot'))
 
   for (const d of depots) {
     if (d.missing) {
-      problems.push(`Depot ${d.id} 引用的脚本不存在：${d.file}`)
+      problems.push(problem('Depot {id} 引用的脚本不存在：{file}', { id: d.id, file: d.file }))
       continue
     }
-    if (!d.idMatches) problems.push(`DepotID 不一致：app 写 ${d.id}，${d.file} 写 ${d.depotId}`)
-    if (!d.hasFileMapping) problems.push(`${d.file} 缺少 FileMapping 块`)
+    if (!d.idMatches) {
+      problems.push(problem('DepotID 不一致：app 写 {app}，{file} 写 {depot}', { app: d.id, file: d.file, depot: d.depotId }))
+    }
+    if (!d.hasFileMapping) problems.push(problem('{file} 缺少 FileMapping 块', { file: d.file }))
     if (d.analysis.exists && d.analysis.suspicious.length) {
-      problems.push(`${d.file}：还有 ${d.analysis.suspicious.length} 个疑似调试文件会被上传`)
+      problems.push(
+        problem(
+          '{file}：还有 {n} 个疑似调试文件会被上传',
+          { file: d.file, n: d.analysis.suspicious.length }
+        )
+      )
     }
   }
   return problems
@@ -491,7 +526,7 @@ function collectProblems({ appId, contentRoot, depots, appText }) {
 export function scanApps(settings) {
   const p = getPaths(settings)
   if (!fs.existsSync(p.scriptsDir)) {
-    return { apps: [], error: `scripts 目录不存在：${p.scriptsDir}` }
+    return { apps: [], error: t('scripts 目录不存在：{path}', { path: p.scriptsDir }) }
   }
 
   const dirNames = fs
@@ -572,16 +607,16 @@ export function adoptOrphans(spec, settings) {
   const name = check.name
 
   const orphans = scanOrphans(settings)
-  if (!orphans.length) return { ok: false, error: 'scripts 根目录下没有游离的 vdf 文件' }
+  if (!orphans.length) return { ok: false, error: t('scripts 根目录下没有游离的 vdf 文件') }
 
   const dir = path.join(p.scriptsDir, name)
-  if (fs.existsSync(dir)) return { ok: false, error: `已经存在同名的 App：${name}` }
+  if (fs.existsSync(dir)) return { ok: false, error: t('已经存在同名的 App：{name}', { name }) }
 
   const appFiles = orphans.filter((o) => o.kind === 'app')
   if (appFiles.length > 1) {
     return {
       ok: false,
-      error: `根目录下有 ${appFiles.length} 个 app_*.vdf，一次只能收一个（先手动挑一个）`
+      error: t('根目录下有 {n} 个 app_*.vdf，一次只能收一个（先手动挑一个）', { n: appFiles.length })
     }
   }
 
@@ -623,12 +658,12 @@ export function adoptOrphans(spec, settings) {
     plan.push({ from: o.path, to: fileName, kind: 'depot', id, platform })
   }
 
-  if (!plan.length) return { ok: false, error: '没有可收拢的文件' }
+  if (!plan.length) return { ok: false, error: t('没有可收拢的文件') }
 
   try {
     fs.mkdirSync(dir, { recursive: true })
   } catch (e) {
-    return { ok: false, error: `建目录失败：${e.message}` }
+    return { ok: false, error: t('建目录失败：{message}', { message: e.message }) }
   }
 
   const moved = []
@@ -651,7 +686,7 @@ export function adoptOrphans(spec, settings) {
     } catch {
       /* 忽略 */
     }
-    return { ok: false, error: `搬文件失败：${e.message}` }
+    return { ok: false, error: t('搬文件失败：{message}', { message: e.message }) }
   }
 
   // app vdf 里引用 depot 的写法有三种：裸文件名、绝对路径、正斜杠绝对路径。
@@ -678,7 +713,7 @@ export function adoptOrphans(spec, settings) {
         ok: true,
         dirName: name,
         moved,
-        warning: `文件已搬好，但 app vdf 里的引用没改成功：${e.message}`
+        warning: t('文件已搬好，但 app vdf 里的引用没改成功：{message}', { message: e.message })
       }
     }
   }
@@ -723,7 +758,7 @@ function lit(s) {
 function safeInScripts(file, settings) {
   const root = path.resolve(getPaths(settings).scriptsDir)
   const target = path.resolve(file)
-  if (!target.startsWith(root + path.sep)) throw new Error(`拒绝访问 scripts 之外的路径：${target}`)
+  if (!target.startsWith(root + path.sep)) throw new Error(t('拒绝访问 scripts 之外的路径：{path}', { path: target }))
   return target
 }
 
@@ -769,7 +804,7 @@ export function syncDepotRoots(appDirName, projectDir, settings) {
   if (app.error) return { ok: false, error: app.error }
 
   const base = String(projectDir ?? app.contentRoot ?? '').trim()
-  if (!base) return { ok: false, error: '项目文件夹是空的' }
+  if (!base) return { ok: false, error: t('项目文件夹是空的') }
 
   const same = (a, b) =>
     path.resolve(String(a || '')).replace(/[\\/]+$/, '').toLowerCase() ===
@@ -824,7 +859,7 @@ export function updateAppFields(appDirName, patch, settings) {
   if (app.error) return { ok: false, error: app.error }
 
   let text = readText(app.appPath)
-  if (text == null) return { ok: false, error: `读取失败 ${app.appPath}` }
+  if (text == null) return { ok: false, error: t('读取失败 {path}', { path: app.appPath }) }
 
   const changed = []
   for (const [field, key] of [
@@ -882,16 +917,16 @@ export function updateDepotFields(appDirName, depotFile, patch, settings) {
   if (app.error) return { ok: false, error: app.error }
 
   const depot = app.depots.find((d) => d.file === depotFile)
-  if (!depot) return { ok: false, error: `找不到 depot 脚本 ${depotFile}` }
-  if (depot.missing) return { ok: false, error: `${depotFile} 不存在` }
+  if (!depot) return { ok: false, error: t('找不到 depot 脚本 {file}', { file: depotFile }) }
+  if (depot.missing) return { ok: false, error: t('{file} 不存在', { file: depotFile }) }
 
   const srcPath = safeInScripts(path.join(app.dir, depotFile), settings)
   let text = readText(srcPath)
-  if (text == null) return { ok: false, error: `读取失败 ${srcPath}` }
+  if (text == null) return { ok: false, error: t('读取失败 {path}', { path: srcPath }) }
 
   const newId = patch.depotId != null ? String(patch.depotId).trim() : depot.id
   if (patch.depotId != null) {
-    if (!/^\d+$/.test(newId)) return { ok: false, error: 'DepotID 必须是数字' }
+    if (!/^\d+$/.test(newId)) return { ok: false, error: t('DepotID 必须是数字') }
     text = setField(text, 'DepotID', newId).text
   }
   if (patch.contentRoot != null) {
@@ -924,7 +959,7 @@ export function updateDepotFields(appDirName, depotFile, patch, settings) {
       appText = appText.replace(re, (...m) => `${m[1]}"${newId}"${m[2]}"${newFile}"${m[3]}`)
       fs.writeFileSync(safeInScripts(app.appPath, settings), appText, 'utf8')
     } else {
-      return { ok: false, error: `app 脚本里找不到 depot 映射行，文件已改名但引用没更新` }
+      return { ok: false, error: t('app 脚本里找不到 depot 映射行，文件已改名但引用没更新') }
     }
   }
 
@@ -937,9 +972,9 @@ export function addDepot(appDirName, spec, settings) {
   if (app.error) return { ok: false, error: app.error }
 
   const depotId = String(spec.depotId ?? '').trim()
-  if (!/^\d+$/.test(depotId)) return { ok: false, error: 'DepotID 必须是数字' }
+  if (!/^\d+$/.test(depotId)) return { ok: false, error: t('DepotID 必须是数字') }
   if (app.depots.some((d) => d.id === depotId)) {
-    return { ok: false, error: `Depot ${depotId} 已经在这个 App 里了` }
+    return { ok: false, error: t('Depot {id} 已经在这个 App 里了', { id: depotId }) }
   }
 
   // 后台新建 Depot 时选的是「操作系统 + 架构」，本地平台 id 由这两项推出来
@@ -947,11 +982,11 @@ export function addDepot(appDirName, spec, settings) {
   const platform = fromOs || spec.platform || 'win64'
   if (!spec.allowDuplicatePlatform && app.depots.some((d) => d.platformId === platform)) {
     const label = platformById(platform).label
-    return { ok: false, error: `这个 App 已经有 ${label} 的 Depot 了`, duplicatePlatform: true, platform }
+    return { ok: false, error: t('这个 App 已经有 {platform} 的 Depot 了', { platform: label }), duplicatePlatform: true, platform }
   }
   const file = `depot_${depotId}_${platformById(platform).suffix}.vdf`
   const full = safeInScripts(path.join(app.dir, file), settings)
-  if (fs.existsSync(full)) return { ok: false, error: `文件已存在：${file}` }
+  if (fs.existsSync(full)) return { ok: false, error: t('文件已存在：{file}', { file }) }
 
   const contentRoot = spec.contentRoot || defaultContentRoot(appDirName, platform, settings)
   fs.writeFileSync(
@@ -974,7 +1009,7 @@ export function addDepot(appDirName, spec, settings) {
     } catch {
       /* ignore */
     }
-    return { ok: false, error: 'app 脚本里找不到 Depots 块，已回滚' }
+    return { ok: false, error: t('app 脚本里找不到 Depots 块，已回滚') }
   }
   fs.writeFileSync(
     safeInScripts(app.appPath, settings),
@@ -1003,7 +1038,7 @@ export function removeDepot(appDirName, depotFile, settings) {
   if (app.error) return { ok: false, error: app.error }
 
   const depot = app.depots.find((d) => d.file === depotFile)
-  if (!depot) return { ok: false, error: `找不到 depot ${depotFile}` }
+  if (!depot) return { ok: false, error: t('找不到 depot {file}', { file: depotFile }) }
 
   let appText = readText(app.appPath)
   const line = `"${depot.id}"\t"${depotFile}"`
@@ -1012,7 +1047,7 @@ export function removeDepot(appDirName, depotFile, settings) {
     // 缩进可能不同，退一步按正则删
     const re = new RegExp(`^[ \\t]*${lit(depot.id)}[ \\t]+${lit(depotFile)}[ \\t]*\\r?\\n?`, 'm')
     const out = appText.replace(re, '')
-    if (out === appText) return { ok: false, error: 'app 脚本里找不到这行 depot 映射' }
+    if (out === appText) return { ok: false, error: t('app 脚本里找不到这行 depot 映射') }
     appText = out
   } else {
     appText = r.text
@@ -1034,18 +1069,20 @@ export function removeDepot(appDirName, depotFile, settings) {
 /** App 名字 = scripts 下的文件夹名。校验规则两处共用（新建 / 改名）。 */
 export function validateAppName(name) {
   const n = String(name || '').trim()
-  if (!n) return { ok: false, error: '名字不能为空' }
-  if (n.startsWith('_')) return { ok: false, error: '名字不能以下划线开头（_ 开头的目录会被扫描跳过）' }
-  if (/[\\/:*?"<>|]/.test(n)) return { ok: false, error: '名字里不能有 \\ / : * ? " < > | 这几个字符' }
+  if (!n) return { ok: false, error: t('名字不能为空') }
+  if (n.startsWith('_')) return { ok: false, error: t('名字不能以下划线开头（_ 开头的目录会被扫描跳过）') }
+  // 正则里双引号写成 \x22（与 " 完全等价）：裸写时会和下面文案里的引号配对，
+  // 让 i18n 检查器把这条 t() 当成「还没走 t() 的中文」。
+  if (/[\\/:*?\x22<>|]/.test(n)) return { ok: false, error: t('名字里不能有 \\ / : * ? " < > | 这几个字符') }
   // 空格是允许的 —— Valve 自己的例子（MyGame Steam(Body-1234567) B0.7.9）就带空格。
   // 只是不许有控制字符，也不许只有空格（上面 trim 之后为空的已经拦掉了）。
   // eslint-disable-next-line no-control-regex
-  if (/[\u0000-\u001f\u007f]/.test(n)) return { ok: false, error: '名字里不能有控制字符' }
+  if (/[\u0000-\u001f\u007f]/.test(n)) return { ok: false, error: t('名字里不能有控制字符') }
   if (!/^[\w\u4e00-\u9fa5.\- ()（）[\]【】]+$/.test(n)) {
-    return { ok: false, error: '名字里只能用字母、数字、下划线、点、横线、空格、括号或中文' }
+    return { ok: false, error: t('名字里只能用字母、数字、下划线、点、横线、空格、括号或中文') }
   }
-  if (n === '.' || n === '..') return { ok: false, error: '名字不合法' }
-  if (n.length > 64) return { ok: false, error: '名字太长了（最多 64 字）' }
+  if (n === '.' || n === '..') return { ok: false, error: t('名字不合法') }
+  if (n.length > 64) return { ok: false, error: t('名字太长了（最多 64 字）') }
   return { ok: true, name: n }
 }
 
@@ -1053,7 +1090,7 @@ export function validateAppName(name) {
 export function renameApp(appDirName, newName, settings) {
   const p = getPaths(settings)
   const oldDir = path.join(p.scriptsDir, appDirName)
-  if (!fs.existsSync(oldDir)) return { ok: false, error: `找不到 ${appDirName}` }
+  if (!fs.existsSync(oldDir)) return { ok: false, error: t('找不到 {name}', { name: appDirName }) }
 
   const check = validateAppName(newName)
   if (!check.ok) return { ok: false, error: check.error }
@@ -1062,7 +1099,7 @@ export function renameApp(appDirName, newName, settings) {
   if (name === appDirName) return { ok: true, changed: false, dirName: name }
 
   const newDir = path.join(p.scriptsDir, name)
-  if (fs.existsSync(newDir)) return { ok: false, error: `已经存在同名的 App：${name}` }
+  if (fs.existsSync(newDir)) return { ok: false, error: t('已经存在同名的 App：{name}', { name }) }
 
   const app = readApp(appDirName, settings)
   if (app.error) return { ok: false, error: app.error }
@@ -1070,7 +1107,7 @@ export function renameApp(appDirName, newName, settings) {
   try {
     fs.renameSync(oldDir, newDir)
   } catch (e) {
-    return { ok: false, error: `重命名失败：${e.message}` }
+    return { ok: false, error: t('重命名失败：{message}', { message: e.message }) }
   }
 
   // 内容目录不受影响：vdf 里写的是绝对路径，跟文件夹名无关。
@@ -1087,10 +1124,10 @@ export function createApp(spec, settings) {
   const name = nameCheck.name
 
   const appId = String(spec.appId ?? '').trim()
-  if (!/^\d+$/.test(appId)) return { ok: false, error: 'AppID 必须是数字' }
+  if (!/^\d+$/.test(appId)) return { ok: false, error: t('AppID 必须是数字') }
 
   const dir = path.join(p.scriptsDir, name)
-  if (fs.existsSync(dir)) return { ok: false, error: `已经存在同名的 App：${name}` }
+  if (fs.existsSync(dir)) return { ok: false, error: t('已经存在同名的 App：{name}', { name }) }
 
   const specs = Array.isArray(spec.depots) && spec.depots.length ? spec.depots : [{ platform: 'win64' }]
   // 项目文件夹：各平台构建的父目录。默认 D:\SteamBuilds\<App名>，
@@ -1100,11 +1137,11 @@ export function createApp(spec, settings) {
   const depots = []
   for (const d of specs) {
     const depotId = String(d.depotId ?? '').trim()
-    if (!/^\d+$/.test(depotId)) return { ok: false, error: 'DepotID 必须是数字' }
-    if (depots.some((x) => x.id === depotId)) return { ok: false, error: `DepotID 重复：${depotId}` }
+    if (!/^\d+$/.test(depotId)) return { ok: false, error: t('DepotID 必须是数字') }
+    if (depots.some((x) => x.id === depotId)) return { ok: false, error: t('DepotID 重复：{id}', { id: depotId }) }
     const platform = d.platform || 'win64'
     if (depots.some((x) => x.platform === platform)) {
-      return { ok: false, error: `同一个 App 里 ${platformById(platform).label} 只能有一个 Depot` }
+      return { ok: false, error: t('同一个 App 里 {platform} 只能有一个 Depot', { platform: platformById(platform).label }) }
     }
     depots.push({
       id: depotId,
@@ -1153,7 +1190,7 @@ export function createApp(spec, settings) {
     } catch {
       /* ignore */
     }
-    return { ok: false, error: `创建失败：${e.message}` }
+    return { ok: false, error: t('创建失败：{message}', { message: e.message }) }
   }
 
   // 项目文件夹和各平台子目录都建出来。用户要的就是「新建 App 的时候把对应文件夹
@@ -1186,8 +1223,8 @@ export function ensureDepotContentDir(appDirName, depotFile, settings) {
   if (app.error) return { ok: false, error: app.error }
 
   const depot = app.depots.find((d) => d.file === depotFile)
-  if (!depot) return { ok: false, error: `找不到 depot ${depotFile}` }
-  if (!depot.contentRoot) return { ok: false, error: '这个 depot 没有设置内容目录' }
+  if (!depot) return { ok: false, error: t('找不到 depot {file}', { file: depotFile }) }
+  if (!depot.contentRoot) return { ok: false, error: t('这个 depot 没有设置内容目录') }
 
   const made = ensureContentDir(depot.contentRoot)
   if (made.error) return { ok: false, error: made.error }
@@ -1270,7 +1307,7 @@ export function deleteApp(appDirName, { deleteContent = false } = {}, settings) 
     removed.scripts = fs.readdirSync(app.dir)
     fs.rmSync(app.dir, { recursive: true, force: true })
   } catch (e) {
-    return { ok: false, error: `删除脚本目录失败：${e.message}` }
+    return { ok: false, error: t('删除脚本目录失败：{message}', { message: e.message }) }
   }
 
   return { ok: true, dirName: appDirName, appId: app.appId, removed }
@@ -1315,7 +1352,8 @@ export function listHistory(settings) {
       items.push({
         file: full,
         name: f.name,
-        group: path.basename(dir) === 'output' ? '最近' : path.basename(dir),
+        // 「最近」是 HistoryView.vue 排序和筛选用到的身份比较串，不能翻译
+        group: path.basename(dir) === 'output' ? '最近' : path.basename(dir), // i18n-ignore
         size: st.size,
         mtime: st.mtimeMs
       })
@@ -1334,8 +1372,8 @@ export function readLog(file, maxBytes = 512 * 1024) {
     const buf = Buffer.alloc(maxBytes)
     fs.readSync(fd, buf, 0, maxBytes, st.size - maxBytes)
     fs.closeSync(fd)
-    return `…（仅显示最后 ${Math.round(maxBytes / 1024)} KB）…\n` + buf.toString('utf8')
+    return t('…（仅显示最后 {kb} KB）…', { kb: Math.round(maxBytes / 1024) }) + '\n' + buf.toString('utf8')
   } catch (e) {
-    return `读取日志失败：${e.message}`
+    return t('读取日志失败：{message}', { message: e.message })
   }
 }

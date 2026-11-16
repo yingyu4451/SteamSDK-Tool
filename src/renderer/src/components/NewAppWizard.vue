@@ -20,6 +20,7 @@ import {
 } from '../store.js'
 import { ExternalLink, GripVertical, ListFilter, LoaderCircle, X, ChevronDown } from '@lucide/vue'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t, listSeparator } from '../i18n/index.js'
 
 const el = ref(null)
 const nameInput = ref(null)
@@ -78,12 +79,12 @@ const depotIdDup = computed(() => {
 const willCreate = computed(() => {
   const v = w.value
   if (!v) return { scripts: [], dirs: [] }
-  const folder = v.name.trim() || '<App名>'
+  const folder = v.name.trim() || t('<App名>')
   const scripts = [`scripts\\${folder}\\app_${v.appId.trim() || '<AppID>'}.vdf`]
   for (const p of picked.value) {
     scripts.push(`scripts\\${folder}\\depot_${String(p.depotId ?? '').trim() || '<DepotID>'}_${p.id}.vdf`)
   }
-  return { scripts, dirs: picked.value.map((p) => String(p.contentRoot ?? '').trim() || '（未填）') }
+  return { scripts, dirs: picked.value.map((p) => String(p.contentRoot ?? '').trim() || t('（未填）')) }
 })
 
 /* ---- AppID：快捷链接 + 已知 App 下拉 + 公开名称 ---- */
@@ -112,10 +113,10 @@ const filteredKnownApps = computed(() => {
 })
 
 const knownStatus = computed(() => {
-  if (state.knownAppsLoading) return '正在从密钥拉取权限内的 App…'
-  if (state.hasApiKey && state.partnerAppCount) return `已拉取 ${state.partnerAppCount} 个 App（Web API 密钥）`
-  if (knownApps.value.length) return `用过的 App ${knownApps.value.length} 个`
-  return '还没有记录'
+  if (state.knownAppsLoading) return t('正在从密钥拉取权限内的 App…')
+  if (state.hasApiKey && state.partnerAppCount) return t('已拉取 {n} 个 App（Web API 密钥）', { n: state.partnerAppCount })
+  if (knownApps.value.length) return t('用过的 App {n} 个', { n: knownApps.value.length })
+  return t('还没有记录')
 })
 
 const appIdKnown = computed(() => {
@@ -253,10 +254,10 @@ function goExisting() {
 
 /* ---- 描述 / 会创建：共用一个位置，用选项卡切换，勾几个平台都不会把弹窗撑长 ---- */
 
-const TABS = [
-  { id: 'desc', label: '描述' },
-  { id: 'will', label: '会创建' }
-]
+const TABS = computed(() => [
+  { id: 'desc', label: t('描述') },
+  { id: 'will', label: t('会创建') }
+])
 const descTab = ref('desc')
 </script>
 
@@ -267,7 +268,7 @@ const descTab = ref('desc')
 
     <div ref="el" role="dialog" aria-modal="true" aria-labelledby="new-app-title" class="relative card s-modal w-full max-w-165 max-h-[88vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-6 h-14 border-b border-line flex items-center gap-3">
-        <h2 id="new-app-title" class="text-title font-semibold m-0">新建 App</h2>
+        <h2 id="new-app-title" class="text-title font-semibold m-0">{{ t('新建 App') }}</h2>
         <button
           class="ml-auto w-7 h-7 grid place-items-center rounded-input text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
           @click="closeWizard"
@@ -279,11 +280,11 @@ const descTab = ref('desc')
       <div class="p-6 flex flex-col gap-4">
         <!-- 名字 -->
         <label class="flex flex-col gap-1.5">
-          <span class="text-label text-muted">App 名字</span>
+          <span class="text-label text-muted">{{ t('App 名字') }}</span>
           <input
             ref="nameInput"
             :value="w.name"
-            placeholder="例如 MyGame"
+            :placeholder="t('例如 MyGame')"
             class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
             @input="wizardNameChanged($event.target.value)"
           />
@@ -300,7 +301,7 @@ const descTab = ref('desc')
               <input
                 ref="appIdRef"
                 :value="w.appId"
-                placeholder="例如 1234560；输入可搜索已知 App"
+                :placeholder="t('例如 1234560；输入可搜索已知 App')"
                 role="combobox"
                 aria-autocomplete="list"
                 :aria-expanded="appPick.open"
@@ -322,7 +323,7 @@ const descTab = ref('desc')
               </span>
               <button
                 class="btn btn-sm px-2 h-7 shrink-0"
-                title="展开已知 App 列表"
+                :title="t('展开已知 App 列表')"
                 @mousedown.prevent
                 @click="onAppIdFocus()"
               >
@@ -330,7 +331,7 @@ const descTab = ref('desc')
               </button>
               <button class="btn btn-sm px-2.5 h-7 shrink-0" @click="openPartner">
                 <ExternalLink :size="13" :stroke-width="2" class="mr-1" />
-                后台
+                {{ t('后台') }}
               </button>
             </div>
 
@@ -338,11 +339,11 @@ const descTab = ref('desc')
               v-if="appPick.open"
               id="app-pick-list"
               role="listbox"
-              aria-label="已知 App"
+              :aria-label="t('已知 App')"
               class="absolute left-0 right-0 top-full mt-1 z-30 max-h-60 overflow-y-auto scroll-thin rounded-card border border-line bg-surface-2 py-1 shadow-modal"
             >
               <div v-if="!filteredKnownApps.length" class="px-3 py-2 text-label text-faint">
-                没有匹配的 App —— 可以继续手填 AppID
+                {{ t('没有匹配的 App —— 可以继续手填 AppID') }}
               </div>
               <button
                 v-for="(a, i) in filteredKnownApps"
@@ -355,24 +356,24 @@ const descTab = ref('desc')
                 @mousedown.prevent="pickKnownApp(a)"
               >
                 <span class="num text-label text-accent shrink-0">{{ a.appId }}</span>
-                <span class="text-label text-muted truncate">{{ a.name || '（没有名字）' }}</span>
+                <span class="text-label text-muted truncate">{{ a.name || t('（没有名字）') }}</span>
                 <span
                   v-if="a.localName && a.localName !== a.name"
                   class="text-micro text-faint truncate"
-                  :title="`本地文件夹：${a.localName}`"
+                  :title="t('本地文件夹：{name}', { name: a.localName })"
                 >
                   {{ a.localName }}
                 </span>
-                <span v-if="a.local" class="ml-auto shrink-0 text-micro text-faint">本地已有</span>
+                <span v-if="a.local" class="ml-auto shrink-0 text-micro text-faint">{{ t('本地已有') }}</span>
               </button>
               <div class="px-3 py-1.5 mt-1 border-t border-line-soft text-micro text-faint">
-                {{ knownStatus }} · ↑↓ 选择，Enter 填入
+                {{ knownStatus }} · {{ t('↑↓ 选择，Enter 填入') }}
               </div>
             </div>
           </div>
 
           <span v-if="appIdOk && !appIdKnown" class="text-micro text-amber">
-            AppID 不在密钥权限内 —— 还能继续建，但「读后台 Depot」「同步 Depot」会 403。
+            {{ t('AppID 不在密钥权限内 —— 还能继续建，但「读后台 Depot」「同步 Depot」会 403。') }}
           </span>
 
           <div
@@ -380,17 +381,16 @@ const descTab = ref('desc')
             class="rounded-card border border-amber/26 bg-amber/6 px-3 py-2 flex items-center gap-2 flex-wrap"
           >
             <span class="text-label text-amber">
-              AppID {{ w.appId }} 已经被本地 App「{{ appIdConflict.join('、') }}」用了 ——
-              再建一个就是两个本地 App 指着同一个 Steam App，构建会传到同一处。
+              {{ t('AppID {id} 已经被本地 App「{names}」用了 —— 再建一个就是两个本地 App 指着同一个 Steam App，构建会传到同一处。', { id: w.appId, names: appIdConflict.join(listSeparator()) }) }}
             </span>
-            <button class="btn btn-sm px-2 " @click="goExisting">改用它</button>
+            <button class="btn btn-sm px-2 " @click="goExisting">{{ t('改用它') }}</button>
           </div>
         </div>
 
         <!-- 平台 -->
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-label text-muted">平台</span>
+            <span class="text-label text-muted">{{ t('平台') }}</span>
             <button
               class="ml-auto btn btn-sm no-drag"
               :disabled="!appIdOk || lk?.busy"
@@ -403,7 +403,7 @@ const descTab = ref('desc')
                 class="mr-1.5 animate-spin"
               />
               <ListFilter v-else :size="14" :stroke-width="1.8" class="mr-1.5" />
-              {{ lk?.busy ? '读取中…' : '读后台 Depot' }}
+              {{ lk?.busy ? t('读取中…') : t('读后台 Depot') }}
             </button>
           </div>
 
@@ -419,14 +419,14 @@ const descTab = ref('desc')
           >
             <div class="whitespace-pre-wrap">{{ lk.error }}</div>
             <div v-if="lk.needsKey || lk.needsPassword" class="mt-2 flex items-center gap-2 flex-wrap">
-              <button class="btn btn-sm px-2.5 " @click="closeWizard(); goSettings()">去设置里配</button>
+              <button class="btn btn-sm px-2.5 " @click="closeWizard(); goSettings()">{{ t('去设置里配') }}</button>
               <button
                 v-if="!state.hasApiKey"
                 class="btn btn-sm px-2.5 "
                 :disabled="lk.busy"
                 @click="doLookup('steamcmd')"
               >
-                用 steamcmd 再试一次
+                {{ t('用 steamcmd 再试一次') }}
               </button>
             </div>
           </div>
@@ -437,9 +437,9 @@ const descTab = ref('desc')
             >
               <span />
               <span />
-              <span>平台 ↑↓</span>
+              <span>{{ t('平台 ↑↓') }}</span>
               <span>DepotID</span>
-              <span>内容目录</span>
+              <span>{{ t('内容目录') }}</span>
               <span />
             </div>
 
@@ -456,7 +456,7 @@ const descTab = ref('desc')
               >
                 <span
                   class="cursor-grab active:cursor-grabbing text-faint hover:text-muted select-none grid place-items-center touch-none"
-                  title="拖动排序：从上到下就是 DepotID +1、+2… 的顺序"
+                  :title="t('拖动排序：从上到下就是 DepotID +1、+2… 的顺序')"
                   @pointerdown="startDrag(p.id, $event)"
                 >
                 <GripVertical :size="12" :stroke-width="2" />
@@ -492,14 +492,14 @@ const descTab = ref('desc')
                 :disabled="!w.picks[p.id].on"
                 @click="wizardPickRoot(p.id)"
               >
-                选择…
+                {{ t('选择…') }}
               </button>
               </div>
             </TransitionGroup>
           </div>
 
           <p class="m-0 text-micro text-faint leading-relaxed">
-            32 位和 ARM64 的 Depot 只有老项目才需要；新 App 一般只建 Windows 64 / macOS / Linux。
+            {{ t('32 位和 ARM64 的 Depot 只有老项目才需要；新 App 一般只建 Windows 64 / macOS / Linux。') }}
           </p>
         </div>
 
@@ -520,7 +520,7 @@ const descTab = ref('desc')
               />
             </button>
             <span v-if="descTab === 'will'" class="ml-auto text-label text-faint num">
-              {{ willCreate.scripts.length }} 个脚本 · {{ willCreate.dirs.length }} 个目录
+              {{ t('{n} 个脚本', { n: willCreate.scripts.length }) }} · {{ t('{n} 个目录', { n: willCreate.dirs.length }) }}
             </span>
           </div>
 
@@ -531,7 +531,7 @@ const descTab = ref('desc')
               v-if="descTab === 'desc'"
               key="desc"
               :value="w.desc"
-              placeholder="例如 MyGame 正式版"
+              :placeholder="t('例如 MyGame 正式版')"
               class="w-full h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
               @input="w.desc = $event.target.value"
             />
@@ -540,8 +540,8 @@ const descTab = ref('desc')
             <div v-else key="will" class="flex flex-col gap-1">
               <details
                 v-for="grp in [
-                  { name: '脚本', icon: '＋ 脚本　', rows: willCreate.scripts },
-                  { name: '目录', icon: '＋ 目录　', rows: willCreate.dirs }
+                  { name: t('脚本'), icon: t('＋ 脚本　'), rows: willCreate.scripts },
+                  { name: t('目录'), icon: t('＋ 目录　'), rows: willCreate.dirs }
                 ]"
                 :key="grp.name"
                 class="group"
@@ -551,8 +551,8 @@ const descTab = ref('desc')
                 >
                   <span class="text-faint">{{ grp.name }}</span>
                   <span class="num text-faint">{{ grp.rows.length }}</span>
-                  <span class="ml-auto text-micro text-faint group-open:hidden">展开</span>
-                  <span class="ml-auto text-micro text-faint hidden group-open:inline">收起</span>
+                  <span class="ml-auto text-micro text-faint group-open:hidden">{{ t('展开') }}</span>
+                  <span class="ml-auto text-micro text-faint hidden group-open:inline">{{ t('收起') }}</span>
                 </summary>
                 <div class="mt-1">
                   <div
@@ -570,7 +570,7 @@ const descTab = ref('desc')
         </div>
 
         <div v-if="depotIdDup" class="text-label text-danger">
-          DepotID 有重复 —— 同一个 App 下每个 DepotID 必须不一样。
+          {{ t('DepotID 有重复 —— 同一个 App 下每个 DepotID 必须不一样。') }}
         </div>
 
         <div
@@ -583,9 +583,9 @@ const descTab = ref('desc')
 
       <footer class="px-6 py-4 border-t border-line flex items-center gap-2">
         <div class="flex-1" />
-        <button class="btn" @click="closeWizard">取消</button>
+        <button class="btn" @click="closeWizard">{{ t('取消') }}</button>
         <button class="btn btn-primary" :disabled="!canSubmit" @click="submitWizard">
-          {{ w.busy ? '创建中…' : `创建（${picked.length} 个 Depot）` }}
+          {{ w.busy ? t('创建中…') : t('创建（{n} 个 Depot）', { n: picked.length }) }}
         </button>
       </footer>
     </div>

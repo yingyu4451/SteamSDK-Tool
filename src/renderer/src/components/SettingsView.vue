@@ -16,6 +16,24 @@ import {
   setZoomPercent,
   refreshScriptUpdate
 } from '../store.js'
+import { lang, languagePref, setLanguagePref, t } from '../i18n/index.js'
+
+/** 语言选择的三个按钮：中文/English 各写各的语言，「跟随系统」跟着界面走 */
+const langOptions = computed(() => [
+  { value: 'auto', label: t('跟随系统') },
+  { value: 'zh', label: '中文' }, // i18n-ignore 语言自称，按自己的语言显示
+  { value: 'en', label: 'English' }
+])
+/** 「跟随系统 → {name}」里的中文名：语言自称，不随界面语言翻成 Chinese */
+const LANG_NAME_ZH = '中文' // i18n-ignore 语言自称
+
+async function chooseLanguage(value) {
+  if (languagePref.value === value) return
+  // 先换界面，再落盘：切换是纯前端的事，等 IPC 回来会有一下卡顿
+  setLanguagePref(value)
+  const res = await window.api.settings.save({ language: value }).catch(() => null)
+  if (res?.ok) state.settings = { ...state.settings, language: value }
+}
 
 /** 当前界面缩放百分比 */
 const zoomPct = computed(() => Math.round((Number(state.zoom) || 1) * 100))
@@ -58,27 +76,27 @@ const mobileWaiting = computed(() => loginPhase.value === 'checking' && state.lo
 const loginMsg = computed(() => {
   if (loginPhase.value === 'checking') {
     return mobileWaiting.value
-      ? '等你在手机上点确认 —— 打开 Steam App，点「确认登录」'
-      : '正在用 steamcmd 登录，第一次要十几秒…'
+      ? t('等你在手机上点确认 —— 打开 Steam App，点「确认登录」')
+      : t('正在用 steamcmd 登录，第一次要十几秒…')
   }
-  const t = loginResult.value
-  if (t && loginPhase.value !== 'idle') {
-    if (t.ok) return t.passwordChecked ? '登录验证通过，账号和密码已保存' : 'steamcmd 用缓存令牌登录成功，账号已保存'
-    switch (t.reason) {
+  const r = loginResult.value
+  if (r && loginPhase.value !== 'idle') {
+    if (r.ok) return r.passwordChecked ? t('登录验证通过，账号和密码已保存') : t('steamcmd 用缓存令牌登录成功，账号已保存')
+    switch (r.reason) {
       case 'bad-password':
-        return 'Steam 说密码不对（Invalid Password）——账号名不是邮箱，检查一下大小写'
+        return t('Steam 说密码不对（Invalid Password）——账号名不是邮箱，检查一下大小写')
       case 'steam-guard':
-        return 'Steam 要一个 Steam Guard 验证码，填到上面后再点一次「登录 Steam」'
+        return t('Steam 要一个 Steam Guard 验证码，填到上面后再点一次「登录 Steam」')
       case 'mobile-timeout':
-        return '等手机确认超时了 —— 在 Steam App 右下角盾牌里点「确认登录」后再试'
+        return t('等手机确认超时了 —— 在 Steam App 右下角盾牌里点「确认登录」后再试')
       case 'rate-limit':
-        return 'Steam 暂时限制了登录尝试（Rate Limit），等几分钟再试'
+        return t('Steam 暂时限制了登录尝试（Rate Limit），等几分钟再试')
       case 'no-steamcmd':
-        return '找不到 steamcmd.exe —— 先在上面把 SDK 路径配对'
+        return t('找不到 steamcmd.exe —— 先在上面把 SDK 路径配对')
       case 'no-account':
-        return '先填 Steam 账号名'
+        return t('先填 Steam 账号名')
       default:
-        return t.error || '登录没成功，也没认出具体原因'
+        return r.error || t('登录没成功，也没认出具体原因')
     }
   }
   return ''
@@ -86,16 +104,16 @@ const loginMsg = computed(() => {
 
 async function verifyAndSave() {
   const acct = accountDraft.value.trim()
-  if (!acct) return flash('先填 Steam 账号名', 'bad')
-  if (!passwordDraft.value.trim()) return flash('先填 Steam 密码', 'bad')
+  if (!acct) return flash(t('先填 Steam 账号名'), 'bad')
+  if (!passwordDraft.value.trim()) return flash(t('先填 Steam 密码'), 'bad')
   if (loginPhase.value === 'checking') return
   saving.value = true
   loginPhase.value = 'checking'
   loginResult.value = null
   try {
-    const t = await testTypedLogin(acct, passwordDraft.value, guardCode.value)
-    loginResult.value = t
-    if (!t.ok) {
+    const r = await testTypedLogin(acct, passwordDraft.value, guardCode.value)
+    loginResult.value = r
+    if (!r.ok) {
       guardCode.value = ''
       loginPhase.value = 'fail'
       return
@@ -105,14 +123,14 @@ async function verifyAndSave() {
       const r = await window.api.settings.setPassword(passwordDraft.value)
       if (!r?.ok) {
         loginPhase.value = 'fail'
-        return flash(r?.error || '密码没存上', 'bad')
+        return flash(r?.error || t('密码没存上'), 'bad')
       }
       passwordDraft.value = ''
       state.hasPassword = true
     }
     loginPhase.value = 'ok'
     await reloadSettings()
-    flash('登录验证通过，账号和密码已保存')
+    flash(t('登录验证通过，账号和密码已保存'))
   } catch (e) {
     loginResult.value = { ok: false, reason: 'error', error: String(e?.message || e) }
     loginPhase.value = 'fail'
@@ -143,13 +161,13 @@ async function saveKey() {
   if (!res.ok) return flashKey(res.error, 'bad')
   apiKeyDraft.value = ''
   keyState.value = await window.api.steam.keyState()
-  flashKey('密钥已用 DPAPI 加密保存')
+  flashKey(t('密钥已用 DPAPI 加密保存'))
 }
 
 async function clearKey() {
   await window.api.steam.clearKey()
   keyState.value = { has: false, tail: '' }
-  flashKey('已清除密钥')
+  flashKey(t('已清除密钥'))
 }
 
 async function testKey() {
@@ -159,13 +177,13 @@ async function testKey() {
     if (!res.ok) {
       flashKey(
         res.status === 401 || res.status === 403
-          ? '密钥无效或权限不够（需要 Publisher 级别）'
+          ? t('密钥无效或权限不够（需要 Publisher 级别）')
           : res.error,
         'bad'
       )
       return
     }
-    flashKey(`密钥可用，能看到 ${res.count} 个 App`)
+    flashKey(t('密钥可用，能看到 {n} 个 App', { n: res.count }))
   } finally {
     testingKey.value = false
   }
@@ -174,13 +192,13 @@ async function testKey() {
 const checks = computed(() => {
   const s = state.sdk || {}
   return [
-    { label: 'SDK 根目录', ok: s.sdkRootExists, path: s.sdkRoot },
+    { label: 'SDK 根目录', ok: s.sdkRootExists, path: s.sdkRoot }, // i18n-ignore label 是 key，模板里 t(c.label)
     { label: 'ContentBuilder', ok: s.contentBuilderExists, path: s.contentBuilder },
-    { label: 'scripts 目录', ok: s.scriptsDirExists, path: s.scriptsDir },
+    { label: 'scripts 目录', ok: s.scriptsDirExists, path: s.scriptsDir }, // i18n-ignore label 是 key，模板里 t(c.label)
     { label: 'steamcmd.exe', ok: s.steamcmdExists, path: s.steamcmd },
     { label: 'build.ps1', ok: s.buildScriptExists, path: s.buildScript },
     { label: 'check.ps1', ok: s.checkScriptExists, path: s.checkScript },
-    { label: 'output 目录', ok: s.outputDirExists, path: s.outputDir }
+    { label: 'output 目录', ok: s.outputDirExists, path: s.outputDir } // i18n-ignore label 是 key，模板里 t(c.label)
   ]
 })
 
@@ -205,10 +223,10 @@ const scriptState = computed(() => {
     // ContentBuilder 都没有的时候是「SDK 路径不对」，不是脚本的问题，不显示这一行
     show: cbOk && (missing.length > 0 || stale.length > 0),
     hint: !bundled
-      ? '这个安装包不完整（缺自带的 build.ps1 / check.ps1）—— 重新装一次工具'
+      ? t('这个安装包不完整（缺自带的 build.ps1 / check.ps1）—— 重新装一次工具')
       : missing.length
-        ? `${missing.join(' / ')} 没写进去`
-        : '脚本和工具自带的版本不一致',
+        ? t('{files} 没写进去', { files: missing.join(' / ') })
+        : t('脚本和工具自带的版本不一致'),
     hintClass: !bundled || missing.length ? 'text-danger' : 'text-amber'
   }
 })
@@ -220,11 +238,11 @@ async function repairScripts() {
     const res = await window.api.sdk.installScripts()
     if (res?.status) state.sdk = res.status
     if (!res?.ok) {
-      scriptMsg.value = { text: res?.error || '写入失败', tone: 'bad' }
+      scriptMsg.value = { text: res?.error || t('写入失败'), tone: 'bad' }
       return
     }
     const n = (res.written || []).length
-    scriptMsg.value = { text: n ? `已写入 ${n} 个脚本` : '脚本已是最新', tone: 'ok' }
+    scriptMsg.value = { text: n ? t('已写入 {n} 个脚本', { n }) : t('脚本已是最新'), tone: 'ok' }
     // 顶栏那条「构建脚本需更新」跟着收起来
     await refreshScriptUpdate()
     // 状态刷新后这一行会收起来，成功提示自己留 4 秒，别让按钮点完就「无影无踪」
@@ -261,7 +279,7 @@ async function savePaths() {
     await window.api.settings.save({ sdkRoot: sdkDraft.value.trim() })
     await reloadSettings()
     await rescan()
-    flash('路径已保存，检查已刷新')
+    flash(t('路径已保存，检查已刷新'))
   } finally {
     saving.value = false
   }
@@ -305,15 +323,15 @@ async function openContentBuilder() {
   const p = state.sdk?.contentBuilder
   if (!p) return
   const r = await window.api.shell.openPath(p)
-  if (!r?.ok) state.toast = { text: r?.error || '打不开构建目录', tone: 'bad' }
+  if (!r?.ok) state.toast = { text: r?.error || t('打不开构建目录'), tone: 'bad' }
 }
 </script>
 
 <template>
   <div class="p-5 max-w-300">
     <header class="mb-4 flex items-end gap-3 flex-wrap">
-      <h1 class="text-display font-semibold m-0 text-ink">设置</h1>
-      <p class="m-0 text-body text-muted">SDK 路径、登录凭据、Web API 密钥和界面缩放。</p>
+      <h1 class="text-display font-semibold m-0 text-ink">{{ t('设置') }}</h1>
+      <p class="m-0 text-body text-muted">{{ t('SDK 路径、登录凭据、Web API 密钥、界面语言和缩放。') }}</p>
     </header>
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
 
@@ -321,7 +339,7 @@ async function openContentBuilder() {
       <div class="flex flex-col gap-4 min-w-0">
         <!-- 路径 -->
         <section class="card p-5" v-reveal>
-          <h2 class="font-semibold m-0">SDK 路径</h2>
+          <h2 class="font-semibold m-0">{{ t('SDK 路径') }}</h2>
 
           <div class="mt-3.5 flex gap-2">
             <input
@@ -329,39 +347,39 @@ async function openContentBuilder() {
               class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
               placeholder="D:\SteamSDK"
             />
-            <button class="btn no-drag" @click="pick">选择…</button>
-            <button class="btn btn-primary no-drag" :disabled="saving" @click="savePaths">保存</button>
+            <button class="btn no-drag" @click="pick">{{ t('选择…') }}</button>
+            <button class="btn btn-primary no-drag" :disabled="saving" @click="savePaths">{{ t('保存') }}</button>
           </div>
 
           <div class="mt-2 flex items-center gap-2 flex-wrap">
             <button
               class="btn btn-sm px-2.5  no-drag"
-              title="打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链"
+              :title="t('打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链')"
               @click="openExternal(SDK_DOWNLOAD)"
             >
-              <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
+              <Download :size="13" class="mr-1.5" /> {{ t('下载 Steamworks SDK') }}
             </button>
             <button
               class="btn btn-sm px-2.5  no-drag"
               :disabled="!state.sdk?.contentBuilderExists"
               :title="
                 state.sdk?.contentBuilderExists
-                  ? `在资源管理器里打开构建目录：${state.sdk.contentBuilder}`
-                  : '还没检测到构建目录，先把上面的 SDK 路径指到解压后的 SteamSDK'
+                  ? t('在资源管理器里打开构建目录：{path}', { path: state.sdk.contentBuilder })
+                  : t('还没检测到构建目录，先把上面的 SDK 路径指到解压后的 SteamSDK')
               "
               @click="openContentBuilder"
             >
-              <FolderOpen :size="13" class="mr-1.5" /> 构建目录
+              <FolderOpen :size="13" class="mr-1.5" /> {{ t('构建目录') }}
             </button>
             <span v-if="!state.sdk?.sdkRootExists" class="text-micro text-amber">
-              还没装 SDK —— 下完解压到任意目录，再把上面的路径指过去
+              {{ t('还没装 SDK —— 下完解压到任意目录，再把上面的路径指过去') }}
             </span>
           </div>
 
           <div class="mt-4 grid grid-cols-1 gap-1.5">
             <div v-for="c in checks" :key="c.label" class="flex items-start gap-2.5 text-label">
               <span class="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" :class="c.ok ? 'bg-success' : 'bg-danger'" />
-              <span class="w-28 shrink-0 pt-0.5" :class="c.ok ? 'text-muted' : 'text-danger'">{{ c.label }}</span>
+              <span class="w-28 shrink-0 pt-0.5" :class="c.ok ? 'text-muted' : 'text-danger'">{{ t(c.label) }}</span>
               <span class="font-mono text-faint break-all min-w-0 flex-1">{{ c.path }}</span>
             </div>
           </div>
@@ -373,11 +391,11 @@ async function openContentBuilder() {
               v-if="scriptState.show && scriptState.canInstall"
               class="btn btn-sm px-2.5  no-drag"
               :disabled="installingScripts"
-              title="把工具自带的 build.ps1 / check.ps1 写进 SDK 的 tools\ContentBuilder（内容一样的不重写）"
+              :title="t('把工具自带的 build.ps1 / check.ps1 写进 SDK 的 tools\\ContentBuilder（内容一样的不重写）')"
               @click="repairScripts"
             >
               <Wrench :size="13" class="mr-1.5" />
-              {{ installingScripts ? '写入中…' : '安装/修复脚本' }}
+              {{ installingScripts ? t('写入中…') : t('安装/修复脚本') }}
             </button>
             <span
               v-if="scriptMsg"
@@ -393,11 +411,11 @@ async function openContentBuilder() {
         <!-- 凭据 -->
         <section class="card p-5" v-reveal="{ delay: 0.04 }">
           <div class="flex items-center gap-2.5">
-            <h2 class="font-semibold m-0">登录凭据</h2>
+            <h2 class="font-semibold m-0">{{ t('登录凭据') }}</h2>
             <span class="pill" :class="state.hasPassword ? 'pill-ok' : 'pill-idle'">
-              {{ state.hasPassword ? '已保存' : '未保存' }}
+              {{ state.hasPassword ? t('已保存') : t('未保存') }}
             </span>
-            <span v-if="!state.encryptionAvailable" class="pill pill-bad">系统不支持加密存储</span>
+            <span v-if="!state.encryptionAvailable" class="pill pill-bad">{{ t('系统不支持加密存储') }}</span>
           </div>
 
           <div class="mt-3.5 flex flex-col gap-2.5">
@@ -405,23 +423,23 @@ async function openContentBuilder() {
               <input
                 v-model="accountDraft"
                 class="flex-1 basis-[200px] min-w-[150px] h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45"
-                placeholder="Steam 账号名（不是邮箱）"
+                :placeholder="t('Steam 账号名（不是邮箱）')"
                 @keydown.enter="verifyAndSave"
               />
               <input
                 v-model="passwordDraft"
                 type="password"
                 class="flex-1 basis-[200px] min-w-[150px] h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
-                placeholder="Steam 密码"
+                :placeholder="t('Steam 密码')"
                 @keydown.enter="verifyAndSave"
               />
             </div>
 
             <label v-if="needGuard" class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">Steam Guard 验证码</span>
+              <span class="text-label text-muted">{{ t('Steam Guard 验证码') }}</span>
               <input
                 v-model="guardCode"
-                placeholder="例如 K4F2B"
+                :placeholder="t('例如 K4F2B')"
                 autocomplete="one-time-code"
                 class="h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-accent/45 placeholder:tracking-normal"
                 @keydown.enter="verifyAndSave"
@@ -453,14 +471,14 @@ async function openContentBuilder() {
           <div class="mt-3 pt-3 border-t border-line-soft flex items-center gap-2 flex-nowrap">
             <button
               class="btn no-drag shrink-0"
-              title="打开系统命令行窗口，自己用 steamcmd 登录（内置窗口打不开时用这个）"
+              :title="t('打开系统命令行窗口，自己用 steamcmd 登录（内置窗口打不开时用这个）')"
               @click="openLogin"
             >
-              外置窗口
+              {{ t('外置窗口') }}
             </button>
             <button class="btn btn-danger no-drag shrink-0" @click="openForget">
               <ShieldOff :size="14" />
-              忘记账号
+              {{ t('忘记账号') }}
             </button>
             <button
               class="btn btn-primary no-drag shrink-0 ml-auto px-3"
@@ -469,7 +487,7 @@ async function openContentBuilder() {
             >
               <LoaderCircle v-if="saving" :size="13" class="mr-1.5 drop-spin" />
               <Check v-else-if="loginPhase === 'ok'" :size="13" class="mr-1.5" />
-              {{ saving ? '正在登录…' : '登录 Steam' }}
+              {{ saving ? t('正在登录…') : t('登录 Steam') }}
             </button>
           </div>
         </section>
@@ -481,7 +499,7 @@ async function openContentBuilder() {
         <!-- Steamworks Web API -->
         <section class="card p-5" v-reveal="{ delay: 0.06 }">
           <div class="flex items-center gap-2">
-            <h2 class="font-semibold m-0">Steamworks Web API 密钥</h2>
+            <h2 class="font-semibold m-0">{{ t('Steamworks Web API 密钥') }}</h2>
             <span
               class="px-2 py-0.5 rounded-full text-micro border"
               :class="
@@ -490,7 +508,7 @@ async function openContentBuilder() {
                   : 'text-faint border-line'
               "
             >
-              {{ keyState.has ? `已保存 ····${keyState.tail}` : '未保存' }}
+              {{ keyState.has ? t('已保存 ····{tail}', { tail: keyState.tail }) : t('未保存') }}
             </span>
           </div>
 
@@ -498,22 +516,22 @@ async function openContentBuilder() {
             <input
               v-model="apiKeyDraft"
               type="password"
-              placeholder="32 位十六进制 Publisher 密钥"
+              :placeholder="t('32 位十六进制 Publisher 密钥')"
               class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-body font-mono outline-none focus:border-accent/45 placeholder:text-faint"
             />
-            <button class="btn no-drag" :disabled="!apiKeyDraft.trim()" @click="saveKey">加密保存</button>
-            <button class="btn no-drag" :disabled="!keyState.has" @click="clearKey">清除</button>
+            <button class="btn no-drag" :disabled="!apiKeyDraft.trim()" @click="saveKey">{{ t('加密保存') }}</button>
+            <button class="btn no-drag" :disabled="!keyState.has" @click="clearKey">{{ t('清除') }}</button>
           </div>
 
           <div class="mt-2.5 flex items-center gap-2 flex-wrap">
             <button class="btn no-drag" :disabled="!keyState.has || testingKey" @click="testKey">
-              {{ testingKey ? '测试中…' : '测试密钥' }}
+              {{ testingKey ? t('测试中…') : t('测试密钥') }}
             </button>
             <button
               class="btn no-drag"
               @click="openExternal('https://partner.steamgames.com/apps/webapikeys')"
             >
-              去后台取密钥
+              {{ t('去后台取密钥') }}
             </button>
             <span v-if="keyMsg" class="text-label" :class="keyMsg.tone === 'bad' ? 'text-danger' : 'text-accent'">
               {{ keyMsg.text }}
@@ -521,14 +539,35 @@ async function openContentBuilder() {
           </div>
         </section>
 
+        <!-- 界面语言 -->
+        <section class="card p-5" v-reveal="{ delay: 0.065 }">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="font-semibold m-0">{{ t('界面语言') }}</h2>
+            <span v-if="languagePref === 'auto'" class="text-micro text-faint">
+              {{ t('跟随系统 → {name}', { name: lang === 'en' ? 'English' : LANG_NAME_ZH }) }}
+            </span>
+          </div>
+          <div class="mt-3 flex items-center gap-1.5">
+            <button
+              v-for="opt in langOptions"
+              :key="opt.value"
+              class="btn btn-sm px-2.5 no-drag"
+              :class="languagePref === opt.value ? 'btn-primary' : ''"
+              @click="chooseLanguage(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </section>
+
         <!-- 界面缩放 -->
         <section class="card p-5" v-reveal="{ delay: 0.07 }">
-          <h2 class="font-semibold m-0">界面缩放</h2>
+          <h2 class="font-semibold m-0">{{ t('界面缩放') }}</h2>
           <div class="mt-3 flex items-center gap-2">
             <button
               class="btn btn-square no-drag w-9"
-              aria-label="缩小 5%"
-              title="缩小 5%"
+              :aria-label="t('缩小 5%')"
+              :title="t('缩小 5%')"
               :disabled="zoomPct <= 80"
               @click="zoomStep(-1)"
             >
@@ -539,7 +578,7 @@ async function openContentBuilder() {
                 v-model="zoomText"
                 class="zoom-input text-center text-body num text-ink"
                 inputmode="numeric"
-                aria-label="界面缩放百分比"
+                :aria-label="t('界面缩放百分比')"
                 @keydown.enter.prevent="commitZoomText"
                 @blur="commitZoomText"
               />
@@ -547,8 +586,8 @@ async function openContentBuilder() {
             </label>
             <button
               class="btn btn-square no-drag w-9"
-              aria-label="放大 5%"
-              title="放大 5%"
+              :aria-label="t('放大 5%')"
+              :title="t('放大 5%')"
               :disabled="zoomPct >= 150"
               @click="zoomStep(1)"
             >
@@ -560,16 +599,16 @@ async function openContentBuilder() {
         <!-- 关于 & 更新 -->
         <section class="card p-5" v-reveal="{ delay: 0.08 }">
           <div class="flex items-center gap-2.5 flex-wrap">
-            <h2 class="font-semibold m-0">关于</h2>
-            <span class="pill">{{ u.current ? `v${u.current}` : '读取版本中…' }}</span>
-            <span v-if="u.data?.hasUpdate" class="pill pill-warn">有新版本 v{{ u.data.latest }}</span>
-            <span v-else-if="u.checked && u.data" class="pill pill-ok">已是最新</span>
+            <h2 class="font-semibold m-0">{{ t('关于') }}</h2>
+            <span class="pill">{{ u.current ? `v${u.current}` : t('读取版本中…') }}</span>
+            <span v-if="u.data?.hasUpdate" class="pill pill-warn">{{ t('有新版本 v{version}', { version: u.data.latest }) }}</span>
+            <span v-else-if="u.checked && u.data" class="pill pill-ok">{{ t('已是最新') }}</span>
             <button
               class="ml-auto btn btn-sm px-2.5  no-drag"
               :disabled="u.busy"
               @click="checkUpdateNow()"
             >
-              {{ u.busy ? '检查中…' : '检查更新' }}
+              {{ u.busy ? t('检查中…') : t('检查更新') }}
             </button>
           </div>
 
@@ -580,7 +619,7 @@ async function openContentBuilder() {
             class="mt-3 rounded-card border border-amber/30 bg-amber/6 p-3"
           >
             <div class="text-label text-muted">
-              新版本 <b>v{{ u.data.latest }}</b>（当前 v{{ u.current }}）<template v-if="u.data.publishedAt">
+              {{ t('新版本') }} <b>v{{ u.data.latest }}</b>{{ t('（当前 v{current}）', { current: u.current }) }}<template v-if="u.data.publishedAt">
                 · {{ fmtDate(u.data.publishedAt) }}</template
               >
             </div>
@@ -597,11 +636,11 @@ async function openContentBuilder() {
               </div>
               <div class="mt-1.5 text-micro text-faint num">
                 <template v-if="u.viaIncremental && u.estimate && (!u.total || u.total <= u.estimate * 1.2)">
-                  增量下载 · {{ fmtSize(u.got) }} / {{ fmtSize(u.total || u.estimate)
-                  }}<template v-if="u.fullSize">（全量 {{ fmtSize(u.fullSize) }}）</template> · {{ pct }}%
+                  {{ t('增量下载') }} · {{ fmtSize(u.got) }} / {{ fmtSize(u.total || u.estimate)
+                  }}<template v-if="u.fullSize">{{ t('（全量 {size}）', { size: fmtSize(u.fullSize) }) }}</template> · {{ pct }}%
                 </template>
                 <template v-else>
-                  {{ fmtSize(u.got) }} / {{ u.total ? fmtSize(u.total) : '未知大小' }} · {{ pct }}%
+                  {{ fmtSize(u.got) }} / {{ u.total ? fmtSize(u.total) : t('未知大小') }} · {{ pct }}%
                 </template>
               </div>
             </div>
@@ -613,41 +652,41 @@ async function openContentBuilder() {
                 :disabled="u.downloading || !(u.data.asset || u.incremental)"
                 :title="
                   u.data.asset || u.incremental
-                    ? '下载新版安装包；装在系统里的版本会走增量下载'
-                    : 'GitHub 这次没返回 release 的资产列表（刚发版时偶尔会这样）。过一会儿再点一次「检查更新」就有了，或者点「在 GitHub 上看」手动下载。'
+                    ? t('下载新版安装包；装在系统里的版本会走增量下载')
+                    : t('GitHub 这次没返回 release 的资产列表（刚发版时偶尔会这样）。过一会儿再点一次「检查更新」就有了，或者点「在 GitHub 上看」手动下载。')
                 "
                 @click="downloadUpdateNow()"
               >
-                {{ u.downloading ? '下载中…' : u.data.asset || u.incremental ? '下载更新' : '没读到安装包' }}
+                {{ u.downloading ? t('下载中…') : u.data.asset || u.incremental ? t('下载更新') : t('没读到安装包') }}
               </button>
               <button v-else class="btn btn-primary px-3  no-drag" @click="installUpdateNow()">
-                {{ u.portable ? '打开下载位置' : '重启并安装' }}
+                {{ u.portable ? t('打开下载位置') : t('重启并安装') }}
               </button>
-              <button class="btn px-3  no-drag" @click="openReleases()">在 GitHub 上看</button>
+              <button class="btn px-3  no-drag" @click="openReleases()">{{ t('在 GitHub 上看') }}</button>
             </div>
 
             <div v-if="!u.ready && !u.data.asset && !u.incremental" class="mt-2 text-micro text-faint">
-              这次没读到 release 的安装包列表（刚发版时偶尔会这样）。过一会儿再点「检查更新」，或者点「在 GitHub 上看」手动下载。
+              {{ t('这次没读到 release 的安装包列表（刚发版时偶尔会这样）。过一会儿再点「检查更新」，或者点「在 GitHub 上看」手动下载。') }}
             </div>
             <div v-if="u.ready && u.portable" class="mt-2 text-micro text-faint">
-              便携版没有安装目录，也覆盖不了正在运行的自己。
-              点「打开下载位置」，关掉工具，用新版替换掉你那个 exe 就行。
+              {{ t('便携版没有安装目录，也覆盖不了正在运行的自己。') }}
+              {{ t('点「打开下载位置」，关掉工具，用新版替换掉你那个 exe 就行。') }}
             </div>
             <div v-else-if="u.ready" class="mt-2 text-micro text-faint">
-              {{ u.viaIncremental && u.differential ? '增量包已经下好了（只下了改动的部分）。' : '安装包已经下好了。' }}
-              点「重启并安装」会关掉工具、起安装程序。
+              {{ u.viaIncremental && u.differential ? t('增量包已经下好了（只下了改动的部分）。') : t('安装包已经下好了。') }}
+              {{ t('点「重启并安装」会关掉工具、起安装程序。') }}
             </div>
           </div>
 
           <div class="mt-3.5 flex gap-2 flex-wrap">
             <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/doc/sdk/uploading')">
-              SteamPipe 文档
+              {{ t('SteamPipe 文档') }}
             </button>
             <button class="btn no-drag" @click="openExternal('https://partner.steamgames.com/apps/builds')">
-              Steamworks 构建页
+              {{ t('Steamworks 构建页') }}
             </button>
-            <button class="btn no-drag" @click="openReleases()">GitHub 仓库</button>
-            <button class="btn no-drag" @click="changelogOpen = true">更新日志</button>
+            <button class="btn no-drag" @click="openReleases()">{{ t('GitHub 仓库') }}</button>
+            <button class="btn no-drag" @click="changelogOpen = true">{{ t('更新日志') }}</button>
           </div>
         </section>
       </div>

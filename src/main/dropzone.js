@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process'
 import { platformById, platformFromOsArch } from './vdf-edit.js'
 import { addDepot, updateDepotFields } from './sdk.js'
 import { setDepotMeta } from './store.js'
+import { t } from './i18n.js'
 
 const ZIP_EXT = ['.zip']
 const ARCHIVE_EXT = ['.zip', '.7z', '.rar', '.tar', '.gz', '.xz', '.tar.gz']
@@ -18,13 +19,14 @@ const ARCHIVE_EXT = ['.zip', '.7z', '.rar', '.tar', '.gz', '.xz', '.tar.gz']
 /** 走目录时最多看这么多项 —— 一个 Unity 包一万多个文件，全统计会很慢 */
 const MAX_ENTRIES = 30000
 
+// 模块加载时就会求值的常量表：label 保持中文，返回给界面时再 t(label)
 const JUNK = [
-  { re: /_BurstDebugInformation_DoNotShip$/i, label: 'Burst 调试信息目录', rule: '*BurstDebugInformation_DoNotShip\\*' },
-  { re: /\.pdb$/i, label: '符号文件 .pdb', rule: '*.pdb' },
-  { re: /\.dSYM$/i, label: '符号目录 .dSYM', rule: '*.dSYM\\*' },
-  { re: /\.log$/i, label: '日志 .log', rule: '*.log' },
+  { re: /_BurstDebugInformation_DoNotShip$/i, label: 'Burst 调试信息目录', rule: '*BurstDebugInformation_DoNotShip\\*' }, // i18n-ignore
+  { re: /\.pdb$/i, label: '符号文件 .pdb', rule: '*.pdb' }, // i18n-ignore
+  { re: /\.dSYM$/i, label: '符号目录 .dSYM', rule: '*.dSYM\\*' }, // i18n-ignore
+  { re: /\.log$/i, label: '日志 .log', rule: '*.log' }, // i18n-ignore
   { re: /^steam_appid\.txt$/i, label: 'steam_appid.txt', rule: 'steam_appid.txt' },
-  { re: /^(logs|tools|CrashReports|Crashes)$/i, label: '调试目录', rule: null }
+  { re: /^(logs|tools|CrashReports|Crashes)$/i, label: '调试目录', rule: null } // i18n-ignore
 ]
 
 function extOf(p) {
@@ -75,6 +77,8 @@ function inspectDir(dir) {
     hasMacUnity: false,
     executableLinux: []
   }
+  // 同一条规则只报一次；比较的是中文原文，和界面语言无关
+  const seenJunk = new Set()
 
   const walk = (d, depth) => {
     let entries
@@ -95,8 +99,9 @@ function inspectDir(dir) {
       // 垃圾特征只看目录名和文件名，不看内容
       if (depth <= 3) {
         for (const j of JUNK) {
-          if (j.re.test(e.name) && !out.junk.some((x) => x.label === j.label)) {
-            out.junk.push({ label: j.label, sample: rel, rule: j.rule })
+          if (j.re.test(e.name) && !seenJunk.has(j.label)) {
+            seenJunk.add(j.label)
+            out.junk.push({ label: t(j.label), sample: rel, rule: j.rule })
           }
         }
       }
@@ -140,31 +145,31 @@ function inspectDir(dir) {
   let platform = ''
   if (out.hasAppBundle || out.hasMacUnity) {
     platform = 'macos'
-    why.push(out.hasAppBundle ? '根下有 .app bundle' : '有 UnityPlayer 的 .dylib')
+    why.push(out.hasAppBundle ? t('根下有 .app bundle') : t('有 UnityPlayer 的 .dylib'))
   } else if (out.hasUnityPlayerSo || out.executableLinux.length) {
     platform = 'linux'
-    why.push(out.hasUnityPlayerSo ? '有 UnityPlayer.so' : `有可执行的 ${out.executableLinux[0]}`)
+    why.push(out.hasUnityPlayerSo ? t('有 UnityPlayer.so') : t('有可执行的 {name}', { name: out.executableLinux[0] }))
   } else if (out.hasUnityPlayerDll || out.exeNames.length || out.hasDataDir) {
     platform = 'win64'
     why.push(
       out.hasUnityPlayerDll
-        ? '有 UnityPlayer.dll'
+        ? t('有 UnityPlayer.dll')
         : out.exeNames.length
-          ? `有 ${out.exeNames[0]}`
-          : '有 *_Data 目录'
+          ? t('有 {name}', { name: out.exeNames[0] })
+          : t('有 *_Data 目录')
     )
   }
 
-  if (out.hasDataDir) out.markers.push('Unity 构建（*_Data 目录）')
+  if (out.hasDataDir) out.markers.push(t('Unity 构建（*_Data 目录）'))
   if (out.hasUnityPlayerDll) out.markers.push('UnityPlayer.dll → Windows')
   if (out.hasUnityPlayerSo) out.markers.push('UnityPlayer.so → Linux')
   if (out.hasMacUnity) out.markers.push('UnityPlayer dylib → macOS')
-  if (out.hasAppBundle) out.markers.push(`${out.appBundles.length} 个 .app bundle`)
+  if (out.hasAppBundle) out.markers.push(t('{n} 个 .app bundle', { n: out.appBundles.length }))
 
   const nameGuess = platformFromName(path.basename(dir))
   if (nameGuess && !platform) {
     platform = nameGuess
-    why.push(`文件夹名里有「${nameGuess}」`)
+    why.push(t('文件夹名里有「{name}」', { name: nameGuess }))
   }
 
   return { ...out, platform, why }
@@ -204,7 +209,7 @@ function quickStats(dir, cap = 200000) {
 async function extractArchive(archive, destRoot, onProgress) {
   const ext = extOf(archive)
   if (!ZIP_EXT.includes(ext)) {
-    return { ok: false, error: `只能自动解 .zip。${ext} 请先用 7-Zip 解开，再把文件夹拖进来。` }
+    return { ok: false, error: t('只能自动解 .zip。{ext} 请先用 7-Zip 解开，再把文件夹拖进来。', { ext }) }
   }
   const base = path.basename(archive, path.extname(archive)).replace(/[\\/:*?"<>|]/g, '_').trim()
   const dest = path.join(destRoot, base)
@@ -240,7 +245,7 @@ async function extractArchive(archive, destRoot, onProgress) {
 
   const poll = setInterval(() => {
     try {
-      onProgress?.({ phase: 'extract', text: '正在解压…', ...quickStats(dest) })
+      onProgress?.({ phase: 'extract', text: t('正在解压…'), ...quickStats(dest) })
     } catch {
       /* 报进度失败不影响解压 */
     }
@@ -259,7 +264,7 @@ async function extractArchive(archive, destRoot, onProgress) {
   clearTimeout(killTimer)
 
   if (code !== 0) {
-    return { ok: false, error: out.trim().split('\n').slice(-4).join('\n') || '解压失败' }
+    return { ok: false, error: out.trim().split('\n').slice(-4).join('\n') || t('解压失败') }
   }
   return { ok: true, dir: dest, extracted: true }
 }
@@ -297,14 +302,14 @@ export async function analyzeTarget(target, settings, onProgress) {
     }
   }
   const p = String(target || '').trim()
-  if (!p) return { ok: false, error: '没拿到路径' }
-  if (!fs.existsSync(p)) return { ok: false, error: `找不到：${p}` }
+  if (!p) return { ok: false, error: t('没拿到路径') }
+  if (!fs.existsSync(p)) return { ok: false, error: t('找不到：{path}', { path: p }) }
 
   let st
   try {
     st = fs.statSync(p)
   } catch (e) {
-    return { ok: false, error: `读不了：${e.message}` }
+    return { ok: false, error: t('读不了：{message}', { message: e.message }) }
   }
 
   const name = path.basename(p)
@@ -316,7 +321,7 @@ export async function analyzeTarget(target, settings, onProgress) {
   }
 
   if (st.isDirectory()) {
-    say({ phase: 'scan', text: '正在统计文件…', files: 0, bytes: 0 })
+    say({ phase: 'scan', text: t('正在统计文件…'), files: 0, bytes: 0 })
     const info = inspectDir(p)
     return {
       ...base,
@@ -336,10 +341,10 @@ export async function analyzeTarget(target, settings, onProgress) {
     }
   }
 
-  if (!st.isFile()) return { ok: false, error: '只能拖文件夹或者 .zip' }
+  if (!st.isFile()) return { ok: false, error: t('只能拖文件夹或者 .zip') }
 
   if (!isArchive(p)) {
-    return { ok: false, error: `${name} 不是压缩包。拖文件夹，或者 .zip。` }
+    return { ok: false, error: t('{name} 不是压缩包。拖文件夹，或者 .zip。', { name }) }
   }
 
   // 先解到临时目录看，apply 的时候再决定最终落在哪
@@ -351,15 +356,15 @@ export async function analyzeTarget(target, settings, onProgress) {
   } catch {}
   let probe
   try {
-    say({ phase: 'extract', text: '正在解压…', files: 0, bytes: 0 })
+    say({ phase: 'extract', text: t('正在解压…'), files: 0, bytes: 0 })
     probe = await extractArchive(p, tmpRoot, say)
   } catch (e) {
-    return { ok: false, error: `解压失败：${e.message}` }
+    return { ok: false, error: t('解压失败：{message}', { message: e.message }) }
   }
   if (!probe.ok) return { ok: false, error: probe.error }
 
   const inner = unwrapSingleDir(probe.dir)
-  say({ phase: 'scan', text: '正在统计文件…', files: 0, bytes: 0 })
+  say({ phase: 'scan', text: t('正在统计文件…'), files: 0, bytes: 0 })
   const info = inspectDir(inner)
   return {
     ...base,
@@ -392,12 +397,12 @@ export async function analyzeTarget(target, settings, onProgress) {
  */
 export async function applyDrop(spec, settings) {
   const appDirName = String(spec?.appDirName || '').trim()
-  if (!appDirName) return { ok: false, error: '先选一个 App' }
+  if (!appDirName) return { ok: false, error: t('先选一个 App') }
 
   // 目标就是界面算好的「项目文件夹\<平台>」，没有它没法放
   const contentRootInput = String(spec?.contentRoot || '').trim()
   if (!contentRootInput) {
-    return { ok: false, error: '没拿到要放进去的项目平台目录 —— 先在界面上选一个项目文件夹' }
+    return { ok: false, error: t('没拿到要放进去的项目平台目录 —— 先在界面上选一个项目文件夹') }
   }
   const contentRootAbs = path.resolve(contentRootInput)
 
@@ -409,10 +414,10 @@ export async function applyDrop(spec, settings) {
   const depotFileInput = String(spec?.depotFile || '').trim()
   const newDepotId = String(spec?.depotId || '').trim()
   if (!depotFileInput) {
-    if (!/^\d+$/.test(newDepotId)) return { ok: false, error: 'DepotID 必须是数字' }
+    if (!/^\d+$/.test(newDepotId)) return { ok: false, error: t('DepotID 必须是数字') }
     const osArch = spec?.os && spec?.arch ? platformFromOsArch(spec.os, spec.arch) : null
     if (osArch && osArch !== platform) {
-      return { ok: false, error: `系统 + 架构组合出来是 ${platformById(osArch).label}，和选的 ${plat.label} 不一致` }
+      return { ok: false, error: t('系统 + 架构组合出来是 {os}，和选的 {platform} 不一致', { os: platformById(osArch).label, platform: plat.label }) }
     }
   }
 
@@ -460,14 +465,14 @@ export async function applyDrop(spec, settings) {
       const destRoot = String(spec?.extractTo || buildsRoot).trim()
       if (!fs.existsSync(destRoot)) fs.mkdirSync(destRoot, { recursive: true })
       const r = await extractArchive(spec.archive, destRoot)
-      if (!r || r.ok === false) return { ok: false, error: r?.error || '解压失败' }
+      if (!r || r.ok === false) return { ok: false, error: r?.error || t('解压失败') }
       srcDir = unwrapSingleDir(r.dir)
       extractedTo = srcDir
     }
   } else {
     srcDir = String(spec?.dir || spec?.target || '').trim()
   }
-  if (!srcDir || !fs.existsSync(srcDir)) return { ok: false, error: `找不到要导入的文件夹：${srcDir}` }
+  if (!srcDir || !fs.existsSync(srcDir)) return { ok: false, error: t('找不到要导入的文件夹：{path}', { path: srcDir }) }
   const srcAbs = path.resolve(srcDir)
 
   // 解压暂存/探测目录用完就清，成功失败都不留多余副本。
@@ -495,7 +500,7 @@ export async function applyDrop(spec, settings) {
         fs.mkdirSync(contentRootAbs, { recursive: true })
         fs.cpSync(srcAbs, contentRootAbs, { recursive: true, force: true })
       } catch (e) {
-        return { ok: false, error: `复制失败：${e.message}` }
+        return { ok: false, error: t('复制失败：{message}', { message: e.message }) }
       }
     }
 
@@ -514,13 +519,13 @@ export async function applyDrop(spec, settings) {
         },
         settings
       )
-      if (!res || res.ok === false) return { ok: false, error: res?.error || '新建 Depot 失败' }
+      if (!res || res.ok === false) return { ok: false, error: res?.error || t('新建 Depot 失败') }
       created = res
       depotFile = res.file || ''
     } else {
       // 已有 Depot：不管它之前指向哪儿，一律重指到项目平台目录
       const r = updateDepotFields(appDirName, depotFile, { contentRoot: contentRootAbs }, settings)
-      if (r && r.ok === false) return { ok: false, error: r.error || '更新 Depot 内容目录失败' }
+      if (r && r.ok === false) return { ok: false, error: r.error || t('更新 Depot 内容目录失败') }
     }
   } finally {
     cleanupStaging()

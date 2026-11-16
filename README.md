@@ -256,6 +256,7 @@ gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md `
 | Steam 账号 | 上传构建用的账号名（不是邮箱） |
 | 密码 | 可选，DPAPI 加密存本机 |
 | Web API 密钥 | 可选，Publisher 级别，填了优先走官方接口 |
+| 界面语言 | 中文 / English，或「跟随系统」；切换即时生效 |
 | 本地内容服务器 | 用 SDK 自带的 `ContentServer\` 起一个本地 HTTP 服务，配合 Steam 客户端的 `@localcontentserver` 做不上传的本地测试 |
 
 ---

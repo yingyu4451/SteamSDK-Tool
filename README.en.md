@@ -8,7 +8,7 @@ The UI follows Steam's own visual language. Vue 3 + Electron, Windows installer.
 
 **English** · [中文](README.md)
 
-> ⚠️ **The application UI is currently Chinese only.** This document describes it in English, and the button names below are given as English glosses of the Chinese labels.
+> The app runs in **English or Chinese** — pick one under **Settings → Language**, or leave it on *Follow system*. Switching takes effect immediately, no restart.
 
 ![Workbench](docs/workbench.png)
 
@@ -32,9 +32,9 @@ This tool folds all of that into one window: **one App = one project folder, wit
 1. Download and run `SteamSDK Tool-x.y.z-setup.exe`;
 2. Follow the three-step guide on first launch: **① confirm the SteamSDK path → ② enter your Steam account → ③ create or pick an App**;
    - Returning users can click **Skip tutorial**; everything lives on the Settings page;
-3. Click **Read backend Depots** — it lists the Depots already configured for this App in Steamworks, and ticking one fills in the real DepotID;
-4. Click **Self-check** to validate the config, then **Preview (dry run)** to walk the whole flow without uploading;
-5. When it looks right, click **Upload for real**.
+3. Click **Read backend** — it lists the Depots already configured for this App in Steamworks, and ticking one fills in the real DepotID;
+4. Click **Check config** to validate the config, then **Preview** to walk the whole flow without uploading;
+5. When it looks right, click **Upload**.
 
 <table>
 <tr>
@@ -53,7 +53,7 @@ This tool folds all of that into one window: **one App = one project folder, wit
 | **Depot** | The upload unit inside an App, split by platform (or DLC, or language). **One Depot per platform**, each with its own DepotID |
 | **Project folder** | The parent directory holding every platform's build output for one App, e.g. `D:\SteamBuilds\MyGame`, with `win64\`, `macos\`, `linux\` each bound to a Depot |
 | **Branch / SetLive** | SteamPipe beta branches. `SetLive` picks which branch a build publishes to; **it cannot target `default`** — create branches in the Steamworks backend first |
-| **Preview (dry run)** | Runs the entire build flow without uploading anything. Used to validate config and exclusion rules |
+| **Preview** | Runs the entire build flow without uploading anything. Used to validate config and exclusion rules |
 
 ### Directory layout
 
@@ -137,9 +137,9 @@ Each Depot card shows four numbers directly: **files on disk / total size / excl
 
 ### Builds and history
 
-- **Self-check** runs `check.ps1` with output streamed live into the window;
-- **Preview (dry run)** runs the full flow without uploading;
-- **Upload for real** requires a **second click to confirm**;
+- **Check config** runs `check.ps1` with output streamed live into the window;
+- **Preview** runs the full flow without uploading;
+- **Upload** requires a **second click to confirm**;
 - **Abort** kills the whole process tree (steamcmd included);
 - **Each App has its own build console** — switching Apps switches the log;
 - Build history filters by "all / individual App" and is searchable.
@@ -175,7 +175,7 @@ The app name is the folder name under `scripts/`, and it **may contain spaces an
 - The password is encrypted at rest with **Windows DPAPI** (Electron `safeStorage`) and is only decryptable by the current Windows user;
 - It is **never passed on the command line** — it goes to `build.ps1` via an environment variable, and PowerShell pipes it into steamcmd's stdin;
 - If the password appears in output it is redacted to `********`;
-- Storing it is optional: if you don't, the UI asks each time you upload for real. The tidier alternative is **Log in once**, which opens a real console where you `login`, letting steamcmd cache the credential itself.
+- Storing it is optional: if you don't, the UI asks each time you upload for real. The tidier alternative is **Sign in to Steam**, which opens a real console where you `login`, letting steamcmd cache the credential itself.
 
 The optional Web API key is likewise DPAPI-encrypted locally.
 
@@ -236,6 +236,7 @@ gh release create v0.2.0 --title "v0.2.0" --notes-file NOTES.md `
 | Steam account | The account name used for uploads (not the email) |
 | Password | Optional, DPAPI-encrypted locally |
 | Web API key | Optional, Publisher level; when present the official API is preferred |
+| Language | English / 中文, or *Follow system*; applied immediately |
 | Local content server | Starts a local HTTP server from the SDK's own `ContentServer\`, paired with Steam's `@localcontentserver` for upload-free local testing |
 
 ---
@@ -290,10 +291,10 @@ The SDK path in Settings must point at the directory containing `tools\ContentBu
 **`build.ps1` / `check.ps1` show up red in Settings**
 Those two are **not** part of the Steamworks SDK — they are this tool's own build / validation logic. The installer ships a copy and writes it into `tools\ContentBuilder` on startup, SDK-path change, and before any check or upload (existing files are never overwritten, so your edits survive). If the directory is read-only or the write fails, Settings shows an "Install/repair scripts" button that writes the bundled version back.
 
-**"Upload for real" finished but nothing was uploaded**
-Check whether `"preview"` in the app vdf is `1`. That value is now driven by the button (clicking Upload for real forces it to 0), but be aware if you hand-edited the script.
+**"Upload" finished but nothing was uploaded**
+Check whether `"preview"` in the app vdf is `1`. That value is now driven by the button (clicking Upload forces it to 0), but be aware if you hand-edited the script.
 
-**Self-check says "the script referenced by Depot … does not exist"**
+**Check config says "the script referenced by Depot … does not exist"**
 The depot path in the app vdf is wrong. Both absolute paths and bare filenames are supported.
 
 **A to-do item says "Depot X uploads … which is not inside the project folder"**

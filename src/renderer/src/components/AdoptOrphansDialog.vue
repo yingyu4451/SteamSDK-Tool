@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { state, closeOrphanDialog, submitOrphanDialog } from '../store.js'
 import { X } from '@lucide/vue'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t } from '../i18n/index.js'
 
 const el = ref(null)
 const input = ref(null)
@@ -37,7 +38,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
     <div ref="el" role="dialog" aria-modal="true" aria-labelledby="adopt-title" class="relative card s-modal w-full max-w-140 max-h-[86vh] overflow-y-auto scroll-thin no-drag">
       <header class="px-6 pt-5 pb-4 border-b border-line flex items-start gap-3">
         <div>
-          <h2 id="adopt-title" class="text-title font-semibold m-0">把游离的 vdf 收进一个 App</h2>
+          <h2 id="adopt-title" class="text-title font-semibold m-0">{{ t('把游离的 vdf 收进一个 App') }}</h2>
         </div>
         <button
           class="ml-auto w-7 h-7 grid place-items-center rounded-input text-faint hover:text-ink hover:bg-surface-2 transition-colors bg-transparent border-0 cursor-pointer"
@@ -49,11 +50,11 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
 
       <div class="p-6 flex flex-col gap-4">
         <label class="flex flex-col gap-1.5">
-          <span class="text-label text-muted">App 名字（新文件夹的名字）</span>
+          <span class="text-label text-muted">{{ t('App 名字（新文件夹的名字）') }}</span>
           <input
             ref="input"
             :value="d.name"
-            placeholder="例如 MyGame"
+            :placeholder="t('例如 MyGame')"
             class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
             @input="d.name = $event.target.value"
             @keydown.enter="canSubmit && submitOrphanDialog()"
@@ -62,7 +63,7 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
 
         <div class="card-flat p-3.5">
           <div class="text-micro font-semibold tracking-wider text-faint uppercase mb-2">
-            会被搬走的文件
+            {{ t('会被搬走的文件') }}
           </div>
           <div
             v-for="o in apps"
@@ -90,11 +91,11 @@ const canSubmit = computed(() => !!d.value && !!d.value.name.trim() && !d.value.
       </div>
 
       <footer class="px-6 py-4 border-t border-line flex items-center gap-2">
-        <span class="text-micro text-faint">只搬文件，不动磁盘上的游戏内容</span>
+        <span class="text-micro text-faint">{{ t('只搬文件，不动磁盘上的游戏内容') }}</span>
         <div class="flex-1" />
-        <button class="btn" @click="closeOrphanDialog">取消</button>
+        <button class="btn" @click="closeOrphanDialog">{{ t('取消') }}</button>
         <button class="btn btn-primary" :disabled="!canSubmit" @click="submitOrphanDialog">
-          {{ d.busy ? '搬运中…' : '收拢' }}
+          {{ d.busy ? t('搬运中…') : t('收拢') }}
         </button>
       </footer>
     </div>

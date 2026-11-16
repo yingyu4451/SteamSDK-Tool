@@ -12,6 +12,7 @@ import {
 } from '../store.js'
 import { X, RefreshCw } from '@lucide/vue'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t } from '../i18n/index.js'
 
 const el = ref(null)
 const idInput = ref(null)
@@ -74,7 +75,7 @@ const willCreate = computed(() => {
         class="slideover-panel s-drawer-panel relative h-full w-115 max-w-[92vw] flex flex-col no-drag"
       >
         <header class="px-5 h-14 shrink-0 border-b border-line flex items-center gap-3">
-          <h2 id="new-depot-title" class="text-title font-semibold m-0">新建 Depot</h2>
+          <h2 id="new-depot-title" class="text-title font-semibold m-0">{{ t('新建 Depot') }}</h2>
           <button
             class="ml-auto w-7 h-7 grid place-items-center rounded-btn text-faint hover:text-ink hover:bg-surface-3 transition-colors bg-transparent border-0 cursor-pointer"
             @click="closeDepotSlide"
@@ -87,23 +88,23 @@ const willCreate = computed(() => {
           <div v-if="s.lookupError" class="text-micro text-amber">{{ s.lookupError }}</div>
 
           <div class="flex items-center gap-2">
-            <span class="text-micro text-faint">只在本地记录，不会写进 vdf</span>
+            <span class="text-micro text-faint">{{ t('只在本地记录，不会写进 vdf') }}</span>
             <button
               class="ml-auto btn btn-sm px-2.5 no-drag shrink-0"
               :disabled="s.lookupBusy"
-              title="用 steamcmd + 已保存的 Steam 账号读后台这个 App 的 Depot 列表"
+              :title="t('用 steamcmd + 已保存的 Steam 账号读后台这个 App 的 Depot 列表')"
               @click="slideLookupBackend"
             >
               <RefreshCw :size="13" :stroke-width="2" :class="s.lookupBusy ? 'animate-spin' : ''" />
-              {{ s.lookupBusy ? '读取中…' : '读后台' }}
+              {{ s.lookupBusy ? t('读取中…') : t('读后台') }}
             </button>
           </div>
 
           <label class="flex flex-col gap-1.5">
-            <span class="text-label text-muted">Depot 名称</span>
+            <span class="text-label text-muted">{{ t('Depot 名称') }}</span>
             <input
               :value="s.name"
-              placeholder="例如 MyGame Content"
+              :placeholder="t('例如 MyGame Content')"
               class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45 placeholder:text-faint"
               @input="s.name = $event.target.value"
             />
@@ -114,12 +115,12 @@ const willCreate = computed(() => {
             <input
               ref="idInput"
               :value="s.depotId"
-              placeholder="例如 1234561"
+              :placeholder="t('例如 1234561')"
               class="h-9 px-3 rounded-input bg-surface border text-body num outline-none focus:border-accent/45 placeholder:text-faint"
               :class="s.depotId && !/^\d+$/.test(String(s.depotId).trim()) ? 'border-danger/55' : 'border-line'"
               @input="s.depotId = $event.target.value"
             />
-            <span class="text-micro text-faint">后台新建时如果留空，Steam 会自动分配一个</span>
+            <span class="text-micro text-faint">{{ t('后台新建时如果留空，Steam 会自动分配一个') }}</span>
             <span
               v-if="idHint"
               class="text-micro"
@@ -139,7 +140,7 @@ const willCreate = computed(() => {
 
           <div class="grid grid-cols-2 gap-3">
             <label class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">操作系统</span>
+              <span class="text-label text-muted">{{ t('操作系统') }}</span>
               <select
                 :value="s.os"
                 class="h-9 px-2.5 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
@@ -149,31 +150,31 @@ const willCreate = computed(() => {
               </select>
             </label>
             <label class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">架构</span>
+              <span class="text-label text-muted">{{ t('架构') }}</span>
               <select
                 :value="s.arch"
                 class="h-9 px-2.5 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
                 @change="setDepotPlatform({ arch: $event.target.value })"
               >
-                <option v-for="x in archList" :key="x.id" :value="x.id">{{ x.label }}</option>
+                <option v-for="x in archList" :key="x.id" :value="x.id">{{ t(x.label) }}</option>
               </select>
             </label>
           </div>
 
           <div class="flex items-baseline gap-2 pt-1 border-t border-line-soft">
-            <span class="text-micro font-semibold tracking-wider text-faint uppercase">本地 · SteamPipe</span>
-            <span class="text-micro text-faint">vdf 里真正生效的部分</span>
+            <span class="text-micro font-semibold tracking-wider text-faint uppercase">{{ t('本地 · SteamPipe') }}</span>
+            <span class="text-micro text-faint">{{ t('vdf 里真正生效的部分') }}</span>
           </div>
 
           <label class="flex flex-col gap-1.5">
-            <span class="text-label text-muted">内容目录</span>
+            <span class="text-label text-muted">{{ t('内容目录') }}</span>
             <div class="flex items-center gap-2">
               <input
                 :value="s.contentRoot"
                 class="flex-1 min-w-0 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-accent/45"
                 @input="s.contentRoot = $event.target.value"
               />
-              <button class="btn px-3  no-drag" @click="pickDepotRoot">选择…</button>
+              <button class="btn px-3  no-drag" @click="pickDepotRoot">{{ t('选择…') }}</button>
             </div>
           </label>
 
@@ -183,21 +184,21 @@ const willCreate = computed(() => {
             class="rounded-card border border-amber/26 bg-amber/6 px-3.5 py-2.5"
           >
             <div class="text-label text-amber">
-              这个 App 已经有 {{ dup.platformId }} 的 Depot（{{ dup.id }}）。
+              {{ t('这个 App 已经有 {platform} 的 Depot（{id}）。', { platform: dup.platformId, id: dup.id }) }}
             </div>
             <label class="mt-2 flex items-center gap-2 text-label text-muted cursor-pointer select-none">
               <input type="checkbox" v-model="s.allowDup" class="accent-accent" />
-              确实要再加一个同平台的
+              {{ t('确实要再加一个同平台的') }}
             </label>
           </div>
 
           <div class="card-flat p-3.5">
-            <div class="text-micro font-semibold tracking-wider text-faint uppercase mb-2">会写出什么</div>
+            <div class="text-micro font-semibold tracking-wider text-faint uppercase mb-2">{{ t('会写出什么') }}</div>
             <div class="font-mono text-label text-accent py-0.5 break-all">
-              <span class="text-faint">＋ 脚本　</span>{{ willCreate.file }}
+              <span class="text-faint">{{ t('＋ 脚本') }}　</span>{{ willCreate.file }}
             </div>
             <div class="font-mono text-label text-accent py-0.5 break-all">
-              <span class="text-faint">＋ 目录　</span>{{ willCreate.dir || '（未填）' }}
+              <span class="text-faint">{{ t('＋ 目录') }}　</span>{{ willCreate.dir || t('（未填）') }}
             </div>
           </div>
 
@@ -211,9 +212,9 @@ const willCreate = computed(() => {
 
         <footer class="px-5 h-16 shrink-0 border-t border-line flex items-center gap-2">
           <div class="flex-1" />
-          <button class="btn" @click="closeDepotSlide">取消</button>
+          <button class="btn" @click="closeDepotSlide">{{ t('取消') }}</button>
           <button class="btn btn-primary" :disabled="!canSubmit" @click="submitDepotSlide">
-            {{ s.busy ? '创建中…' : '创建 Depot' }}
+            {{ s.busy ? t('创建中…') : t('创建 Depot') }}
           </button>
         </footer>
       </aside>

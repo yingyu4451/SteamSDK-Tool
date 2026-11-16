@@ -15,6 +15,7 @@
  * `summarizeAppDepots()`。
  */
 import { oslistToPlatform } from './steamcmdinfo.js'
+import { t } from './i18n.js'
 
 const PARTNER = 'https://partner.steam-api.com'
 const TIMEOUT_MS = 20000
@@ -43,38 +44,47 @@ function scrub(text, key) {
 }
 
 async function partnerGet(pathname, params, key) {
-  if (!key) throw new SteamApiError('还没有配置 Web API 密钥', 0)
+  if (!key) throw new SteamApiError(t('还没有配置 Web API 密钥'), 0)
 
   let res
   try {
     res = await fetch(buildUrl(pathname, params, key), { signal: AbortSignal.timeout(TIMEOUT_MS) })
   } catch (e) {
     if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
-      throw new SteamApiError(`请求超时（${TIMEOUT_MS / 1000}s）：${pathname}`, 0)
+      throw new SteamApiError(
+        t('请求超时（{seconds}s）：{endpoint}', { seconds: TIMEOUT_MS / 1000, endpoint: pathname }),
+        0
+      )
     }
-    throw new SteamApiError(`网络错误：${scrub(e?.message || e, key)}`, 0)
+    throw new SteamApiError(t('网络错误：{error}', { error: scrub(e?.message || e, key) }), 0)
   }
 
   const text = await res.text()
 
   if (res.status === 401 || res.status === 403) {
     throw new SteamApiError(
-      '密钥被拒绝（' +
-        res.status +
-        '）。三种常见原因：① 密钥打错或已作废；② 这个密钥不是从 Steamworks 后台' +
-        '「用户与权限 → API 密钥」签发的；③ 密钥没有这个 App 的权限。',
+      t(
+        '密钥被拒绝（{status}）。三种常见原因：① 密钥打错或已作废；② 这个密钥不是从 Steamworks 后台「用户与权限 → API 密钥」签发的；③ 密钥没有这个 App 的权限。',
+        { status: res.status }
+      ),
       res.status
     )
   }
   if (!res.ok) {
-    throw new SteamApiError(`HTTP ${res.status}：${scrub(text.slice(0, 200), key)}`, res.status)
+    throw new SteamApiError(
+      t('HTTP {status}：{body}', { status: res.status, body: scrub(text.slice(0, 200), key) }),
+      res.status
+    )
   }
 
   let json
   try {
     json = JSON.parse(text)
   } catch {
-    throw new SteamApiError(`返回的不是 JSON：${scrub(text.slice(0, 200), key)}`, res.status)
+    throw new SteamApiError(
+      t('返回的不是 JSON：{body}', { body: scrub(text.slice(0, 200), key) }),
+      res.status
+    )
   }
 
   // Valve 统一包一层 { response: { ... } }
@@ -355,11 +365,11 @@ export function diffDepots(app, steam) {
         level: 'error',
         kind: 'localOnly',
         depotId: id,
-        title: `depot ${id} 后台没有`,
-        text:
-          `本地脚本 ${l.file} 写的是 depot ${id}（${PLATFORM_LABEL[l.platform] || l.platform}），` +
-          `但后台 AppID ${app.appId} 下不存在这个 Depot。` +
-          `要么 DepotID 写错了，要么这个 Depot 还没在后台建。`
+        title: t('depot {id} 后台没有', { id }),
+        text: t(
+          '本地脚本 {file} 写的是 depot {id}（{platform}），但后台 AppID {appId} 下不存在这个 Depot。要么 DepotID 写错了，要么这个 Depot 还没在后台建。',
+          { file: l.file, id, platform: PLATFORM_LABEL[l.platform] || l.platform, appId: app.appId }
+        )
       })
       continue
     }
@@ -372,27 +382,36 @@ export function diffDepots(app, steam) {
         level: 'warn',
         kind: 'matched',
         depotId: id,
-        title: `depot ${id} 后台还没有任何 Manifest`,
-        text: `后台存在这个 Depot${r.name ? `（${r.name}）` : ''}，但从来没传过内容。`
+        title: t('depot {id} 后台还没有任何 Manifest', { id }),
+        text: r.name
+          ? t('后台存在这个 Depot（{name}），但从来没传过内容。', { name: r.name })
+          : t('后台存在这个 Depot，但从来没传过内容。')
       })
       continue
     }
 
     const osPlat = osToPlatform(pub.os)
     const mismatch = osPlat && l.platform && osPlat !== l.platform
+    const osPart = pub.os ? ` · ${pub.os}${pub.osarch ? ' ' + pub.osarch : ''}` : ''
+    const branchPart = pub.branch ? ' · ' + t('分支 {branch}', { branch: pub.branch }) : ''
+    const buildPart = pub.buildid ? ` · build ${pub.buildid}` : ''
     items.push({
       level: mismatch ? 'warn' : 'ok',
       kind: 'matched',
       depotId: id,
-      title: `depot ${id} 匹配`,
-      text:
-        `本地：${PLATFORM_LABEL[l.platform] || l.platform}` +
-        `　后台：${r.name || '未命名'}` +
-        (pub.os ? ` · ${pub.os}${pub.osarch ? ' ' + pub.osarch : ''}` : '') +
-        (pub.branch ? ` · 分支 ${pub.branch}` : '') +
-        (pub.buildid ? ` · build ${pub.buildid}` : ''),
+      title: t('depot {id} 匹配', { id }),
+      text: t('本地：{local}　后台：{remote}{os}{branch}{build}', {
+        local: PLATFORM_LABEL[l.platform] || l.platform,
+        remote: r.name || t('未命名'),
+        os: osPart,
+        branch: branchPart,
+        build: buildPart
+      }),
       hint: mismatch
-        ? `注意：后台这个 Depot 的 Manifest 标的是 ${pub.os}，本地脚本写的是 ${l.platform}。平台对不上通常意味着 DepotID 串了。`
+        ? t(
+            '注意：后台这个 Depot 的 Manifest 标的是 {remote}，本地脚本写的是 {local}。平台对不上通常意味着 DepotID 串了。',
+            { remote: pub.os, local: l.platform }
+          )
         : ''
     })
   }
@@ -402,10 +421,16 @@ export function diffDepots(app, steam) {
       level: 'warn',
       kind: 'steamOnly',
       depotId: r.depotid,
-      title: `后台多了 depot ${r.depotid}`,
-      text:
-        `后台 AppID ${app.appId} 下有 depot ${r.depotid}${r.name ? `（${r.name}）` : ''}，` +
-        `本地脚本里没有 —— 这次构建不会更新它。要一起传就在 Depot 矩阵里加上。`
+      title: t('后台多了 depot {id}', { id: r.depotid }),
+      text: r.name
+        ? t(
+            '后台 AppID {appId} 下有 depot {id}（{name}），本地脚本里没有 —— 这次构建不会更新它。要一起传就在 Depot 矩阵里加上。',
+            { appId: app.appId, id: r.depotid, name: r.name }
+          )
+        : t(
+            '后台 AppID {appId} 下有 depot {id}，本地脚本里没有 —— 这次构建不会更新它。要一起传就在 Depot 矩阵里加上。',
+            { appId: app.appId, id: r.depotid }
+          )
     })
   }
 
@@ -422,16 +447,18 @@ export function diffBranches(localBranches, steam) {
     if (!remote.includes(b)) {
       items.push({
         level: 'error',
-        title: `分支 ${b} 后台不存在`,
-        text: `本地历史里有这个分支名，但后台读不到。SetLive 写错分支名会静默失败，先确认后台建过它。`
+        title: t('分支 {branch} 后台不存在', { branch: b }),
+        text: t(
+          '本地历史里有这个分支名，但后台读不到。SetLive 写错分支名会静默失败，先确认后台建过它。'
+        )
       })
     }
   }
   for (const b of remote) {
     items.push({
       level: 'ok',
-      title: `分支 ${b} 存在`,
-      text: 'Steamworks 后台的 beta 分支'
+      title: t('分支 {branch} 存在', { branch: b }),
+      text: t('Steamworks 后台的 beta 分支')
     })
   }
   return items

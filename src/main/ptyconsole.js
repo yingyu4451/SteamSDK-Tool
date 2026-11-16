@@ -9,6 +9,7 @@
  * 这个模块只负责进程和 I/O；提示判定、界面展示放在 index.js / LoginConsole.vue。
  */
 import path from 'node:path'
+import { t } from './i18n.js'
 
 let pty = null
 try {
@@ -19,6 +20,8 @@ try {
   pty = null
 }
 
+// i18n-ignore 下面这条匹配的是 steamcmd 自己打出来的英文提示（外部进程输出），
+// 用来判断要不要提示「去手机上确认」—— 不是界面文案，不能翻译。
 const MOBILE_RE =
   /Steam Guard mobile authenticator|confirm the login in the Steam Mobile app|Open the Steam Mobile app/i
 
@@ -49,9 +52,12 @@ function stripAnsi(text) {
  */
 export function open(opts = {}) {
   if (!pty) {
-    return { ok: false, error: 'node-pty 没有加载成功（预编译产物缺失），只能用外置登录窗口' }
+    return {
+      ok: false,
+      error: t('node-pty 没有加载成功（预编译产物缺失），只能用外置登录窗口')
+    }
   }
-  if (!opts.steamcmd) return { ok: false, error: '没有找到 steamcmd.exe' }
+  if (!opts.steamcmd) return { ok: false, error: t('没有找到 steamcmd.exe') }
   close()
 
   let term
@@ -64,7 +70,7 @@ export function open(opts = {}) {
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
     })
   } catch (e) {
-    return { ok: false, error: `启动伪终端失败：${e.message}` }
+    return { ok: false, error: t('启动伪终端失败：{error}', { error: e.message }) }
   }
 
   const id = ++seq
@@ -111,7 +117,7 @@ export function open(opts = {}) {
 }
 
 export function write(id, data) {
-  if (!session || session.id !== id) return { ok: false, error: '会话已结束' }
+  if (!session || session.id !== id) return { ok: false, error: t('会话已结束') }
   session.term.write(String(data ?? ''))
   return { ok: true }
 }

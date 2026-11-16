@@ -1,5 +1,6 @@
 <script setup>
 import { state } from '../store.js'
+import { t } from '../i18n/index.js'
 import { ExternalLink, File, Folder } from '@lucide/vue'
 
 const props = defineProps({
@@ -25,8 +26,8 @@ async function open() {
     :class="exists ? '' : 'opacity-55'"
     :title="
       exists
-        ? `在资源管理器里打开：${path}`
-        : `路径不存在，点一下试试：${path}`
+        ? t('在资源管理器里打开：{path}', { path })
+        : t('路径不存在，点一下试试：{path}', { path })
     "
     @click="open"
   >

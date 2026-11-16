@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { state, openOrphanDialog, depotUploadEnabled } from '../store.js'
+import { t, num, problemId } from '../i18n/index.js'
 import AppHeader from './AppHeader.vue'
 import ActionBar from './ActionBar.vue'
 import DepotMatrix from './DepotMatrix.vue'
@@ -44,7 +45,8 @@ const activeProblems = computed(() => {
   if (!d) return 0
   const perm = new Set(d.problemsIgnored || [])
   const sess = new Set(state.sessionIgnored?.[d.dirName] || [])
-  return (d.problems || []).filter((t) => !perm.has(t) && !sess.has(t)).length
+  return (d.problems || []).filter((p) => !perm.has(problemId(p)) && !sess.has(problemId(p)))
+    .length
 })
 
 const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - activeProblems.value)
@@ -62,7 +64,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
         <TriangleAlert :size="20" :stroke-width="1.9" class="shrink-0 text-amber mt-0.5" />
         <div class="min-w-0 flex-1">
           <div class="text-body text-amber font-normal">
-            scripts 根目录下有 {{ state.orphans.length }} 个 vdf 没有被任何 App 管着
+            {{ t('scripts 根目录下有 {n} 个 vdf 没有被任何 App 管着', { n: state.orphans.length }) }}
           </div>
           <div class="mt-2 flex flex-col gap-0.5">
             <div
@@ -72,13 +74,13 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
             >
               {{ o.file }}
               <span class="text-faint">
-                · {{ o.kind === 'app' ? `app，AppID ${o.appId || '?'}` : `depot ${o.depotId || '?'}` }}
+                · {{ o.kind === 'app' ? t('app，AppID {id}', { id: o.appId || '?' }) : `depot ${o.depotId || '?'}` }}
                 · {{ o.bytes }} B
               </span>
             </div>
           </div>
 
-          <button class="btn no-drag mt-2.5" @click="openOrphanDialog">收进一个 App 文件夹</button>
+          <button class="btn no-drag mt-2.5" @click="openOrphanDialog">{{ t('收进一个 App 文件夹') }}</button>
         </div>
       </div>
     </div>
@@ -90,8 +92,8 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       <div v-if="!detail && !state.detailLoading" key="__none" class="card p-6" v-reveal>
         <EmptyState
           :icon="MousePointerClick"
-          title="左侧选一个 App"
-          hint="还没有 App 就点左栏的「＋」加一个；已有的点一下，就能开始检查、空跑或正式上传。"
+          :title="t('左侧选一个 App')"
+          :hint="t('还没有 App 就点左栏的「＋」加一个；已有的点一下，就能开始检查、空跑或正式上传。')"
         />
       </div>
 
@@ -104,43 +106,43 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
         class="card px-5 py-2.5 flex items-center gap-5 flex-wrap min-w-0"
         v-reveal="{ delay: 0.02 }"
       >
-        <div class="flex items-baseline gap-2 min-w-0" :title="`磁盘共 ${agg.total.toLocaleString('en-US')} 个`">
-          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">会上传</span>
-          <span class="num text-title font-semibold text-accent leading-none">{{ agg.upload.toLocaleString('en-US') }}</span>
-          <span class="text-label text-faint">个文件</span>
+        <div class="flex items-baseline gap-2 min-w-0" :title="t('磁盘共 {n} 个', { n: num(agg.total) })">
+          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">{{ t('会上传') }}</span>
+          <span class="num text-title font-semibold text-accent leading-none">{{ num(agg.upload) }}</span>
+          <span class="text-label text-faint">{{ t('个文件', { n: agg.upload }) }}</span>
         </div>
         <span class="w-px h-5 bg-line shrink-0" />
-        <div class="flex items-baseline gap-2 min-w-0" :title="`磁盘共 ${totalMb.toFixed(1)} MB`">
-          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">上传体积</span>
+        <div class="flex items-baseline gap-2 min-w-0" :title="t('磁盘共 {size} MB', { size: totalMb.toFixed(1) })">
+          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">{{ t('上传体积') }}</span>
           <span class="num text-title font-semibold text-ink leading-none">{{ uploadMb >= 1024 ? (uploadMb / 1024).toFixed(2) : uploadMb.toFixed(1) }}</span>
           <span class="text-label text-faint">{{ uploadMb >= 1024 ? 'GB' : 'MB' }}</span>
         </div>
         <span class="w-px h-5 bg-line shrink-0" />
-        <div class="flex items-baseline gap-2 min-w-0" title="只不上传，本地保留">
-          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">被排除</span>
+        <div class="flex items-baseline gap-2 min-w-0" :title="t('只不上传，本地保留')">
+          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">{{ t('被排除') }}</span>
           <span
             class="num text-title font-semibold leading-none"
             :class="agg.excluded ? 'text-amber' : 'text-muted'"
-          >{{ agg.excluded.toLocaleString('en-US') }}</span>
-          <span class="text-label text-faint">个文件</span>
+          >{{ num(agg.excluded) }}</span>
+          <span class="text-label text-faint">{{ t('个文件', { n: agg.excluded }) }}</span>
         </div>
         <span class="w-px h-5 bg-line shrink-0" />
         <div
           class="flex items-baseline gap-2 min-w-0"
           :title="
             activeProblems
-              ? '见上方问题清单'
+              ? t('见上方问题清单')
               : ignoredProblems
-                ? `还有 ${ignoredProblems} 项已忽略`
-                : '没有发现问题'
+                ? t('还有 {n} 项已忽略', { n: ignoredProblems })
+                : t('没有发现问题')
           "
         >
-          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">待处理</span>
+          <span class="text-micro font-semibold tracking-wider text-faint uppercase shrink-0">{{ t('待处理') }}</span>
           <span
             class="num text-title font-semibold leading-none"
             :class="activeProblems ? 'text-danger' : 'text-success'"
           >{{ activeProblems }}</span>
-          <span class="text-label text-faint">项</span>
+          <span class="text-label text-faint">{{ t('项', { n: activeProblems }) }}</span>
         </div>
       </div>
 
@@ -163,7 +165,7 @@ const ignoredProblems = computed(() => (detail.value?.problems?.length || 0) - a
       <div v-else key="__loading" class="card p-10 grid place-items-center text-muted text-body">
         <div class="flex items-center gap-3">
           <div class="w-5 h-5 rounded-full border-2 border-line border-t-accent animate-spin" />
-          正在读取 {{ state.selectedDir }}…
+          {{ t('正在读取 {dir}…', { dir: state.selectedDir }) }}
         </div>
       </div>
     </Transition>

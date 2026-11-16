@@ -4,6 +4,7 @@ import http from 'node:http'
 import net from 'node:net'
 import { execFileSync } from 'node:child_process'
 import { getPaths } from './sdk.js'
+import { t } from './i18n.js'
 
 /* ------------------------------------------------------------------ *
  *  本地内容服务器（Steam Local Content Server）
@@ -83,20 +84,20 @@ function whoHolds(port) {
     if (!pids.size) return ''
     const names = []
     for (const pid of pids) {
-      let name = '进程'
+      let name = t('进程')
       try {
-        const t = execFileSync('tasklist', ['/FI', `PID eq ${pid}`, '/NH', '/FO', 'CSV'], {
+        const out = execFileSync('tasklist', ['/FI', `PID eq ${pid}`, '/NH', '/FO', 'CSV'], {
           encoding: 'utf8',
           windowsHide: true
         })
-        const n = /^"([^"]+)"/.exec(t.trim())
+        const n = /^"([^"]+)"/.exec(out.trim())
         if (n) name = n[1]
       } catch {
         /* 拿不到名字就算了 */
       }
       names.push(`${name} (PID ${pid})`)
     }
-    return names.join('、')
+    return names.join(t('、'))
   } catch {
     return ''
   }
@@ -284,7 +285,10 @@ export async function startLocal(settings, port = DEFAULT_PORT) {
   const L = localPaths(settings)
   const p = Number(port) || DEFAULT_PORT
   if (!fs.existsSync(L.htdocs)) {
-    return { ok: false, error: `找不到 ${L.htdocs} —— 先在「构建目录」里跑一次带本地服务器的构建。` }
+    return {
+      ok: false,
+      error: t('找不到 {path} —— 先在「构建目录」里跑一次带本地服务器的构建。', { path: L.htdocs })
+    }
   }
 
   if (server && server.listening && serverPort === p) {
@@ -299,10 +303,13 @@ export async function startLocal(settings, port = DEFAULT_PORT) {
       ok: false,
       portBusy: true,
       error:
-        `端口 ${p} 已经被占用${holder ? `：${holder}` : ''}。\n` +
+        (holder
+          ? t('端口 {port} 已经被占用：{holder}。', { port: p, holder })
+          : t('端口 {port} 已经被占用。', { port: p })) +
+        '\n' +
         (p === 80
-          ? 'Steam 客户端默认只连 80 端口，所以要么把占用它的程序关掉，要么换个端口（换端口后客户端那边多半连不上）。'
-          : '换一个端口再试。')
+          ? t('Steam 客户端默认只连 80 端口，所以要么把占用它的程序关掉，要么换个端口（换端口后客户端那边多半连不上）。')
+          : t('换一个端口再试。'))
     }
   }
 
@@ -325,8 +332,8 @@ export async function startLocal(settings, port = DEFAULT_PORT) {
         code: e.code,
         error:
           e.code === 'EACCES'
-            ? `没有权限监听 ${p} 端口 —— 1024 以下的端口要管理员身份运行。`
-            : `监听 ${p} 端口失败：${e.message}`
+            ? t('没有权限监听 {port} 端口 —— 1024 以下的端口要管理员身份运行。', { port: p })
+            : t('监听 {port} 端口失败：{message}', { port: p, message: e.message })
       })
     })
     s.listen(p, '0.0.0.0', () => {
@@ -352,7 +359,10 @@ export async function startLocal(settings, port = DEFAULT_PORT) {
   const serving = await probePort(p)
   if (!serving) {
     await stopLocal()
-    return { ok: false, error: `服务器起来了但 http://127.0.0.1:${p}/ 没有应答，已经停掉。` }
+    return {
+      ok: false,
+      error: t('服务器起来了但 http://127.0.0.1:{port}/ 没有应答，已经停掉。', { port: p })
+    }
   }
   return { ok: true, pid: process.pid, port: p, url: url(p), serving: true, htdocs: L.htdocs }
 }
@@ -418,7 +428,7 @@ export function steamDevCfg(settings, port = DEFAULT_PORT) {
   const host = '127.0.0.1'
   const line = `@localcontentserver ${host}`
   if (!steamPath) {
-    return { ok: false, error: '找不到 Steam 安装目录（注册表里没有）', line }
+    return { ok: false, error: t('找不到 Steam 安装目录（注册表里没有）'), line }
   }
   const file = path.join(steamPath, 'steam_dev.cfg')
   let content = ''
@@ -455,7 +465,7 @@ export function writeSteamDevCfg(settings, port = DEFAULT_PORT) {
     if (info.exists) fs.writeFileSync(info.file + '.bak', info.content, 'utf8')
     fs.writeFileSync(info.file, text, 'utf8')
   } catch (e) {
-    return { ok: false, error: `写入失败：${e.message}`, file: info.file }
+    return { ok: false, error: t('写入失败：{message}', { message: e.message }), file: info.file }
   }
   return { ok: true, file: info.file, line: payload, backedUp: info.exists }
 }

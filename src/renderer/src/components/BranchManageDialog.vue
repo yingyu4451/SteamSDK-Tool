@@ -4,6 +4,7 @@ import gsap from 'gsap'
 import { GitBranch } from '@lucide/vue'
 import { state, selectedApp, loadBuildPanel } from '../store.js'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t } from '../i18n/index.js'
 
 const props = defineProps({ open: { type: Boolean, default: false } })
 const emit = defineEmits(['close'])
@@ -47,19 +48,19 @@ const backendError = computed(() =>
 
 /** 顶部一行后台状态：读取中 / 读到几个 / 失败 / 没密钥，别让本机记录看起来像「后台不存在」 */
 const backendStatus = computed(() => {
-  if (!appId.value) return { bad: false, text: '还没选 App' }
-  if (backendBusy.value) return { bad: false, text: '后台分支读取中…' }
+  if (!appId.value) return { bad: false, text: t('还没选 App') }
+  if (backendBusy.value) return { bad: false, text: t('后台分支读取中…') }
   if (backendLoaded.value) {
     return {
       bad: false,
       text: backendBetas.value.length
-        ? `后台 ${backendBetas.value.length} 个分支`
-        : '后台没有 beta 分支'
+        ? t('后台 {n} 个分支', { n: backendBetas.value.length })
+        : t('后台没有 beta 分支')
     }
   }
-  if (backendError.value) return { bad: true, text: `后台读取失败：${backendError.value}` }
-  if (!state.hasApiKey) return { bad: false, text: '没有 Web API 密钥，读不到后台分支' }
-  return { bad: false, text: '后台分支未读取' }
+  if (backendError.value) return { bad: true, text: t('后台读取失败：{error}', { error: backendError.value }) }
+  if (!state.hasApiKey) return { bad: false, text: t('没有 Web API 密钥，读不到后台分支') }
+  return { bad: false, text: t('后台分支未读取') }
 })
 
 /** 合并：当前 SetLive 在最前，其余按后台顺序、最后补本机独有的；同名忽略大小写去重 */
@@ -97,16 +98,16 @@ const rows = computed(() => {
 })
 
 function rowStatus(row) {
-  if (row.isCurrent) return { cls: 'pill-warn', text: '当前 SetLive' }
-  if (row.beta) return { cls: 'pill-idle', text: '后台' }
-  if (backendLoaded.value) return { cls: '', text: '仅本机' }
-  return { cls: '', text: '本机记录' }
+  if (row.isCurrent) return { cls: 'pill-warn', text: t('当前 SetLive') }
+  if (row.beta) return { cls: 'pill-idle', text: t('后台') }
+  if (backendLoaded.value) return { cls: '', text: t('仅本机') }
+  return { cls: '', text: t('本机记录') }
 }
 
 function rowTitle(row) {
   if (!row.beta) return ''
   const desc = row.beta.description ? ` · ${row.beta.description}` : ''
-  return `后台 BuildID ${row.beta.buildid || ''}${desc}`
+  return t('后台 BuildID {id}', { id: row.beta.buildid || '' }) + desc
 }
 
 function close() {
@@ -150,7 +151,7 @@ watch(
 async function persist(list) {
   const key = localKey.value
   if (!state.settings) {
-    error.value = '设置还没加载好，稍后再试'
+    error.value = t('设置还没加载好，稍后再试')
     return false
   }
   const prev = state.settings.branches || {}
@@ -164,11 +165,11 @@ async function persist(list) {
     // IPC 走结构化克隆，不能把 Vue 的响应式代理直接递过去（会报 could not be cloned）
     const plain = JSON.parse(JSON.stringify(next))
     const res = await window.api.settings.save({ branches: plain })
-    if (!res?.ok) throw new Error(res?.error || '保存失败')
+    if (!res?.ok) throw new Error(res?.error || t('保存失败'))
     return true
   } catch (e) {
     state.settings.branches = prev
-    error.value = `保存失败：${e?.message || e}`
+    error.value = t('保存失败：{error}', { error: e?.message || e })
     return false
   } finally {
     busy.value = false
@@ -180,7 +181,7 @@ async function addBranch() {
   const name = draft.value.trim()
   if (!name) return
   if (rows.value.some((r) => r.id === name.toLowerCase())) {
-    error.value = '这个分支已经在列表里了'
+    error.value = t('这个分支已经在列表里了')
     return
   }
   if (await persist([...localKnown.value, name])) {
@@ -218,7 +219,7 @@ watch(appId, () => {
           <header class="px-5 pt-4 pb-3 border-b border-line flex items-start gap-3">
             <GitBranch :size="18" class="text-accent shrink-0 mt-0.5" />
             <div class="min-w-0 flex-1">
-              <h2 id="branch-manage-title" class="text-title font-semibold m-0">管理分支</h2>
+              <h2 id="branch-manage-title" class="text-title font-semibold m-0">{{ t('管理分支') }}</h2>
               <p
                 class="mt-1 mb-0 text-label truncate"
                 :class="backendStatus.bad ? 'text-danger' : 'text-faint'"
@@ -235,14 +236,14 @@ watch(appId, () => {
                 ref="inputEl"
                 v-model="draft"
                 type="text"
-                aria-label="新分支名"
-                placeholder="分支名，例如 qa / internal"
+                :aria-label="t('新分支名')"
+                :placeholder="t('分支名，例如 qa / internal')"
                 class="flex-1 h-8 px-3 rounded-input bg-surface border border-line text-body text-ink placeholder:text-faint outline-none focus:border-accent/45 transition-colors"
                 :disabled="busy"
                 @keydown.enter="addBranch"
               />
               <button class="btn px-3" :disabled="busy || !draft.trim()" @click="addBranch">
-                添加
+                {{ t('添加') }}
               </button>
             </div>
 
@@ -280,22 +281,22 @@ watch(appId, () => {
                   :disabled="busy || row.isCurrent"
                   :title="
                     row.isCurrent
-                      ? '先切走当前 SetLive，再删这条本机记录'
-                      : '只删本机记录，不影响后台'
+                      ? t('先切走当前 SetLive，再删这条本机记录')
+                      : t('只删本机记录，不影响后台')
                   "
                   @click="removeBranch(row)"
                 >
-                  删除
+                  {{ t('删除') }}
                 </button>
               </div>
             </div>
 
-            <div v-else class="text-label text-faint py-2">还没有记录过分支</div>
+            <div v-else class="text-label text-faint py-2">{{ t('还没有记录过分支') }}</div>
           </div>
 
           <footer class="px-5 py-3 border-t border-line flex items-center gap-2">
-            <div class="flex-1 text-micro text-faint">只管理本机记录；后台分支由 Steamworks 决定</div>
-            <button class="btn" @click="close">关闭</button>
+            <div class="flex-1 text-micro text-faint">{{ t('只管理本机记录；后台分支由 Steamworks 决定') }}</div>
+            <button class="btn" @click="close">{{ t('关闭') }}</button>
           </footer>
         </div>
       </div>

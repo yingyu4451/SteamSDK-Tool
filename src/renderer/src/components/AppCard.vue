@@ -1,6 +1,7 @@
 <script setup>
 import { GripVertical } from '@lucide/vue'
 import { state } from '../store.js'
+import { t, problemId } from '../i18n/index.js'
 
 const props = defineProps({
   app: { type: Object, required: true },
@@ -13,7 +14,9 @@ defineEmits(['pointerdown', 'click'])
 function activeProblems(app) {
   const perm = new Set(app.problemsIgnored || [])
   const sess = new Set(state.sessionIgnored?.[app.dirName] || [])
-  return (app.problems || []).filter((t) => !perm.has(t) && !sess.has(t)).length
+  // 问题的身份是固定中文渲染（problemId），显示语言不影响忽略状态
+  return (app.problems || []).filter((p) => !perm.has(problemId(p)) && !sess.has(problemId(p)))
+    .length
 }
 
 function healthOf(app) {
@@ -27,15 +30,15 @@ function healthOf(app) {
 function healthTitle(app) {
   const h = healthOf(app)
   if (h === 'bad') {
-    if ((app.depots || []).some((d) => d.missing)) return '有 Depot 的脚本文件不在了'
-    if (!app.appId) return '没有 AppID'
-    return 'AppID 和别的本地 App 撞车'
+    if ((app.depots || []).some((d) => d.missing)) return t('有 Depot 的脚本文件不在了')
+    if (!app.appId) return t('没有 AppID')
+    return t('AppID 和别的本地 App 撞车')
   }
   if (h === 'warn') {
     const n = activeProblems(app)
-    return n ? `有待处理 ${n} 项` : '项目文件夹不存在'
+    return n ? t('有待处理 {n} 项', { n }) : t('项目文件夹不存在')
   }
-  return '一切正常'
+  return t('一切正常')
 }
 </script>
 
@@ -51,7 +54,7 @@ function healthTitle(app) {
       dimmed ? 'opacity-0' : ''
     ]"
     :aria-current="selected ? 'true' : undefined"
-    :title="'拖动调整顺序/分类；点击切换到 ' + app.dirName"
+    :title="t('拖动调整顺序/分类；点击切换到 {name}', { name: app.dirName })"
     @pointerdown="$emit('pointerdown', $event)"
     @click="$emit('click', $event)"
   >

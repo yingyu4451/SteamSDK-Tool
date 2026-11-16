@@ -18,6 +18,7 @@ import {
 import PathLink from './PathLink.vue'
 import { X } from '@lucide/vue'
 import { useDialogA11y } from '../composables/useDialogA11y.js'
+import { t, listSeparator, problemId, problemLabel } from '../i18n/index.js'
 
 /**
  * 已忽略的待处理提示 —— 从 App 头上搬到这里。
@@ -29,8 +30,12 @@ const ignoredRows = computed(() => {
   const perm = new Set(d.problemsIgnored || [])
   const sess = new Set(state.sessionIgnored?.[d.dirName] || [])
   return (d.problems || [])
-    .filter((t) => perm.has(t) || sess.has(t))
-    .map((text) => ({ text, perm: perm.has(text) }))
+    .map((p) => {
+      // id 是固定中文渲染（忽略状态按它记），label 跟着界面语言走
+      const id = problemId(p)
+      return { id, label: problemLabel(p), perm: perm.has(id), sess: sess.has(id) }
+    })
+    .filter((r) => r.perm || r.sess)
 })
 
 /** 「各 Depot 按项目文件夹重排」的状态 */
@@ -62,7 +67,7 @@ async function doRename() {
   try {
     const res = await renameApp(detail.value.dirName, nameForm.value.trim())
     if (res?.ok && res.changed) nameForm.value = res.dirName
-    else if (res?.ok) toast('名字没变')
+    else if (res?.ok) toast(t('名字没变'))
   } finally {
     renaming.value = false
   }
@@ -111,26 +116,26 @@ const appRows = computed(() => {
   const d = detail.value
   if (!d) return []
   return [
-    { key: 'appId', label: 'AppID', value: d.appId || '', empty: '未设置', btn: '修改', mono: true, num: true },
-    { key: 'desc', label: '描述', value: d.desc || '', empty: '空', btn: '修改' },
+    { key: 'appId', label: 'AppID', value: d.appId || '', empty: t('未设置'), btn: t('修改'), mono: true, num: true },
+    { key: 'desc', label: t('描述'), value: d.desc || '', empty: t('空'), btn: t('修改') },
     {
       key: 'contentRoot',
-      label: '项目文件夹',
+      label: t('项目文件夹'),
       value: d.contentRoot || '',
-      empty: '未设置',
-      btn: '修改',
+      empty: t('未设置'),
+      btn: t('修改'),
       mono: true,
       pick: true
     },
-    { key: 'buildOutput', label: 'BuildOutput', value: d.buildOutput || '', empty: '默认', btn: '修改', mono: true },
+    { key: 'buildOutput', label: 'BuildOutput', value: d.buildOutput || '', empty: t('默认'), btn: t('修改'), mono: true },
     {
       key: 'setLive',
       label: 'SetLive',
       value: d.setLive || '',
-      empty: '未设置',
-      btn: '修改',
+      empty: t('未设置'),
+      btn: t('修改'),
       mono: true,
-      placeholder: 'qa / internal（留空 = 不设分支，构建只生成）'
+      placeholder: t('qa / internal（留空 = 不设分支，构建只生成）')
     }
   ]
 })
@@ -154,8 +159,8 @@ async function commitEdit(key) {
     return
   }
   const v = editValue.value.trim()
-  if (key === 'appId' && !v) return toast('AppID 不能空', 'bad')
-  if (key === 'buildOutput' && !v) return toast('BuildOutput 不能空 —— 日志和构建缓存都放这儿', 'bad')
+  if (key === 'appId' && !v) return toast(t('AppID 不能空'), 'bad')
+  if (key === 'buildOutput' && !v) return toast(t('BuildOutput 不能空 —— 日志和构建缓存都放这儿'), 'bad')
   busy.value = true
   try {
     await saveApp({ [key]: v })
@@ -198,20 +203,23 @@ async function syncDepotRoots() {
   const dir = detail.value?.dirName
   if (!dir) return
   const base = String(detail.value?.contentRoot || '').trim()
-  if (!base) return toast('先把项目文件夹填上', 'bad')
+  if (!base) return toast(t('先把项目文件夹填上'), 'bad')
   syncingRoots.value = true
   syncMsg.value = null
   const res = await window.api.app.syncDepotRoots(dir, base)
   syncingRoots.value = false
   if (!res?.ok) {
-    syncMsg.value = { ok: false, text: res?.error || '重排失败' }
+    syncMsg.value = { ok: false, text: res?.error || t('重排失败') }
     return
   }
   syncMsg.value = {
     ok: true,
     text: res.changed.length
-      ? `已重排 ${res.changed.length} 个 Depot：${res.changed.map((c) => c.depotId).join('、')}`
-      : '各 Depot 已经就是这个结构，没有改动'
+      ? t('已重排 {n} 个 Depot：{ids}', {
+          n: res.changed.length,
+          ids: res.changed.map((c) => c.depotId).join(listSeparator())
+        })
+      : t('各 Depot 已经就是这个结构，没有改动')
   }
   sync()
   await rescan()
@@ -240,7 +248,7 @@ async function submit() {
 function addRule() {
   const v = newRule.value.trim()
   if (!v) return
-  if (depotForm.value.exclusions.includes(v)) return toast('这条规则已经有了', 'bad')
+  if (depotForm.value.exclusions.includes(v)) return toast(t('这条规则已经有了'), 'bad')
   depotForm.value.exclusions.push(v)
   newRule.value = ''
 }
@@ -256,7 +264,7 @@ function resetRules() {
 function addUserConfig() {
   const v = newUserConfig.value.trim().replace(/\\/g, '/')
   if (!v) return
-  if (depotForm.value.userConfig.includes(v)) return toast('这条已经有了', 'bad')
+  if (depotForm.value.userConfig.includes(v)) return toast(t('这条已经有了'), 'bad')
   depotForm.value.userConfig.push(v)
   newUserConfig.value = ''
 }
@@ -313,7 +321,7 @@ onUnmounted(depotDisarm)
       <header class="px-5 py-4 border-b border-line flex items-center gap-3 shrink-0">
         <div>
           <h2 id="edit-drawer-title" class="text-title font-semibold m-0">
-            {{ isDepot ? `编辑 Depot ${depot?.id ?? ''}` : '编辑 App' }}
+            {{ isDepot ? t('编辑 Depot {id}', { id: depot?.id ?? '' }) : t('编辑 App') }}
           </h2>
           <div class="mt-1 text-micro font-mono text-faint break-all max-w-90">
             {{ isDepot ? drawer.depotFile : detail?.appFile }}
@@ -334,14 +342,14 @@ onUnmounted(depotDisarm)
           <div class="card-flat divide-y divide-line">
             <div class="px-3 py-2.5">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="w-22 shrink-0 text-label text-faint">App 名字</span>
+                <span class="w-22 shrink-0 text-label text-faint">{{ t('App 名字') }}</span>
                 <template v-if="editing !== 'name'">
                   <span class="min-w-0 flex-1 text-body truncate">{{ detail?.dirName }}</span>
                   <button
                     class="btn btn-sm px-2.5  no-drag shrink-0"
                     @click="startEdit('name', detail?.dirName)"
                   >
-                    改名
+                    {{ t('改名') }}
                   </button>
                 </template>
                 <template v-else>
@@ -355,14 +363,14 @@ onUnmounted(depotDisarm)
                     :disabled="!nameDirty || renaming"
                     @click="doRename"
                   >
-                    {{ renaming ? '改名中…' : '确定' }}
+                    {{ renaming ? t('改名中…') : t('确定') }}
                   </button>
-                  <button class="btn btn-sm px-2.5  no-drag shrink-0" @click="cancelEdit">取消</button>
+                  <button class="btn btn-sm px-2.5  no-drag shrink-0" @click="cancelEdit">{{ t('取消') }}</button>
                 </template>
               </div>
               <div v-if="editing === 'name' && nameDirty" class="mt-1.5 pl-24 text-micro text-faint leading-relaxed">
-                会把 <span class="font-mono">scripts\{{ detail?.dirName }}</span> 整个文件夹改成
-                <span class="font-mono">scripts\{{ nameForm.trim() }}</span>，脚本文件跟着重命名。内容目录<strong class="text-muted">不动</strong>。
+                {{ t('会把') }} <span class="font-mono">scripts\{{ detail?.dirName }}</span> {{ t('整个文件夹改成') }}
+                <span class="font-mono">scripts\{{ nameForm.trim() }}</span>{{ t('，脚本文件跟着重命名。内容目录') }}<strong class="text-muted">{{ t('不动') }}</strong>{{ t('。') }}
               </div>
             </div>
 
@@ -389,16 +397,16 @@ onUnmounted(depotDisarm)
                     @keyup.enter="commitEdit(row.key)"
                   />
                   <button v-if="row.pick" class="btn btn-sm px-2.5  no-drag shrink-0" @click="pickRoot">
-                    选择…
+                    {{ t('选择…') }}
                   </button>
                   <button
                     class="btn btn-sm px-2.5  no-drag shrink-0"
                     :disabled="busy"
                     @click="commitEdit(row.key)"
                   >
-                    保存
+                    {{ t('保存') }}
                   </button>
-                  <button class="btn btn-sm px-2.5  no-drag shrink-0" @click="cancelEdit">取消</button>
+                  <button class="btn btn-sm px-2.5  no-drag shrink-0" @click="cancelEdit">{{ t('取消') }}</button>
                 </template>
               </div>
 
@@ -415,7 +423,7 @@ onUnmounted(depotDisarm)
                   :disabled="syncingRoots"
                   @click="syncDepotRoots"
                 >
-                  {{ syncingRoots ? '重排中…' : '各 Depot 按项目文件夹重排' }}
+                  {{ syncingRoots ? t('重排中…') : t('各 Depot 按项目文件夹重排') }}
                 </button>
                 <div
                   v-if="syncMsg"
@@ -431,29 +439,29 @@ onUnmounted(depotDisarm)
           <!-- 已忽略的提示：App 头上不再显示它们，来这里恢复 -->
           <div v-if="ignoredRows.length" class="pt-3 border-t border-line">
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-label font-semibold text-muted">已忽略的提示</span>
-              <span class="text-micro text-faint num">{{ ignoredRows.length }} 条</span>
+              <span class="text-label font-semibold text-muted">{{ t('已忽略的提示') }}</span>
+              <span class="text-micro text-faint num">{{ t('{n} 条', { n: ignoredRows.length }) }}</span>
             </div>
             <div class="flex flex-col gap-1.5">
               <div v-for="(r, i) in ignoredRows" :key="i" class="flex items-start gap-2">
-                <span class="text-label leading-relaxed min-w-0 flex-1 text-faint">{{ r.text }}</span>
+                <span class="text-label leading-relaxed min-w-0 flex-1 text-faint">{{ r.label }}</span>
                 <span class="text-micro shrink-0 text-faint pt-0.5">
-                  {{ r.perm ? '永久忽略' : '本次忽略' }}
+                  {{ r.perm ? t('永久忽略') : t('本次忽略') }}
                 </span>
                 <button
                   class="link-btn shrink-0"
-                  title="恢复之后会重新出现在 App 头上的待处理里"
-                  @click="r.perm ? ignoreProblem(r.text, false) : restoreProblemThisRun(r.text)"
+                  :title="t('恢复之后会重新出现在 App 头上的待处理里')"
+                  @click="r.perm ? ignoreProblem(r.id, false) : restoreProblemThisRun(r.id)"
                 >
-                  恢复提示
+                  {{ t('恢复提示') }}
                 </button>
               </div>
             </div>
           </div>
 
           <div class="pt-3 border-t border-line flex items-center gap-2 flex-wrap">
-            <button class="btn no-drag" @click="openVdf(null)">用系统编辑器打开</button>
-            <button class="btn btn-danger no-drag ml-auto" @click="askDeleteApp">删除这个 App</button>
+            <button class="btn no-drag" @click="openVdf(null)">{{ t('用系统编辑器打开') }}</button>
+            <button class="btn btn-danger no-drag ml-auto" @click="askDeleteApp">{{ t('删除这个 App') }}</button>
           </div>
         </template>
 
@@ -468,7 +476,7 @@ onUnmounted(depotDisarm)
               />
             </label>
             <label class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">平台</span>
+              <span class="text-label text-muted">{{ t('平台') }}</span>
               <select
                 v-model="depotForm.platform"
                 class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/45"
@@ -478,25 +486,25 @@ onUnmounted(depotDisarm)
             </label>
           </div>
           <span class="text-micro text-faint -mt-2">
-            改 DepotID 或平台会自动重命名脚本文件，并同步 app 脚本里的引用。
+            {{ t('改 DepotID 或平台会自动重命名脚本文件，并同步 app 脚本里的引用。') }}
           </span>
 
           <label class="flex flex-col gap-1.5">
-            <span class="text-label text-muted">内容目录</span>
+            <span class="text-label text-muted">{{ t('内容目录') }}</span>
             <div class="flex gap-2">
               <input
                 v-model="depotForm.contentRoot"
                 class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-accent/45"
               />
-              <button class="btn no-drag" @click="pickRoot">选择…</button>
+              <button class="btn no-drag" @click="pickRoot">{{ t('选择…') }}</button>
             </div>
           </label>
 
           <!-- FileExclusion -->
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
-              <span class="text-label text-muted">FileExclusion（{{ depotForm.exclusions.length }} 条）</span>
-              <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="resetRules">恢复默认</button>
+              <span class="text-label text-muted">{{ t('FileExclusion（{n} 条）', { n: depotForm.exclusions.length }) }}</span>
+              <button class="ml-auto btn btn-sm px-2.5  no-drag" @click="resetRules">{{ t('恢复默认') }}</button>
             </div>
 
             <div class="card-flat divide-y divide-line max-h-65 overflow-y-auto scroll-thin">
@@ -517,18 +525,18 @@ onUnmounted(depotDisarm)
                 </button>
               </div>
               <div v-if="!depotForm.exclusions.length" class="px-3 py-3 text-label text-faint">
-                没有任何排除规则 —— 内容目录里的日志、符号文件都会被传上去。
+                {{ t('没有任何排除规则 —— 内容目录里的日志、符号文件都会被传上去。') }}
               </div>
             </div>
 
             <div class="flex gap-2">
               <input
                 v-model="newRule"
-                placeholder="加一条，例如 *.pdb 或 logs\*"
+                :placeholder="t('加一条，例如 *.pdb 或 logs\\*')"
                 class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-accent/45 placeholder:text-faint"
                 @keydown.enter="addRule"
               />
-              <button class="btn no-drag" :disabled="!newRule.trim()" @click="addRule">添加</button>
+              <button class="btn no-drag" :disabled="!newRule.trim()" @click="addRule">{{ t('添加') }}</button>
             </div>
           </div>
 
@@ -536,13 +544,13 @@ onUnmounted(depotDisarm)
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
               <span class="text-label text-muted">
-                FileProperties / userconfig（{{ depotForm.userConfig.length }} 条）
+                {{ t('FileProperties / userconfig（{n} 条）', { n: depotForm.userConfig.length }) }}
               </span>
               <span
                 class="pill pill-idle"
-                title="玩家运行时会改的文件：Steam 首次安装时放一份，之后升级不再覆盖"
+                :title="t('玩家运行时会改的文件：Steam 首次安装时放一份，之后升级不再覆盖')"
               >
-                保护存档
+                {{ t('保护存档') }}
               </span>
             </div>
 
@@ -565,37 +573,37 @@ onUnmounted(depotDisarm)
                 </button>
               </div>
               <div v-if="!depotForm.userConfig.length" class="px-3 py-3 text-label text-faint">
-                没有标记为玩家数据的文件 —— 玩家存档在升级时会被覆盖掉。
+                {{ t('没有标记为玩家数据的文件 —— 玩家存档在升级时会被覆盖掉。') }}
               </div>
             </div>
 
             <div class="flex gap-2">
               <input
                 v-model="newUserConfig"
-                placeholder="相对内容目录，例如 MyGame_Data/Progress"
+                :placeholder="t('相对内容目录，例如 MyGame_Data/Progress')"
                 class="flex-1 h-9 px-3 rounded-input bg-surface border border-line text-label font-mono outline-none focus:border-accent/45 placeholder:text-faint"
                 @keydown.enter="addUserConfig"
               />
               <button class="btn no-drag" :disabled="!newUserConfig.trim()" @click="addUserConfig">
-                添加
+                {{ t('添加') }}
               </button>
             </div>
           </div>
 
           <div class="pt-3 border-t border-line flex items-center gap-2 flex-wrap">
-            <button class="btn no-drag" @click="openVdf(drawer.depotFile)">用系统编辑器打开</button>
+            <button class="btn no-drag" @click="openVdf(drawer.depotFile)">{{ t('用系统编辑器打开') }}</button>
             <button
               class="btn no-drag ml-auto"
               :class="depotArmed ? 'btn-danger-solid' : 'btn-danger'"
               :disabled="busy"
               @click="doDelete"
             >
-              {{ depotArmed ? `确认删除 Depot（${depotLeft}）` : '删除这个 Depot' }}
+              {{ depotArmed ? t('确认删除 Depot（{n}）', { n: depotLeft }) : t('删除这个 Depot') }}
             </button>
           </div>
           <div v-if="depotArmed" class="mt-2 text-micro text-danger leading-relaxed">
-            会删掉文件 {{ drawer.depotFile }}，并从 app 脚本里移除引用。
-            Steam 上已经传过的 depot 不受影响。5 秒内再点一次才真删。
+            {{ t('会删掉文件 {file}，并从 app 脚本里移除引用。', { file: drawer.depotFile }) }}
+            {{ t('Steam 上已经传过的 depot 不受影响。5 秒内再点一次才真删。') }}
           </div>
         </template>
       </div>
@@ -603,12 +611,12 @@ onUnmounted(depotDisarm)
       <footer class="px-5 py-4 border-t border-line flex items-center gap-2 shrink-0">
         <div class="flex-1" />
         <template v-if="isDepot">
-          <button class="btn no-drag" @click="closeDrawer">取消</button>
+          <button class="btn no-drag" @click="closeDrawer">{{ t('取消') }}</button>
           <button class="btn btn-primary no-drag" :disabled="busy" @click="submit">
-            {{ busy ? '保存中…' : '保存' }}
+            {{ busy ? t('保存中…') : t('保存') }}
           </button>
         </template>
-        <button v-else class="btn no-drag" @click="closeDrawer">关闭</button>
+        <button v-else class="btn no-drag" @click="closeDrawer">{{ t('关闭') }}</button>
       </footer>
     </aside>
   </div>

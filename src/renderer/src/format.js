@@ -1,3 +1,5 @@
+import { num } from './i18n/index.js'
+
 export function fmtSize(bytes) {
   const b = Number(bytes) || 0
   if (b >= 1024 ** 3) return `${(b / 1024 ** 3).toFixed(2)} GB`
@@ -6,8 +8,9 @@ export function fmtSize(bytes) {
   return `${b} B`
 }
 
+/** 千分位整数，跟随界面语言（en-US / zh-CN 分组一致，但用不着写死） */
 export function fmtInt(n) {
-  return Math.round(Number(n) || 0).toLocaleString('en-US')
+  return num(Math.round(Number(n) || 0))
 }
 
 export function fmtTime(ms) {

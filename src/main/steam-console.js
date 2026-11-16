@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { t } from './i18n.js'
 
 /**
  * 清空成就走的是 Steam 客户端**自带的控制台**，不联网、不需要 Web API 密钥：
@@ -21,18 +22,10 @@ import path from 'node:path'
  * 结果以一行 JSON 打印到 stdout，Node 这边解析。
  */
 
-const CODE_MESSAGES = {
-  steam_not_running: 'Steam 没在运行。先打开 Steam 客户端再试。',
-  steam_path_not_found: '找不到 Steam 的安装路径（注册表里没有）。',
-  steam_window_not_found: '没找到 Steam 主窗口。先把 Steam 主界面打开，再试一次。',
-  focus_failed: '切不到 Steam 窗口（可能被别的窗口挡住了）。再试一次。',
-  open_console_failed: '打不开 Steam 控制台页面。',
-  rect_failed: '读不到 Steam 窗口的位置。再试一次。',
-  click_failed: '点不到 Steam 控制台的输入框（窗口可能在屏幕外）。把 Steam 窗口拖回屏幕里再试。',
-  focus_lost: '切到 Steam 后焦点又被别的窗口抢走了。等别的程序安静下来再试一次。',
-  send_keys_failed: '模拟键盘输入失败。',
-  timeout: '没等到 Steam 控制台的返回。确认 Steam 已登录，然后重试。'
-}
+/**
+ * PowerShell 脚本回传的 code 是内部标识（不做 i18n），文案在 friendly() 里
+ * 按当前界面语言取 —— 不能在模块顶层求值 t()，那时语言设置还没加载。
+ */
 
 /** 构造 PowerShell 脚本：只有 AppID 是变量，其余全是常量。 */
 const PS_SCRIPT = String.raw`$ErrorActionPreference = 'Stop'
@@ -65,8 +58,8 @@ public class SteamAchWin {
 }
 "@
 
-# DPI 感知：不声明的话，进程拿到的坐标被系统按主屏 DPI 虚拟化，
-# 第二块屏幕上的 Steam 窗口算出来的点击位置会被裁剪到主屏边缘，点不中输入框。
+# DPI 感知：不声明的话，进程拿到的坐标被系统按主屏 DPI 虚拟化， // i18n-ignore PowerShell 注释（不是界面文案）
+# 第二块屏幕上的 Steam 窗口算出来的点击位置会被裁剪到主屏边缘，点不中输入框。 // i18n-ignore PowerShell 注释（不是界面文案）
 try { [void][SteamAchWin]::SetProcessDPIAware() } catch { }
 
 $AppId = __APP_ID__
@@ -116,19 +109,19 @@ $prev = [SteamAchWin]::GetForegroundWindow()
 
 $log = Join-Path $steamPath 'logs\console_log.txt'
 
-# Steam 窗口最小化/藏起来时，steam://nav/console 不一定能把控制台页打开；
-# 所以顺序是：先恢复窗口 → 切前台 → 再 nav。
+# Steam 窗口最小化/藏起来时，steam://nav/console 不一定能把控制台页打开； // i18n-ignore PowerShell 注释（不是界面文案）
+# 所以顺序是：先恢复窗口 → 切前台 → 再 nav。 // i18n-ignore PowerShell 注释（不是界面文案）
 if ([SteamAchWin]::IsIconic($script:target)) { [void][SteamAchWin]::ShowWindow($script:target, 9) }
 if (-not [SteamAchWin]::IsWindowVisible($script:target)) { [void][SteamAchWin]::ShowWindow($script:target, 5) }
 Start-Sleep -Milliseconds 150
 
-# 先把 Steam 切到前台（刚点完按钮，工具窗口还是前台，这时候最容易拿到前台权限）；
-# 切不到就中止，避免把命令敲进别人正在用的窗口。
+# 先把 Steam 切到前台（刚点完按钮，工具窗口还是前台，这时候最容易拿到前台权限）； // i18n-ignore PowerShell 注释（不是界面文案）
+# 切不到就中止，避免把命令敲进别人正在用的窗口。 // i18n-ignore PowerShell 注释（不是界面文案）
 for ($i = 0; $i -lt 8; $i++) {
   [void][SteamAchWin]::SetForegroundWindow($script:target)
   Start-Sleep -Milliseconds 120
   if ([SteamAchWin]::GetForegroundWindow() -eq $script:target) { break }
-  # ALT 键会解除 Windows 的前台锁，是最稳的一招
+  # ALT 键会解除 Windows 的前台锁，是最稳的一招 // i18n-ignore PowerShell 注释（不是界面文案）
   [SteamAchWin]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
   Start-Sleep -Milliseconds 30
   [void][SteamAchWin]::SetForegroundWindow($script:target)
@@ -161,7 +154,7 @@ if ($fg2 -ne $script:target) {
   exit 0
 }
 
-# Steam 已经在前台，这时打开控制台页才会真的切过去
+# Steam 已经在前台，这时打开控制台页才会真的切过去 // i18n-ignore PowerShell 注释（不是界面文案）
 try {
   Start-Process 'steam://nav/console' | Out-Null
 } catch {
@@ -171,7 +164,7 @@ try {
 }
 Start-Sleep -Milliseconds 2200
 
-# 页面加载期间前台可能又被抢走，再切一下
+# 页面加载期间前台可能又被抢走，再切一下 // i18n-ignore PowerShell 注释（不是界面文案）
 $stillFg = $false
 for ($i = 0; $i -lt 4; $i++) {
   [void][SteamAchWin]::SetForegroundWindow($script:target)
@@ -190,9 +183,9 @@ if (-not $stillFg) {
   exit 0
 }
 
-# 控制台页的输入框在页面打开时会自动聚焦（sp.js 里 useEffect 里 Focus()），
-# 所以先直接敲；只有敲不进去时才去点一下页面底部的输入框再敲。
-# 记得用户鼠标位置，结束时还原，别把光标留在 Steam 窗口上。
+# 控制台页的输入框在页面打开时会自动聚焦（sp.js 里 useEffect 里 Focus()）， // i18n-ignore PowerShell 注释（不是界面文案）
+# 所以先直接敲；只有敲不进去时才去点一下页面底部的输入框再敲。 // i18n-ignore PowerShell 注释（不是界面文案）
+# 记得用户鼠标位置，结束时还原，别把光标留在 Steam 窗口上。 // i18n-ignore PowerShell 注释（不是界面文案）
 $cursor = [SteamAchWin]::CursorPos()
 
 [int64]$before = 0
@@ -224,7 +217,7 @@ function Wait-Result([int]$seconds) {
   return ''
 }
 
-# 敲之前再确认一次前台，避免把命令敲进别的窗口
+# 敲之前再确认一次前台，避免把命令敲进别的窗口 // i18n-ignore PowerShell 注释（不是界面文案）
 if ([SteamAchWin]::GetForegroundWindow() -ne $script:target) {
   [void][SteamAchWin]::SetCursorPos($cursor[0], $cursor[1])
   [void][SteamAchWin]::SetForegroundWindow($prev)
@@ -243,7 +236,7 @@ try {
 
 $line = Wait-Result 5
 if ($line -eq '') {
-  # 第一次没等到：可能是页面还没加载完、输入框没聚焦。点一下页面底部的输入框再敲一次。
+  # 第一次没等到：可能是页面还没加载完、输入框没聚焦。点一下页面底部的输入框再敲一次。 // i18n-ignore PowerShell 注释（不是界面文案）
   $r = $null
   try { $r = [SteamAchWin]::RectOf($script:target) } catch { $r = $null }
   if ($null -eq $r -or $r.Count -lt 4) {
@@ -258,7 +251,7 @@ if ($line -eq '') {
   Start-Sleep -Milliseconds 150
   [void][SteamAchWin]::SetCursorPos($clickX, $clickY)
   Start-Sleep -Milliseconds 120
-  # 光标没到位说明坐标被系统裁掉了（多屏不同 DPI / 窗口在屏幕外），点了也白点。
+  # 光标没到位说明坐标被系统裁掉了（多屏不同 DPI / 窗口在屏幕外），点了也白点。 // i18n-ignore PowerShell 注释（不是界面文案）
   $now = [SteamAchWin]::CursorPos()
   if ([Math]::Abs($now[0] - $clickX) -gt 3 -or [Math]::Abs($now[1] - $clickY) -gt 3) {
     [void][SteamAchWin]::SetCursorPos($cursor[0], $cursor[1])
@@ -269,7 +262,7 @@ if ($line -eq '') {
   [SteamAchWin]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
   [SteamAchWin]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
   Start-Sleep -Milliseconds 250
-  # 点完再确认前台还是 Steam，被抢走就停手，别把命令敲进别人的窗口。
+  # 点完再确认前台还是 Steam，被抢走就停手，别把命令敲进别人的窗口。 // i18n-ignore PowerShell 注释（不是界面文案）
   $fgClick = [SteamAchWin]::GetForegroundWindow()
   if ($fgClick -ne $script:target) {
     $sbLost = New-Object System.Text.StringBuilder 256
@@ -299,8 +292,32 @@ if ($line -ne '') {
 Write-Output '{"ok":false,"code":"timeout"}'
 `
 
+/** 把脚本回传的 code 翻成给界面看的文案（调用时才取字典）。 */
 function friendly(code) {
-  return CODE_MESSAGES[code] || '清空失败，Steam 返回了未知错误。'
+  switch (code) {
+    case 'steam_not_running':
+      return t('Steam 没在运行。先打开 Steam 客户端再试。')
+    case 'steam_path_not_found':
+      return t('找不到 Steam 的安装路径（注册表里没有）。')
+    case 'steam_window_not_found':
+      return t('没找到 Steam 主窗口。先把 Steam 主界面打开，再试一次。')
+    case 'focus_failed':
+      return t('切不到 Steam 窗口（可能被别的窗口挡住了）。再试一次。')
+    case 'open_console_failed':
+      return t('打不开 Steam 控制台页面。')
+    case 'rect_failed':
+      return t('读不到 Steam 窗口的位置。再试一次。')
+    case 'click_failed':
+      return t('点不到 Steam 控制台的输入框（窗口可能在屏幕外）。把 Steam 窗口拖回屏幕里再试。')
+    case 'focus_lost':
+      return t('切到 Steam 后焦点又被别的窗口抢走了。等别的程序安静下来再试一次。')
+    case 'send_keys_failed':
+      return t('模拟键盘输入失败。')
+    case 'timeout':
+      return t('没等到 Steam 控制台的返回。确认 Steam 已登录，然后重试。')
+    default:
+      return t('清空失败，Steam 返回了未知错误。')
+  }
 }
 
 /**
@@ -312,7 +329,7 @@ export function clearAppAchievements(appId) {
   return new Promise((resolve) => {
     const id = Number(appId)
     if (!Number.isFinite(id) || id <= 0) {
-      resolve({ ok: false, error: '这个 App 的构建脚本里没有可用的 AppID。' })
+      resolve({ ok: false, error: t('这个 App 的构建脚本里没有可用的 AppID。') })
       return
     }
 
@@ -322,7 +339,7 @@ export function clearAppAchievements(appId) {
       // 脚本里的中文注释会被读坏，直接报 ParserError。
       fs.writeFileSync(file, '\ufeff' + PS_SCRIPT.replace('__APP_ID__', String(Math.trunc(id))), 'utf8')
     } catch (e) {
-      resolve({ ok: false, error: `写临时脚本失败：${e.message}` })
+      resolve({ ok: false, error: t('写临时脚本失败：{error}', { error: e.message }) })
       return
     }
 
@@ -351,16 +368,19 @@ export function clearAppAchievements(appId) {
         if (!data) {
           resolve({
             ok: false,
-            error: `清空失败：没拿到 Steam 的返回${err?.message ? `（${err.message}）` : ''}。`
+            error: err?.message
+              ? t('清空失败：没拿到 Steam 的返回（{error}）。', { error: err.message })
+              : t('清空失败：没拿到 Steam 的返回。')
           })
           return
         }
         if (data.ok === false) {
-          let err = friendly(data.code)
-          if ((data.code === 'focus_failed' || data.code === 'focus_lost') && data.fg) {
-            err += `（当前前台窗口是「${data.fg}」）`
-          }
-          resolve({ ok: false, error: err })
+          const msg = friendly(data.code)
+          const message =
+            (data.code === 'focus_failed' || data.code === 'focus_lost') && data.fg
+              ? t('{msg}（当前前台窗口是「{window}」）', { msg, window: data.fg })
+              : msg
+          resolve({ ok: false, error: message })
           return
         }
         if (data.success === true) {
@@ -369,7 +389,7 @@ export function clearAppAchievements(appId) {
         }
         resolve({
           ok: false,
-          error: 'Steam 返回「清空失败」。确认这个账号拥有该 App，并且已经登录 Steam。'
+          error: t('Steam 返回「清空失败」。确认这个账号拥有该 App，并且已经登录 Steam。')
         })
       }
     )

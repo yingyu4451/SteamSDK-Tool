@@ -19,6 +19,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import zlib from 'node:zlib'
+import { t } from './i18n.js'
 
 const FALLBACK_OWNER = 'yingyu4451'
 const FALLBACK_REPO = 'SteamSDK-Tool'
@@ -123,7 +124,7 @@ function netRequest(url, { method = 'GET', headers = {}, timeout = TIMEOUT, foll
       } catch {
         /* ignore */
       }
-      reject(new Error('请求超时'))
+      reject(new Error(t('请求超时')))
     }, timeout)
     const done = (fn) => (arg) => {
       if (settled) return
@@ -269,22 +270,22 @@ export async function checkUpdate() {
   try {
     feed = await getText(`${repoUrl()}/releases.atom`, 'application/atom+xml')
   } catch (e) {
-    return { ok: false, current, error: `连不上 GitHub：${e.message}` }
+    return { ok: false, current, error: t('连不上 GitHub：{message}', { message: e.message }) }
   }
   if (feed.statusCode === 404) {
-    return { ok: false, current, error: '仓库里还没有发布过 release。' }
+    return { ok: false, current, error: t('仓库里还没有发布过 release。') }
   }
   if (feed.statusCode !== 200) {
-    return { ok: false, current, error: `GitHub 返回 ${feed.statusCode}` }
+    return { ok: false, current, error: t('GitHub 返回 {status}', { status: feed.statusCode }) }
   }
 
   const entry = /<entry>([\s\S]*?)<\/entry>/.exec(feed.text)
   if (!entry) {
-    return { ok: false, current, error: '仓库里还没有发布过 release。' }
+    return { ok: false, current, error: t('仓库里还没有发布过 release。') }
   }
   const tagM = /\/releases\/tag\/([^"<]+)/.exec(entry[1])
   if (!tagM) {
-    return { ok: false, current, error: 'feed 里没找到 release 地址。' }
+    return { ok: false, current, error: t('feed 里没找到 release 地址。') }
   }
 
   const tag = decodeURIComponent(tagM[1])
@@ -322,7 +323,7 @@ export async function checkUpdate() {
   }
   if (!asset && hasUpdate) {
     asset = await assetFromLatestYml(tag)
-    if (!asset) assetError = assetError || '资产列表里没找到 .exe'
+    if (!asset) assetError = assetError || t('资产列表里没找到 .exe')
   }
 
   // 3) 体积：expanded_assets 片段里只有 sha256，没有字节数，单独 HEAD 一下。
@@ -345,7 +346,7 @@ export async function checkUpdate() {
  * @param {{url:string, name:string, onProgress?:(got:number,total:number)=>void}} o
  */
 export async function downloadUpdate({ url, name, onProgress } = {}) {
-  if (!url) return { ok: false, error: '没读到安装包地址（GitHub 的资产列表当时没返回）。过一会儿再点一次「检查更新」。' }
+  if (!url) return { ok: false, error: t('没读到安装包地址（GitHub 的资产列表当时没返回）。过一会儿再点一次「检查更新」。') }
   const dir = path.join(app.getPath('userData'), 'updates')
   fs.mkdirSync(dir, { recursive: true })
   const dest = path.join(dir, String(name || 'SteamSDK-Tool-setup.exe').replace(/[\\/:*?"<>|]/g, '_'))
@@ -356,7 +357,7 @@ export async function downloadUpdate({ url, name, onProgress } = {}) {
     req.setHeader('User-Agent', UA)
     req.setHeader('Accept', 'application/octet-stream')
   } catch (e) {
-    return { ok: false, error: `下载失败：${e.message}` }
+    return { ok: false, error: t('下载失败：{message}', { message: e.message }) }
   }
 
   return new Promise((resolve) => {
@@ -375,14 +376,14 @@ export async function downloadUpdate({ url, name, onProgress } = {}) {
       } catch {
         /* ignore */
       }
-      done({ ok: false, error: '下载超时（20 秒内没连上）' })
+      done({ ok: false, error: t('下载超时（20 秒内没连上）') })
     }, TIMEOUT)
 
     req.on('response', (res) => {
       if (timer) clearTimeout(timer)
       if (res.statusCode !== 200) {
         res.resume()
-        done({ ok: false, error: `下载失败：GitHub 返回 ${res.statusCode}` })
+        done({ ok: false, error: t('下载失败：GitHub 返回 {status}', { status: res.statusCode }) })
         return
       }
 
@@ -403,23 +404,23 @@ export async function downloadUpdate({ url, name, onProgress } = {}) {
         out.close(() => {
           if (total && got < total) {
             fs.rmSync(dest, { force: true })
-            done({ ok: false, error: `下载不完整（${got}/${total} 字节）` })
+            done({ ok: false, error: t('下载不完整（{got}/{total} 字节）', { got, total }) })
             return
           }
           done({ ok: true, path: dest, bytes: got })
         })
       })
-      out.on('error', (e) => done({ ok: false, error: `写文件失败：${e.message}` }))
-      res.on('error', (e) => done({ ok: false, error: `下载中断：${e.message}` }))
+      out.on('error', (e) => done({ ok: false, error: t('写文件失败：{message}', { message: e.message }) }))
+      res.on('error', (e) => done({ ok: false, error: t('下载中断：{message}', { message: e.message }) }))
     })
-    req.on('error', (e) => done({ ok: false, error: `下载失败：${e.message}` }))
+    req.on('error', (e) => done({ ok: false, error: t('下载失败：{message}', { message: e.message }) }))
     req.end()
   })
 }
 
 /** 起安装程序，然后退出自己 —— 不退出的话文件被占着，装不进去 */
 export function installUpdate(filePath) {
-  if (!filePath || !fs.existsSync(filePath)) return { ok: false, error: '安装包已经不在了，重新下载一次' }
+  if (!filePath || !fs.existsSync(filePath)) return { ok: false, error: t('安装包已经不在了，重新下载一次') }
 
   // 便携版没有安装目录，而且自己的 exe 正被占用，覆盖不了 —— 只把文件夹打开
   if (isPortable()) {
@@ -433,7 +434,7 @@ export function installUpdate(filePath) {
     setTimeout(() => app.quit(), 700)
     return { ok: true }
   } catch (e) {
-    return { ok: false, error: `起不来安装程序：${e.message}` }
+    return { ok: false, error: t('起不来安装程序：{message}', { message: e.message }) }
   }
 }
 
@@ -575,12 +576,12 @@ async function blockmapUrlOf(version) {
 async function seedBlockmap(version) {
   const dir = updaterCacheDir()
   const installer = path.join(dir, 'installer.exe')
-  if (!fs.existsSync(installer)) return { ok: false, reason: '缓存里没有旧安装包' }
+  if (!fs.existsSync(installer)) return { ok: false, reason: t('缓存里没有旧安装包') }
 
   const url = await blockmapUrlOf(version)
   const res = await netRequest(url, { headers: { Accept: '*/*' } })
-  if (res.statusCode !== 200) return { ok: false, reason: `旧块表 HTTP ${res.statusCode}` }
-  if (!looksLikeBlockmap(res.body)) return { ok: false, reason: '旧块表内容不像 blockmap' }
+  if (res.statusCode !== 200) return { ok: false, reason: t('旧块表 HTTP {status}', { status: res.statusCode }) }
+  if (!looksLikeBlockmap(res.body)) return { ok: false, reason: t('旧块表内容不像 blockmap') }
 
   fs.mkdirSync(dir, { recursive: true })
   const target = path.join(dir, 'current.blockmap')
@@ -657,7 +658,7 @@ export async function incrementalDownload(onProgress, onEstimate) {
   try {
     const r = await autoUpdater.checkForUpdates()
     const latest = String(r?.updateInfo?.version || '')
-    if (!latest) throw new Error('没读到 latest.yml 里的版本号')
+    if (!latest) throw new Error(t('没读到 latest.yml 里的版本号'))
     if (compareVersions(latest, currentVersion()) <= 0) {
       return { ok: true, upToDate: true, version: latest }
     }

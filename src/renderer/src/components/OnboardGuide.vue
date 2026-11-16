@@ -15,6 +15,7 @@ import {
   onboardMode,
   checkLogin
 } from '../store.js'
+import { t } from '../i18n/index.js'
 
 const el = ref(null)
 const o = computed(() => state.onboard)
@@ -24,7 +25,7 @@ useDialogA11y(el, () => {
   if (state.onboard?.open) finishOnboard()
 }, { isOpen: () => !!o.value?.open })
 
-const STEPS = ['欢迎', 'SDK 路径', '登录 Steam 账号']
+const STEPS = computed(() => [t('欢迎'), t('SDK 路径'), t('登录 Steam 账号')])
 
 const sdkOk = computed(() => !!state.sdk?.contentBuilderExists)
 /** 'auto' = 选的是自动找到的那个；'manual' = 手动填的 */
@@ -41,13 +42,13 @@ const lg = computed(() => state.login)
 /** 一句话说清现在是什么状态，别让人猜为什么还没绿 */
 const loginText = computed(() => {
   const l = lg.value
-  if (l?.error) return '检查失败：' + l.error
+  if (l?.error) return t('检查失败：{error}', { error: l.error })
   if (l?.steamcmd?.cached) {
     const who = l.steamcmd.account ? ` · ${l.steamcmd.account}` : ''
-    return `已登录${who} —— steamcmd 记住了，以后构建不用再输密码`
+    return t('已登录{who} —— steamcmd 记住了，以后构建不用再输密码', { who })
   }
-  if (l?.saved?.hasPassword) return '已保存密码，构建时会自动填'
-  return '还没检测到登录凭据'
+  if (l?.saved?.hasPassword) return t('已保存密码，构建时会自动填')
+  return t('还没检测到登录凭据')
 })
 
 /** 点过一次「完成」之后才显示状态行 —— 没查过就别替用户下结论 */
@@ -149,48 +150,50 @@ const alreadyIn = computed(() => !!machineLogin.value?.ready)
 const rowShow = computed(() => checkPhase.value === 'checking' || loginChecked.value)
 const rowTone = computed(() => {
   if (checkPhase.value === 'checking') return 'busy'
-  const t = testResult.value
-  if (t) return t.ok ? 'ok' : 'bad'
+  const res = testResult.value
+  if (res) return res.ok ? 'ok' : 'bad'
   return lg.value?.ready ? 'ok' : 'bad'
 })
 const rowText = computed(() => {
   if (checkPhase.value === 'checking') {
-    if (mobileWaiting.value) return '等你在手机上点确认 —— 打开 Steam App，点「确认登录」'
+    if (mobileWaiting.value) return t('等你在手机上点确认 —— 打开 Steam App，点「确认登录」')
     return testResult.value === null && rowUsesRealLogin.value
-      ? '正在用你填的账号登录 steamcmd，第一次要十几秒…'
-      : '正在验证登录状态…'
+      ? t('正在用你填的账号登录 steamcmd，第一次要十几秒…')
+      : t('正在验证登录状态…')
   }
-  const t = testResult.value
-  if (t) {
-    if (t.timedOut) return '等太久了 —— 网络慢，或者手机那边一直没确认。可以点「跳过」，构建时再试'
-    switch (t.reason) {
+  const res = testResult.value
+  if (res) {
+    if (res.timedOut) return t('等太久了 —— 网络慢，或者手机那边一直没确认。可以点「跳过」，构建时再试')
+    switch (res.reason) {
       case 'ok':
-        return t.passwordChecked
-          ? `账号密码没问题 —— steamcmd 已经登录并记住了（${t.usedAccount}）`
-          : `steamcmd 用它以前缓存的令牌登录成功了（${t.usedAccount}）。你这次填的密码没被校验 —— 想真的验一次，先去设置里「忘记账号」`
+        return res.passwordChecked
+          ? t('账号密码没问题 —— steamcmd 已经登录并记住了（{account}）', { account: res.usedAccount })
+          : t('steamcmd 用它以前缓存的令牌登录成功了（{account}）。你这次填的密码没被校验 —— 想真的验一次，先去设置里「忘记账号」', {
+              account: res.usedAccount
+            })
       case 'bad-password':
-        return 'Steam 说密码不对（Invalid Password）。检查一下大小写，账号名不是邮箱'
+        return t('Steam 说密码不对（Invalid Password）。检查一下大小写，账号名不是邮箱')
       case 'mobile-timeout':
-        return '一直在等你手机上确认，没等到。手机上打开 Steam App → 右下角盾牌图标里那条「确认登录」，点了它这就能过'
+        return t('一直在等你手机上确认，没等到。手机上打开 Steam App → 右下角盾牌图标里那条「确认登录」，点了它这就能过')
       case 'steam-guard':
-        return 'Steam 要一个 Steam Guard 验证码（不是手机确认那种）—— 填到下面再点一次「完成」'
+        return t('Steam 要一个 Steam Guard 验证码（不是手机确认那种）—— 填到下面再点一次「完成」')
       case 'rate-limit':
-        return 'Steam 暂时限制了登录尝试（Rate Limit）。等几分钟再点一次'
+        return t('Steam 暂时限制了登录尝试（Rate Limit）。等几分钟再点一次')
       case 'no-steamcmd':
-        return '找不到 steamcmd.exe —— 回上一步把 SDK 路径配对'
+        return t('找不到 steamcmd.exe —— 回上一步把 SDK 路径配对')
       case 'no-account':
-        return '账号名是空的'
+        return t('账号名是空的')
       default:
-        return '登录没成功，也没认出具体原因。点「跳过」先继续，构建时能看到 steamcmd 的原始输出'
+        return t('登录没成功，也没认出具体原因。点「跳过」先继续，构建时能看到 steamcmd 的原始输出')
     }
   }
   return loginText.value
 })
 const btnText = computed(() => {
-  if (o.value.step !== 2) return '下一步'
-  if (checkPhase.value === 'checking') return '正在验证…'
-  if (checkPhase.value === 'ok') return '验证通过'
-  return '完成'
+  if (o.value.step !== 2) return t('下一步')
+  if (checkPhase.value === 'checking') return t('正在验证…')
+  if (checkPhase.value === 'ok') return t('验证通过')
+  return t('完成')
 })
 
 async function next() {
@@ -221,10 +224,10 @@ async function next() {
         /* 填了账号密码 —— 就真的登一次。
          * 以前这里只读 config.vdf（「这台机器以前登录过没有」），跟你刚敲进去的
          * 那两行字毫无关系，所以乱填也能过。 */
-        const t = await testTypedLogin(acct, pw, guardCode.value)
-        testResult.value = t
+        const res = await testTypedLogin(acct, pw, guardCode.value)
+        testResult.value = res
         loginChecked.value = true
-        if (!t.ok) {
+        if (!res.ok) {
           // 验证码是一次性的，失败后清掉 —— 留着会让人以为「明明填了还是不过」
           guardCode.value = ''
           checkPhase.value = 'fail'
@@ -281,7 +284,7 @@ function skip() {
   <div v-if="o.open" class="fixed inset-0 z-[70] grid place-items-center p-6 no-drag">
     <div class="absolute inset-0 bg-black/25" />
 
-    <div ref="el" role="dialog" aria-modal="true" aria-label="新手教程" class="relative card s-modal w-full max-w-155 overflow-hidden">
+    <div ref="el" role="dialog" aria-modal="true" :aria-label="t('新手教程')" class="relative card s-modal w-full max-w-155 overflow-hidden">
       <!-- 步骤条 -->
       <div class="flex items-center gap-2 px-6 pt-5">
         <button
@@ -309,7 +312,7 @@ function skip() {
           class="ml-auto text-label text-accent hover:text-ink bg-transparent border-0 p-0 cursor-pointer transition-colors"
           @click="skip"
         >
-          跳过教程
+          {{ t('跳过教程') }}
         </button>
       </div>
 
@@ -333,9 +336,9 @@ function skip() {
               <path d="M186 152 128 186v50l58-34z" fill="#245c8c" />
             </svg>
             <div>
-              <h2 class="text-title font-semibold m-0">SteamSDK 上传工作台</h2>
+              <h2 class="text-title font-semibold m-0">{{ t('SteamSDK 上传工作台') }}</h2>
               <p class="text-label text-muted mt-1 mb-0">
-                一份 SDK 管所有 App / Depot / 版本，不用给每个版本复制一份 SDK。
+                {{ t('一份 SDK 管所有 App / Depot / 版本，不用给每个版本复制一份 SDK。') }}
               </p>
             </div>
           </div>
@@ -344,19 +347,19 @@ function skip() {
             <div class="flex gap-2.5 text-body">
               <span class="text-accent shrink-0">①</span>
               <span class="text-muted"
-                >告诉它你的 <span class="text-ink">SteamSDK 在哪</span>，它就能读到你配好的 App 和 Depot</span
+                >{{ t('告诉它你的') }} <span class="text-ink">{{ t('SteamSDK 在哪') }}</span>{{ t('，它就能读到你配好的 App 和 Depot') }}</span
               >
             </div>
             <div class="flex gap-2.5 text-body">
               <span class="text-accent shrink-0">②</span>
               <span class="text-muted"
-                >填一次 <span class="text-ink">Steam 账号</span>，之后检查配置、空跑、正式上传都在界面里点</span
+                >{{ t('填一次') }} <span class="text-ink">{{ t('Steam 账号') }}</span>{{ t('，之后检查配置、空跑、正式上传都在界面里点') }}</span
               >
             </div>
             <div class="flex gap-2.5 text-body">
               <span class="text-accent shrink-0">③</span>
               <span class="text-muted"
-                >一个 App 一个项目文件夹，下面按平台挂 Depot —— <span class="text-ink">一次构建全平台一起传</span></span
+                >{{ t('一个 App 一个项目文件夹，下面按平台挂 Depot ——') }} <span class="text-ink">{{ t('一次构建全平台一起传') }}</span></span
               >
             </div>
           </div>
@@ -365,15 +368,15 @@ function skip() {
         <!-- ── 1 SDK 路径 ── -->
         <template v-else-if="o.step === 1">
           <div class="flex items-center gap-3">
-            <h2 class="text-title font-semibold m-0">SteamSDK 路径</h2>
+            <h2 class="text-title font-semibold m-0">{{ t('SteamSDK 路径') }}</h2>
             <button
               class="ml-auto btn px-3 "
               :disabled="o.busy"
-              title="重新扫一遍常见位置"
+              :title="t('重新扫一遍常见位置')"
               @click="onboardDetect"
             >
               <RefreshCw :size="13" class="mr-1.5" :class="o.busy ? 'animate-spin' : ''" />
-              {{ o.busy ? '正在找…' : '重新识别' }}
+              {{ o.busy ? t('正在找…') : t('重新识别') }}
             </button>
           </div>
 
@@ -387,8 +390,8 @@ function skip() {
             "
           >
             <div class="flex items-center gap-2">
-              <span class="text-micro tracking-wider text-faint uppercase">自动找到的</span>
-              <span v-if="mode === 'auto'" class="pill pill-ok">✓ 用的是这个</span>
+              <span class="text-micro tracking-wider text-faint uppercase">{{ t('自动找到的') }}</span>
+              <span v-if="mode === 'auto'" class="pill pill-ok">{{ t('✓ 用的是这个') }}</span>
             </div>
             <button
               v-for="c in o.candidates"
@@ -403,8 +406,8 @@ function skip() {
             >
               <Check v-if="same(o.manual, c.root)" :size="14" class="shrink-0 text-accent" />
               <span class="font-mono text-label text-ink break-all text-left">{{ c.root }}</span>
-              <span v-if="c.hasSteamcmd" class="pill pill-ok ml-auto shrink-0">有 steamcmd</span>
-              <span v-else class="pill pill-warn ml-auto shrink-0">缺 steamcmd</span>
+              <span v-if="c.hasSteamcmd" class="pill pill-ok ml-auto shrink-0">{{ t('有 steamcmd') }}</span>
+              <span v-else class="pill pill-warn ml-auto shrink-0">{{ t('缺 steamcmd') }}</span>
             </button>
           </div>
 
@@ -419,8 +422,8 @@ function skip() {
             "
           >
             <div class="flex items-center gap-2">
-              <span class="text-micro tracking-wider text-faint uppercase">手动指定</span>
-              <span v-if="mode === 'manual'" class="pill pill-ok">✓ 用的是这个</span>
+              <span class="text-micro tracking-wider text-faint uppercase">{{ t('手动指定') }}</span>
+              <span v-if="mode === 'manual'" class="pill pill-ok">{{ t('✓ 用的是这个') }}</span>
             </div>
             <div class="flex gap-2">
               <input
@@ -430,7 +433,7 @@ function skip() {
                 :class="mode === 'manual' ? 'border-accent/50' : 'border-line'"
                 @input="onManualInput"
               />
-              <button class="btn" @click="pickAndApply">选择…</button>
+              <button class="btn" @click="pickAndApply">{{ t('选择…') }}</button>
             </div>
           </div>
 
@@ -438,17 +441,17 @@ function skip() {
           <div class="mt-3">
             <button
               class="btn px-3 "
-              title="打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链"
+              :title="t('打开 Steamworks 官方下载页。要登录有该 App 权限的 Steamworks 账号，没有匿名直链')"
               @click="openSdkDownload"
             >
-              <Download :size="13" class="mr-1.5" /> 下载 Steamworks SDK
+              <Download :size="13" class="mr-1.5" /> {{ t('下载 Steamworks SDK') }}
             </button>
           </div>
         </template>
 
         <!-- ── 2 Steam 账号 ── -->
         <template v-else>
-          <h2 class="text-title font-semibold m-0">登录 Steam 账号</h2>
+          <h2 class="text-title font-semibold m-0">{{ t('登录 Steam 账号') }}</h2>
 
           <!-- 一进来就查到已经登录过：直接给结论，不用再填一遍 -->
           <div
@@ -457,7 +460,7 @@ function skip() {
           >
             <div class="flex items-center gap-2 flex-wrap">
               <Check :size="15" class="shrink-0 text-success" />
-              <span class="text-body font-semibold text-success">已完成登录</span>
+              <span class="text-body font-semibold text-success">{{ t('已完成登录') }}</span>
               <span
                 v-if="machineLogin?.steamcmd?.account"
                 class="font-mono text-label text-muted"
@@ -466,36 +469,36 @@ function skip() {
               </span>
             </div>
             <p class="mt-1.5 mb-0 text-label text-muted leading-relaxed">
-              steamcmd 里存着这个账号的登录令牌，构建不用再输密码。直接点「完成」就行。
+              {{ t('steamcmd 里存着这个账号的登录令牌，构建不用再输密码。直接点「完成」就行。') }}
             </p>
           </div>
 
           <!-- 没登录过（或者用户要换账号）：才让人填 -->
           <template v-else>
           <p class="text-label text-muted mt-1.5 mb-0 leading-relaxed">
-            <template v-if="machineChecking">正在看这台机器登录过没有…</template>
+            <template v-if="machineChecking">{{ t('正在看这台机器登录过没有…') }}</template>
             <template v-else>
-              steamcmd 要用它上传构建，也用来读你后台配好的 Depot 列表。
-              <span class="text-ink">不需要 Steamworks 管理员</span>。
+              {{ t('steamcmd 要用它上传构建，也用来读你后台配好的 Depot 列表。') }}
+              <span class="text-ink">{{ t('不需要 Steamworks 管理员。') }}</span>
             </template>
           </p>
 
           <div class="mt-3.5 flex flex-col gap-3">
             <label class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">账号名（不是邮箱）</span>
+              <span class="text-label text-muted">{{ t('账号名（不是邮箱）') }}</span>
               <input
                 :value="o.account"
-                placeholder="例如 my_steam_login"
+                :placeholder="t('例如 my_steam_login')"
                 class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/50 placeholder:text-faint"
                 @input="o.account = $event.target.value"
               />
             </label>
             <label class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">密码</span>
+              <span class="text-label text-muted">{{ t('密码') }}</span>
               <input
                 :value="o.password"
                 type="password"
-                placeholder="留空就先不存"
+                :placeholder="t('留空就先不存')"
                 class="h-9 px-3 rounded-input bg-surface border border-line text-body outline-none focus:border-accent/50 placeholder:text-faint"
                 @input="o.password = $event.target.value"
               />
@@ -503,8 +506,7 @@ function skip() {
           </div>
 
           <p class="text-micro text-faint mt-2.5 mb-0 leading-relaxed">
-            密码用 Windows DPAPI 加密后存在本机，只有当前 Windows 用户能解 ——
-            不进命令行参数、不写进任何日志。不存也行，每次构建会问你要。
+            {{ t('密码用 Windows DPAPI 加密后存在本机，只有当前 Windows 用户能解 —— 不进命令行参数、不写进任何日志。不存也行，每次构建会问你要。') }}
           </p>
 
           <!-- 点「完成」之后才出现 —— 没查过就不替用户下结论。
@@ -543,12 +545,16 @@ function skip() {
             class="mt-2.5 rounded-card border border-accent/34 bg-accent/7 px-3 py-2.5"
           >
             <div class="text-body text-accent font-semibold mb-1.5">
-              Steam 正在等你手机上点确认
+              {{ t('Steam 正在等你手机上点确认') }}
             </div>
             <ol class="m-0 pl-4 text-label text-muted leading-relaxed">
-              <li>拿出手机，打开 <strong class="text-ink">Steam App</strong></li>
-              <li>点右下角的<strong class="text-ink">盾牌图标</strong>，里面有一条「确认登录」</li>
-              <li>点它。这边会自己继续，<strong class="text-ink">不用在这个窗口里做任何操作</strong></li>
+              <li>{{ t('拿出手机，打开') }} <strong class="text-ink">Steam App</strong></li>
+              <li>
+                {{ t('点右下角的') }}<strong class="text-ink">{{ t('盾牌图标') }}</strong>{{ t('，里面有一条「确认登录」') }}
+              </li>
+              <li>
+                {{ t('点它。这边会自己继续，') }}<strong class="text-ink">{{ t('不用在这个窗口里做任何操作') }}</strong>
+              </li>
             </ol>
           </div>
 
@@ -556,17 +562,17 @@ function skip() {
                所以失败后清空，逼用户去拿新的那个 -->
           <div v-if="needGuard" class="mt-2.5">
             <label class="flex flex-col gap-1.5">
-              <span class="text-label text-muted">Steam Guard 验证码</span>
+              <span class="text-label text-muted">{{ t('Steam Guard 验证码') }}</span>
               <input
                 v-model="guardCode"
-                placeholder="例如 K4F2B"
+                :placeholder="t('例如 K4F2B')"
                 autocomplete="one-time-code"
                 class="h-9 px-3 rounded-input bg-surface border border-line text-body tracking-[0.18em] num outline-none focus:border-accent/45 placeholder:text-faint placeholder:tracking-normal"
                 @keyup.enter="next"
               />
             </label>
             <p class="mt-1.5 mb-0 text-micro text-faint leading-relaxed">
-              在手机 Steam App 的「Steam 令牌」页，或者 Steam 发来的邮件里。填好点下面的「完成」。
+              {{ t('在手机 Steam App 的「Steam 令牌」页，或者 Steam 发来的邮件里。填好点下面的「完成」。') }}
             </p>
           </div>
           </template>
@@ -587,11 +593,11 @@ function skip() {
           :disabled="checkPhase === 'checking'"
           @click="onboardGo(o.step - 1)"
         >
-          上一步
+          {{ t('上一步') }}
         </button>
         <div class="flex-1" />
         <button v-if="o.step === 2" class="btn" :disabled="checkPhase === 'checking'" @click="skip">
-          跳过
+          {{ t('跳过') }}
         </button>
         <button
           class="btn btn-primary"
