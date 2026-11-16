@@ -3,6 +3,12 @@
  * 键与源码里的中文原文逐字一致；改中文时两边一起改。
  */
 export default {
+  // —— 1.3.0 ——
+  '界面支持中文 / English：设置里多了一个「界面语言」，可选「跟随系统」，切换即时生效，不用重启': 'Added an interface language switch: Settings → Language lets you pick Chinese or English, or follow the system, and switching takes effect instantly with no restart.',
+  '英文界面覆盖到每个角落：工作台、使用手册、首次运行引导、更新日志，以及报错和状态提示': 'Brought English to every corner of the UI: workbench, manual, first-run guide, changelog, plus error and status messages.',
+  '安装包、桌面和开始菜单快捷方式、应用列表和窗口标题的名字统一成 SteamSDK Tool（以前中英文界面各叫一个名字）': 'Unified the installer, the desktop and Start-menu shortcuts, the app list entry and the window title under one name, SteamSDK Tool (the tool used to show a different name in each language).',
+  '新建 Depot 时建议的内容目录占位符也跟着语言变（英文是 <app name>）': 'Made the suggested content folder in the new-depot form follow the interface language too (<app name> in English).',
+
   // —— 1.2.0 ——
   '新增「清空成就」按钮（工作台右上）：让本机 Steam 客户端执行 reset_all_stats，把当前登录账号在这个 App 下的成就和统计一起重置；不联网，也不需要 Web API 密钥': 'Added a “Clear achievements” button in the top right of the workbench: it makes the local Steam client run reset_all_stats, resetting both achievements and stats for the account currently signed in to this app. It works offline and needs no Web API key.',
   '点下去会短暂把 Steam 切到前台，执行完自动切回来；失败会说明原因（Steam 没开、窗口被挡、焦点被抢、控制台没响应），可以直接重试': 'Made the button briefly bring Steam to the foreground and switch back automatically when done. If it fails, the tool explains why (Steam is not running, the window was blocked, focus was stolen, the console did not respond), and you can retry right away.',
